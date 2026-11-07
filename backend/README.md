@@ -55,3 +55,16 @@ The requested scope is `https://www.googleapis.com/auth/business.manage`. The OA
 - No email verification, password reset, refresh-token rotation, multi-factor authentication, or formal security audit is implemented yet.
 - Add HTTPS, managed database backups, secret rotation, monitoring, and a deployment-specific CORS allowlist before production.
 - Never commit secrets or real customer data.
+
+
+## Google Business Profile read-only import
+
+After OAuth, the dashboard asks the owner to choose the correct Google account and then the exact Paanagam listing. The API checks that the account and selected location are accessible to the connected Google user before importing fields from the official Account Management and Business Information APIs.
+
+Imported evidence can include the Google-provided business title, primary category, storefront address, primary phone, website URL and regular hours. Values are saved with source `GOOGLE_API`, an observation timestamp and the selected location resource name. The import does not modify the Google profile, publish content, reply to reviews, or change listing information.
+
+Google's official documentation:
+- Account Management API accounts.list: https://developers.google.com/my-business/reference/accountmanagement/rest/v1/accounts/list
+- Business Information API accounts.locations.list: https://developers.google.com/my-business/reference/businessinformation/rest/v1/accounts.locations/list
+
+The Google Business Profile APIs may require separate API enablement and access approval. If the project has zero quota, Google instructs developers to request Business Profile API access. A successful OAuth consent by itself does not guarantee API access.
