@@ -3,7 +3,7 @@ import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import { z } from "zod";
-import { randomBytes, createHash } from "node:crypto";
+import { createHash } from "node:crypto";
 import { EvidenceSource, Prisma } from "@prisma/client";
 import { prisma } from "./db.js";
 import { env, corsOrigins } from "./env.js";
@@ -112,6 +112,7 @@ app.post("/v1/businesses/:businessId/evidence", { preHandler: requireUser }, asy
     expiresAt: z.coerce.date().optional()
   }).safeParse(request.body);
   if (!params.success || !body.success) return reply.code(400).send({ error: "Invalid evidence details" });
+  if (body.data.source === EvidenceSource.GOOGLE_API) return reply.code(403).send({ error: "Google API evidence can only be created by the trusted integration service" });
   if (body.data.source === EvidenceSource.DEMO && body.data.verified) return reply.code(400).send({ error: "Demo evidence cannot be marked verified" });
   if (body.data.source === EvidenceSource.PUBLIC_OBSERVATION && body.data.verified) return reply.code(400).send({ error: "Public observations cannot be marked owner-verified or API-verified" });
   const business = await ownedBusiness(request.userId!, params.data.businessId);
@@ -165,6 +166,17 @@ app.get("/v1/businesses/:businessId/audits", { preHandler: requireUser }, async 
   if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
   if (!(await ownedBusiness(request.userId!, params.data.businessId))) return reply.code(404).send({ error: "Business not found" });
   return prisma.audit.findMany({ where: { businessId: params.data.businessId }, orderBy: { createdAt: "desc" } });
+});
+
+app.get("/v1/businesses/:businessId/google", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
+  if (!(await ownedBusiness(request.userId!, params.data.businessId))) return reply.code(404).send({ error: "Business not found" });
+  const connection = await prisma.googleConnection.findUnique({
+    where: { businessId: params.data.businessId },
+    select: { scope: true, connectedAt: true, expiresAt: true, updatedAt: true }
+  });
+  return { connected: Boolean(connection), connection };
 });
 
 app.get("/v1/google/connect/:businessId", { preHandler: requireUser }, async (request, reply) => {
