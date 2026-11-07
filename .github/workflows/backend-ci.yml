@@ -12,6 +12,10 @@ on:
   pull_request:
     paths:
       - "backend/**"
+      - "app.js"
+      - "config.js"
+      - "index.html"
+      - "styles.css"
       - ".github/workflows/backend-ci.yml"
 
 jobs:
