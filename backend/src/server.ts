@@ -196,6 +196,33 @@ app.get("/v1/businesses/:businessId/google", { preHandler: requireUser }, async 
   return { connected: Boolean(connection), connection };
 });
 
+app.post("/v1/google/connect/:businessId/url", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) return reply.code(503).send({ error: "Google OAuth is not configured. Add credentials to the deployment environment first." });
+  const state = randomUrlToken();
+  const verifier = randomUrlToken(48);
+  const challenge = createHash("sha256").update(verifier).digest("base64url");
+  await prisma.oAuthState.create({
+    data: { state, codeVerifier: verifier, userId: request.userId!, businessId: business.id, expiresAt: new Date(Date.now() + 10 * 60 * 1000) }
+  });
+  const url = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+  url.search = new URLSearchParams({
+    client_id: env.GOOGLE_CLIENT_ID,
+    redirect_uri: env.GOOGLE_REDIRECT_URI,
+    response_type: "code",
+    scope: "https://www.googleapis.com/auth/business.manage",
+    access_type: "offline",
+    prompt: "consent",
+    state,
+    code_challenge: challenge,
+    code_challenge_method: "S256"
+  }).toString();
+  return { authorizationUrl: url.toString() };
+});
+
 app.get("/v1/google/connect/:businessId", { preHandler: requireUser }, async (request, reply) => {
   const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
   if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
