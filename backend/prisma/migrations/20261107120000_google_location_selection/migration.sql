@@ -1,0 +1,1 @@
+ALTER TABLE "GoogleConnection" ADD COLUMN "googleLocationResourceName" TEXT;
