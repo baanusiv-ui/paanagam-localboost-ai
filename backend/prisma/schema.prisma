@@ -80,6 +80,7 @@ model GoogleConnection {
   businessId            String   @unique
   business              Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   googleAccountId       String?
+  googleLocationResourceName String?
   accessTokenEncrypted  String
   refreshTokenEncrypted String?
   scope                 String
