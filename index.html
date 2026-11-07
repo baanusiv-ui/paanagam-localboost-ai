@@ -18,7 +18,7 @@
       <div class="workspace-label">WORKSPACE</div>
       <button class="business-switcher" type="button">
         <span class="business-avatar">பா</span>
-        <span><strong>Paanagam</strong><small>Business pilot</small></span>
+        <span><strong id="business-switcher-name">Paanagam</strong><small>Business pilot</small></span>
         <span class="chevron">⌄</span>
       </button>
       <nav class="nav-list" aria-label="Main navigation">
@@ -115,6 +115,7 @@
         </div>
       </section>
 
+      <section class="view-panel hidden" id="live-audit-results" aria-live="polite"></section>
       <section class="view-panel hidden" id="competitors-view"><div class="empty-state"><div class="empty-icon">◎</div><h2>Competitor intelligence</h2><p>Add nearby competitors after the business location is verified. We will not invent competitor names, rankings or performance.</p><button class="secondary-button" data-go="audit">Complete business verification</button></div></section>
       <section class="view-panel hidden" id="reviews-view"><div class="empty-state"><div class="empty-icon">✳</div><h2>Review intelligence</h2><p>No reviews have been imported or supplied yet. Connect an authorised source or provide review data to analyse real customer feedback.</p><span class="tag pending-tag">Waiting for verified source</span></div></section>
       <section class="view-panel hidden" id="content-view">
