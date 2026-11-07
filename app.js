@@ -239,6 +239,7 @@
     }
     const resultPanel = $("#live-audit-results");
     if (resultPanel) {
+      resultPanel.classList.remove("hidden");
       resultPanel.innerHTML = "";
       const heading = document.createElement("div");
       heading.className = "section-heading";
