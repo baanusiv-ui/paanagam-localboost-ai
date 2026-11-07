@@ -347,7 +347,7 @@ app.post("/v1/businesses/:businessId/google/import", { preHandler: requireUser }
     }
     if (!found) return reply.code(404).send({ error: "The selected location is not listed under this Google account" });
 
-    const locationId = body.data.locationName.split("/")[1];
+    const locationId = body.data.locationName.slice("locations/".length);
     const location = await googleGet<{
       name?: string; title?: string; websiteUri?: string;
       phoneNumbers?: { primaryPhone?: string };
