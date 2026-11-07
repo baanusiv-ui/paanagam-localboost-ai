@@ -114,10 +114,102 @@
     await loadAuditHistory();
   }
 
+  async function loadGoogleAccounts() {
+    const picker = $("#google-picker");
+    if (!picker || !activeBusiness || !googleConnected) return;
+    picker.classList.remove("hidden");
+    const select = $("#google-account-select");
+    select.innerHTML = "";
+    const loading = document.createElement("option");
+    loading.value = "";
+    loading.textContent = "Loading Google accounts…";
+    select.append(loading);
+    try {
+      const result = await api("/v1/businesses/" + encodeURIComponent(activeBusiness.id) + "/google/accounts");
+      select.innerHTML = "";
+      if (!result.accounts.length) {
+        const empty = document.createElement("option");
+        empty.value = "";
+        empty.textContent = "No accessible Google accounts found";
+        select.append(empty);
+        return;
+      }
+      result.accounts.forEach(account => {
+        const option = document.createElement("option");
+        option.value = account.name || "";
+        option.textContent = (account.accountName || account.name || "Google account") + " · " + (account.role || account.type || "Access");
+        select.append(option);
+      });
+      message("google-import-message", "Choose the account that manages Paanagam.");
+    } catch (error) {
+      select.innerHTML = "";
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "Could not load Google accounts";
+      select.append(option);
+      message("google-import-message", error.message, true);
+    }
+  }
+
+  async function loadGoogleLocations() {
+    const accountName = $("#google-account-select").value;
+    if (!accountName || !activeBusiness) return message("google-import-message", "Select a Google account first.", true);
+    const button = $("#load-google-locations");
+    button.disabled = true;
+    button.textContent = "Loading listings…";
+    try {
+      const result = await api("/v1/businesses/" + encodeURIComponent(activeBusiness.id) + "/google/locations?accountName=" + encodeURIComponent(accountName));
+      const select = $("#google-location-select");
+      select.innerHTML = "";
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = result.locations.length ? "Select the Paanagam listing" : "No listings found in this account";
+      select.append(placeholder);
+      result.locations.forEach(location => {
+        const option = document.createElement("option");
+        option.value = location.name || "";
+        const address = location.storefrontAddress?.locality || location.storefrontAddress?.administrativeArea || "";
+        option.textContent = (location.title || location.name || "Unnamed listing") + (address ? " · " + address : "");
+        select.append(option);
+      });
+      $("#import-google-location").disabled = true;
+      message("google-import-message", result.locations.length + " accessible listing(s) found. Confirm the correct Paanagam listing.");
+    } catch (error) {
+      message("google-import-message", error.message, true);
+    } finally {
+      button.disabled = false;
+      button.textContent = "Find business listings";
+    }
+  }
+
+  async function importGoogleLocation() {
+    const accountName = $("#google-account-select").value;
+    const locationName = $("#google-location-select").value;
+    if (!accountName || !locationName || !activeBusiness) return;
+    const button = $("#import-google-location");
+    button.disabled = true;
+    button.textContent = "Importing evidence…";
+    try {
+      const result = await api("/v1/businesses/" + encodeURIComponent(activeBusiness.id) + "/google/import", {
+        method: "POST",
+        body: JSON.stringify({ accountName, locationName })
+      });
+      message("google-import-message", result.imported + " evidence fields imported from the selected Google listing. No profile changes were made.");
+      await runAudit();
+    } catch (error) {
+      message("google-import-message", error.message, true);
+    } finally {
+      button.disabled = false;
+      button.textContent = "Import selected listing evidence";
+    }
+  }
+
   async function refreshGoogleStatus() {
     if (!activeBusiness) return;
     const result = await api("/v1/businesses/" + encodeURIComponent(activeBusiness.id) + "/google");
     setConnectionState(result.connected, result.connected ? "Authorised connection" : "Not connected");
+    $("#google-picker").classList.toggle("hidden", !result.connected);
+    if (result.connected) await loadGoogleAccounts();
   }
 
   function renderAudit(audit) {
@@ -273,6 +365,9 @@
   document.querySelectorAll("[data-go]").forEach(button => button.addEventListener("click", () => showView(button.dataset.go)));
   $("#run-audit").addEventListener("click", runAudit);
   $("#connect-google").addEventListener("click", connectGoogle);
+  $("#load-google-locations").addEventListener("click", loadGoogleLocations);
+  $("#google-location-select").addEventListener("change", () => { $("#import-google-location").disabled = !$("#google-location-select").value; });
+  $("#import-google-location").addEventListener("click", importGoogleLocation);
   $("#dismiss-notice").addEventListener("click", () => $(".notice").classList.add("hidden"));
   $("#auth-form").addEventListener("submit", event => { event.preventDefault(); authenticate("login"); });
   $("#register-button").addEventListener("click", () => authenticate("register"));
