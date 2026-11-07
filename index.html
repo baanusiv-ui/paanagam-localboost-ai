@@ -113,6 +113,16 @@
           <div class="check-row"><span class="check-icon pending">○</span><div><strong>Address, phone and hours</strong><small>Not yet independently verified</small></div><span class="tag pending-tag">Not verified</span></div>
           <div class="check-row"><span class="check-icon pending">○</span><div><strong>Google Business Profile authorisation</strong><small>No OAuth connection is active</small></div><span class="tag pending-tag">Not connected</span></div>
         </div>
+        <div class="panel google-picker hidden" id="google-picker">
+          <div class="panel-heading"><div><h3>Choose the correct Google listing</h3><p>Review the account and listing names before importing. Nothing on Google will be edited.</p></div><span class="tag confirmed">Read only</span></div>
+          <label for="google-account-select">Google account</label>
+          <select id="google-account-select"><option value="">Load accounts…</option></select>
+          <button class="secondary-button" id="load-google-locations" type="button">Find business listings</button>
+          <label for="google-location-select">Business listing</label>
+          <select id="google-location-select"><option value="">Choose a listing</option></select>
+          <button class="primary-button" id="import-google-location" type="button" disabled>Import selected listing evidence</button>
+          <p class="form-message" id="google-import-message" role="status"></p>
+        </div>
       </section>
 
       <section class="view-panel hidden" id="live-audit-results" aria-live="polite"></section>
