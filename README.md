@@ -28,3 +28,12 @@ See [docs/PRODUCT_BLUEPRINT.md](docs/PRODUCT_BLUEPRINT.md).
 
 ## Security
 Never commit API keys, OAuth client secrets, access tokens, customer personal data, or production credentials.
+
+
+## Backend foundation
+
+The API lives in [backend/](backend/). It includes owner authentication, business workspaces, evidence provenance, audit snapshots, Google OAuth consent flow, encrypted token storage, PostgreSQL migrations, and CI checks.
+
+See [backend setup and API documentation](backend/README.md) before running it locally.
+
+**Current stage:** backend foundation and OAuth consent storage only. Google profile/location data import, AI model orchestration, production hosting, and frontend-to-API integration are not yet complete.
