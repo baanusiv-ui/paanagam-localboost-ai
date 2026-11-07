@@ -34,7 +34,12 @@ All routes except health, registration, login and the Google OAuth callback requ
 - `GET /v1/businesses/:businessId/evidence` — list evidence.
 - `POST /v1/businesses/:businessId/audits` — create an evidence-based audit snapshot.
 - `GET /v1/businesses/:businessId/audits` — list audit snapshots.
-- `GET /v1/google/connect/:businessId` — begin Google OAuth.
+- `GET /v1/businesses/:businessId/google` — safe connection status; never returns tokens.
+- `POST /v1/google/connect/:businessId/url` — return an OAuth URL for browser navigation.
+- `GET /v1/businesses/:businessId/google/accounts` — list Google accounts accessible to the owner.
+- `GET /v1/businesses/:businessId/google/locations?accountName=accounts%2F...` — list locations in the selected account.
+- `POST /v1/businesses/:businessId/google/import` — import evidence from the explicitly selected listing.
+- `GET /v1/google/connect/:businessId` — legacy redirect-based OAuth start.
 - `GET /v1/google/callback` — OAuth callback.
 
 ## Evidence rules
@@ -47,7 +52,7 @@ Manual evidence submission must never be allowed to impersonate the Google API s
 
 Create a Google Cloud OAuth web application and configure the exact redirect URI from `GOOGLE_REDIRECT_URI`. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` only in the deployment secret manager or local ignored `.env`.
 
-The requested scope is `https://www.googleapis.com/auth/business.manage`. The OAuth flow uses state validation and PKCE. Tokens are encrypted at rest with AES-256-GCM. The callback stores credentials but does not yet import profile locations or insights. That requires the next integration milestone, API access approval, and explicit owner authorisation.
+The requested scope is `https://www.googleapis.com/auth/business.manage`. The OAuth flow uses state validation and PKCE. Tokens are encrypted at rest with AES-256-GCM. The callback stores credentials. The dashboard then requires the owner to select the correct Google account and exact business listing before read-only profile evidence is imported. OAuth consent alone does not guarantee API access.
 
 ## Important limitations
 
