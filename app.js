@@ -388,7 +388,7 @@
     const params = new URLSearchParams(window.location.search);
     if (params.get("google") === "connected") {
       window.history.replaceState({}, "", window.location.pathname);
-      message("auth-message", "Google authorisation completed. Profile data import is the next integration step.");
+      message("auth-message", "Google authorisation completed. Choose the correct Google account and Paanagam listing below to import read-only profile evidence.");
     }
     if (!token()) {
       $("#api-status").textContent = "Sign in to connect API";
