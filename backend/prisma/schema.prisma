@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EvidenceSource {
+  OWNER_CONFIRMED
+  GOOGLE_API
+  PUBLIC_OBSERVATION
+  DEMO
+}
+
+enum AuditStatus {
+  COMPLETED
+  INCOMPLETE
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime      @default(now())
+  businesses   Business[]
+  oauthStates  OAuthState[]
+}
+
+model Business {
+  id              String             @id @default(cuid())
+  ownerId         String
+  owner           User               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  displayName     String
+  category        String?
+  address         String?
+  website         String?
+  phone           String?
+  countryCode     String             @default("IN")
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  evidence        Evidence[]
+  audits          Audit[]
+  googleConnection GoogleConnection?
+  oauthStates     OAuthState[]
+  @@index([ownerId, createdAt])
+}
+
+model Evidence {
+  id          String         @id @default(cuid())
+  businessId  String
+  business    Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  category    String
+  value       Json
+  source      EvidenceSource
+  sourceLabel String?
+  verified    Boolean        @default(false)
+  observedAt  DateTime       @default(now())
+  expiresAt   DateTime?
+  createdAt   DateTime       @default(now())
+  @@index([businessId, category, observedAt])
+}
+
+model Audit {
+  id              String      @id @default(cuid())
+  businessId      String
+  business        Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  status          AuditStatus
+  completeness    Int
+  findings        Json
+  evidenceIds     String[]
+  createdAt       DateTime    @default(now())
+  @@index([businessId, createdAt])
+}
+
+model GoogleConnection {
+  id                    String   @id @default(cuid())
+  businessId            String   @unique
+  business              Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  googleAccountId       String?
+  accessTokenEncrypted  String
+  refreshTokenEncrypted String?
+  scope                 String
+  expiresAt             DateTime?
+  connectedAt           DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model OAuthState {
+  id            String   @id @default(cuid())
+  state         String   @unique
+  codeVerifier  String
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessId    String
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+  @@index([expiresAt])
+}
