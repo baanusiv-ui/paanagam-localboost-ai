@@ -97,6 +97,23 @@ app.post("/v1/businesses", { preHandler: requireUser }, async (request, reply) =
   }).safeParse(request.body);
   if (!parsed.success) return reply.code(400).send({ error: "Invalid business details", details: parsed.error.flatten() });
   const business = await prisma.business.create({ data: { ...parsed.data, ownerId: request.userId! } });
+  const initialEvidence = [
+    { category: "business_name", value: { text: business.displayName } },
+    ...(business.category ? [{ category: "primary_category", value: { text: business.category } }] : []),
+    ...(business.address ? [{ category: "address", value: { text: business.address } }] : []),
+    ...(business.phone ? [{ category: "phone", value: { text: business.phone } }] : []),
+    ...(business.website ? [{ category: "website", value: { text: business.website } }] : [])
+  ];
+  await prisma.evidence.createMany({
+    data: initialEvidence.map((item) => ({
+      businessId: business.id,
+      category: item.category,
+      value: item.value,
+      source: EvidenceSource.OWNER_CONFIRMED,
+      sourceLabel: "Entered by the business owner during setup",
+      verified: true
+    }))
+  });
   return reply.code(201).send({ business });
 });
 
@@ -258,6 +275,16 @@ app.get("/v1/google/callback", async (request, reply) => {
       refreshTokenEncrypted: tokenData.refresh_token ? encryptSecret(tokenData.refresh_token) : undefined,
       scope: tokenData.scope ?? "",
       expiresAt: tokenData.expires_in ? new Date(Date.now() + tokenData.expires_in * 1000) : null
+    }
+  });
+  await prisma.evidence.create({
+    data: {
+      businessId: oauthState.businessId,
+      category: "google_profile_access",
+      value: { connected: true, scope: tokenData.scope ?? "" },
+      source: EvidenceSource.GOOGLE_API,
+      sourceLabel: "Google OAuth authorisation completed",
+      verified: true
     }
   });
   return reply.redirect(`${env.APP_BASE_URL}/?google=connected`);
