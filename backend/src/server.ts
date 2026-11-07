@@ -35,7 +35,49 @@ async function requireUser(request: import("fastify").FastifyRequest, reply: imp
   }
 }
 
-async function ownedBusiness(userId: string, businessId: string) {
+
+async function googleAccessToken(businessId: string): Promise<string> {
+  const connection = await prisma.googleConnection.findUnique({ where: { businessId } });
+  if (!connection) throw new Error("Google Business Profile is not connected");
+  if (connection.expiresAt && connection.expiresAt.getTime() > Date.now() + 60_000) {
+    return decryptSecret(connection.accessTokenEncrypted);
+  }
+  if (!connection.refreshTokenEncrypted) throw new Error("Google authorisation expired. Reconnect the Google account.");
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: env.GOOGLE_CLIENT_ID,
+      client_secret: env.GOOGLE_CLIENT_SECRET,
+      refresh_token: decryptSecret(connection.refreshTokenEncrypted),
+      grant_type: "refresh_token"
+    })
+  });
+  const data = await response.json() as { access_token?: string; expires_in?: number; scope?: string; error?: string };
+  if (!response.ok || !data.access_token) {
+    throw new Error(data.error === "invalid_grant" ? "Google authorisation expired or was revoked. Reconnect the Google account." : "Google token refresh failed. Check OAuth settings and API access.");
+  }
+  await prisma.googleConnection.update({
+    where: { businessId },
+    data: {
+      accessTokenEncrypted: encryptSecret(data.access_token),
+      expiresAt: data.expires_in ? new Date(Date.now() + data.expires_in * 1000) : null,
+      scope: data.scope ?? connection.scope
+    }
+  });
+  return data.access_token;
+}
+
+async function googleGet<T>(url: string, accessToken: string): Promise<T> {
+  const response = await fetch(url, { headers: { authorization: "Bearer " + accessToken } });
+  const data = await response.json() as T & { error?: { message?: string; status?: string } };
+  if (!response.ok) {
+    const reason = data.error?.message || data.error?.status || "Google API request failed";
+    throw new Error(reason);
+  }
+  return data;
+}
+\nasync function ownedBusiness(userId: string, businessId: string) {
   return prisma.business.findFirst({ where: { id: businessId, ownerId: userId } });
 }
 
@@ -221,6 +263,128 @@ app.post("/v1/google/connect/:businessId/url", { preHandler: requireUser }, asyn
     code_challenge_method: "S256"
   }).toString();
   return { authorizationUrl: url.toString() };
+});
+
+
+app.get("/v1/businesses/:businessId/google/accounts", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
+  if (!(await ownedBusiness(request.userId!, params.data.businessId))) return reply.code(404).send({ error: "Business not found" });
+  try {
+    const accessToken = await googleAccessToken(params.data.businessId);
+    const result = await googleGet<{ accounts?: Array<{ name?: string; accountName?: string; type?: string; role?: string; permissionLevel?: string }> }>(
+      "https://mybusinessaccountmanagement.googleapis.com/v1/accounts?pageSize=20", accessToken
+    );
+    return { accounts: (result.accounts ?? []).map(account => ({
+      name: account.name, accountName: account.accountName, type: account.type,
+      role: account.role, permissionLevel: account.permissionLevel
+    })) };
+  } catch (error) {
+    request.log.warn({ error: error instanceof Error ? error.message : "unknown" }, "Google accounts list failed");
+    return reply.code(502).send({ error: error instanceof Error ? error.message : "Could not list Google accounts" });
+  }
+});
+
+app.get("/v1/businesses/:businessId/google/locations", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const query = z.object({ accountName: z.string().regex(/^accounts\/[A-Za-z0-9_-]+$/) }).safeParse(request.query);
+  if (!params.success || !query.success) return reply.code(400).send({ error: "A valid Google account is required" });
+  if (!(await ownedBusiness(request.userId!, params.data.businessId))) return reply.code(404).send({ error: "Business not found" });
+  try {
+    const accessToken = await googleAccessToken(params.data.businessId);
+    const accounts = await googleGet<{ accounts?: Array<{ name?: string }> }>(
+      "https://mybusinessaccountmanagement.googleapis.com/v1/accounts?pageSize=20", accessToken
+    );
+    if (!(accounts.accounts ?? []).some(account => account.name === query.data.accountName)) {
+      return reply.code(403).send({ error: "This Google account is not accessible to the connected user" });
+    }
+    const locations: Array<Record<string, unknown>> = [];
+    let pageToken: string | undefined;
+    for (let page = 0; page < 10; page++) {
+      const url = new URL("https://mybusinessbusinessinformation.googleapis.com/v1/" + query.data.accountName + "/locations");
+      url.searchParams.set("readMask", "name,title,storefrontAddress,phoneNumbers,websiteUri,regularHours,categories");
+      url.searchParams.set("pageSize", "100");
+      if (pageToken) url.searchParams.set("pageToken", pageToken);
+      const result = await googleGet<{ locations?: Array<Record<string, unknown>>; nextPageToken?: string }>(url.toString(), accessToken);
+      locations.push(...(result.locations ?? []));
+      pageToken = result.nextPageToken;
+      if (!pageToken) break;
+    }
+    return { locations };
+  } catch (error) {
+    request.log.warn({ error: error instanceof Error ? error.message : "unknown" }, "Google locations list failed");
+    return reply.code(502).send({ error: error instanceof Error ? error.message : "Could not list Google locations" });
+  }
+});
+
+app.post("/v1/businesses/:businessId/google/import", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const body = z.object({
+    accountName: z.string().regex(/^accounts\/[A-Za-z0-9_-]+$/),
+    locationName: z.string().regex(/^locations\/[A-Za-z0-9_-]+$/)
+  }).safeParse(request.body);
+  if (!params.success || !body.success) return reply.code(400).send({ error: "Select a valid Google account and business location" });
+  if (!(await ownedBusiness(request.userId!, params.data.businessId))) return reply.code(404).send({ error: "Business not found" });
+  try {
+    const accessToken = await googleAccessToken(params.data.businessId);
+    const accounts = await googleGet<{ accounts?: Array<{ name?: string }> }>(
+      "https://mybusinessaccountmanagement.googleapis.com/v1/accounts?pageSize=20", accessToken
+    );
+    if (!(accounts.accounts ?? []).some(account => account.name === body.data.accountName)) {
+      return reply.code(403).send({ error: "This Google account is not accessible to the connected user" });
+    }
+    const listUrl = new URL("https://mybusinessbusinessinformation.googleapis.com/v1/" + body.data.accountName + "/locations");
+    listUrl.searchParams.set("readMask", "name");
+    listUrl.searchParams.set("pageSize", "100");
+    let nextPage: string | undefined;
+    let found = false;
+    for (let page = 0; page < 10; page++) {
+      const result = await googleGet<{ locations?: Array<{ name?: string }>; nextPageToken?: string }>(listUrl.toString(), accessToken);
+      if ((result.locations ?? []).some(location => location.name === body.data.locationName)) { found = true; break; }
+      nextPage = result.nextPageToken;
+      if (!nextPage) break;
+      listUrl.searchParams.set("pageToken", nextPage);
+    }
+    if (!found) return reply.code(404).send({ error: "The selected location is not listed under this Google account" });
+
+    const locationId = body.data.locationName.split("/")[1];
+    const location = await googleGet<{
+      name?: string; title?: string; websiteUri?: string;
+      phoneNumbers?: { primaryPhone?: string };
+      storefrontAddress?: Record<string, unknown>;
+      regularHours?: Record<string, unknown>;
+      categories?: { primaryCategory?: { displayName?: string; name?: string } };
+    }>(
+      "https://mybusinessbusinessinformation.googleapis.com/v1/locations/" + encodeURIComponent(locationId) +
+      "?readMask=name,title,storefrontAddress,phoneNumbers,websiteUri,regularHours,categories", accessToken
+    );
+    const sourceLabel = "Google Business Profile API · " + (location.name ?? body.data.locationName);
+    const observedAt = new Date();
+    const evidenceItems: Array<{ category: string; value: Prisma.InputJsonValue }> = [];
+    if (location.title) evidenceItems.push({ category: "business_name", value: { text: location.title } });
+    if (location.categories?.primaryCategory?.displayName) evidenceItems.push({ category: "primary_category", value: { text: location.categories.primaryCategory.displayName } });
+    if (location.storefrontAddress) evidenceItems.push({ category: "address", value: location.storefrontAddress as Prisma.InputJsonValue });
+    if (location.phoneNumbers?.primaryPhone) evidenceItems.push({ category: "phone", value: { text: location.phoneNumbers.primaryPhone } });
+    if (location.websiteUri) evidenceItems.push({ category: "website", value: { text: location.websiteUri } });
+    if (location.regularHours) evidenceItems.push({ category: "business_hours", value: location.regularHours as Prisma.InputJsonValue });
+    evidenceItems.push({ category: "google_profile_access", value: { connected: true, selectedLocation: location.name ?? body.data.locationName } });
+    await prisma.$transaction([
+      prisma.evidence.createMany({
+        data: evidenceItems.map(item => ({
+          businessId: params.data.businessId, category: item.category, value: item.value,
+          source: EvidenceSource.GOOGLE_API, sourceLabel, verified: true, observedAt
+        }))
+      }),
+      prisma.googleConnection.update({
+        where: { businessId: params.data.businessId },
+        data: { googleAccountId: body.data.accountName, googleLocationResourceName: body.data.locationName }
+      })
+    ]);
+    return { imported: evidenceItems.length, location: { name: location.name, title: location.title }, source: "GOOGLE_API", observedAt };
+  } catch (error) {
+    request.log.warn({ error: error instanceof Error ? error.message : "unknown" }, "Google profile import failed");
+    return reply.code(502).send({ error: error instanceof Error ? error.message : "Could not import Google Business Profile data" });
+  }
 });
 
 app.get("/v1/google/connect/:businessId", { preHandler: requireUser }, async (request, reply) => {
