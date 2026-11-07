@@ -36,7 +36,6 @@ services:
   - type: web
     name: paanagam-localboost-dashboard
     runtime: static
-    region: singapore
     buildCommand: mkdir -p public-dist && cp index.html styles.css app.js config.js public-dist/ && printf '%s\n' 'window.LOCALBOOST_API_BASE = "https://paanagam-localboost-api.onrender.com";' > public-dist/config.js
     staticPublishPath: ./public-dist
     autoDeployTrigger: checksPass
