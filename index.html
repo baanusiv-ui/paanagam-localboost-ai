@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101713">
+  <meta name="description" content="LocalBoost AI — local business growth intelligence">
+  <title>LocalBoost AI · Paanagam Pilot</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="#" aria-label="LocalBoost AI home">
+        <span class="brand-mark">L</span>
+        <span><strong>LocalBoost</strong><small>GROWTH INTELLIGENCE</small></span>
+      </a>
+      <div class="workspace-label">WORKSPACE</div>
+      <button class="business-switcher" type="button">
+        <span class="business-avatar">பா</span>
+        <span><strong>Paanagam</strong><small>Business pilot</small></span>
+        <span class="chevron">⌄</span>
+      </button>
+      <nav class="nav-list" aria-label="Main navigation">
+        <button class="nav-item active" data-view="overview"><span>◫</span> Overview</button>
+        <button class="nav-item" data-view="audit"><span>⌕</span> Local presence audit</button>
+        <button class="nav-item" data-view="competitors"><span>◎</span> Competitors</button>
+        <button class="nav-item" data-view="reviews"><span>✳</span> Reviews</button>
+        <button class="nav-item" data-view="content"><span>▤</span> Content studio</button>
+        <button class="nav-item" data-view="approvals"><span>✓</span> Approval centre <i class="count">2</i></button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="connection-card">
+          <span class="status-dot"></span>
+          <div><strong>Google connection</strong><small>Not connected</small></div>
+        </div>
+        <div class="profile-row"><div class="profile-avatar">DS</div><div><strong>Workspace owner</strong><small>Pilot account</small></div><span>•••</span></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="crumb">Workspace <span>/</span> <strong id="crumb-title">Overview</strong></div>
+        <div class="top-actions"><span class="demo-pill"><span></span> DEMO DATA</span><button class="help-button" type="button" aria-label="Help">?</button></div>
+      </header>
+
+      <section class="page-heading">
+        <div><p class="eyebrow">SATURDAY, NOVEMBER 7, 2026</p><h1 id="page-title">Good morning, Paanagam <span>✦</span></h1><p class="subheading">Your local growth command centre. Start with what you can verify.</p></div>
+        <button class="primary-button" id="run-audit">＋ Start a business audit</button>
+      </section>
+
+      <div class="notice"><span>ⓘ</span><p><strong>Demo workspace.</strong> The figures and sample findings below are illustrative, not live Google Business Profile data. Connect an authorised profile to begin a verified audit.</p><button id="dismiss-notice" aria-label="Dismiss notice">×</button></div>
+
+      <section class="view-panel" id="overview-view">
+        <div class="section-heading"><div><h2>Business snapshot</h2><p>Illustrative workspace indicators</p></div><span class="muted-label">SAMPLE ONLY</span></div>
+        <div class="metric-grid">
+          <article class="metric-card"><div class="metric-top"><span>Audit completeness</span><span class="metric-icon">◈</span></div><strong>68%</strong><div class="progress"><i style="width:68%"></i></div><small>Sample checklist progress</small></article>
+          <article class="metric-card"><div class="metric-top"><span>Profile status</span><span class="metric-icon">◎</span></div><strong class="metric-text">Not connected</strong><small>Google authorisation required</small></article>
+          <article class="metric-card"><div class="metric-top"><span>Drafts awaiting review</span><span class="metric-icon">▤</span></div><strong>2</strong><small>Demo drafts · not published</small></article>
+          <article class="metric-card"><div class="metric-top"><span>Verified insights</span><span class="metric-icon">⌁</span></div><strong>0</strong><small>No verified data sources yet</small></article>
+        </div>
+        <div class="content-grid">
+          <article class="panel audit-panel"><div class="panel-heading"><div><h3>Local presence checklist</h3><p>Sample audit items to guide setup</p></div><button class="text-button" data-go="audit">View audit →</button></div>
+            <div class="check-row"><span class="check-icon done">✓</span><div><strong>Business name confirmed</strong><small>Owner-confirmed: Paanagam (பானகம்)</small></div><span class="tag confirmed">Confirmed</span></div>
+            <div class="check-row"><span class="check-icon pending">○</span><div><strong>Google listing resolved</strong><small>Short link needs technical verification</small></div><span class="tag pending-tag">Pending</span></div>
+            <div class="check-row"><span class="check-icon pending">○</span><div><strong>Business hours and contact</strong><small>Awaiting owner verification</small></div><span class="tag pending-tag">Pending</span></div>
+            <div class="check-row"><span class="check-icon pending">○</span><div><strong>Website and ordering links</strong><small>Not yet supplied</small></div><span class="tag pending-tag">Pending</span></div>
+          </article>
+          <article class="panel next-panel"><div class="panel-heading"><div><h3>Recommended next steps</h3><p>Build a trustworthy business baseline</p></div></div>
+            <div class="step"><b>01</b><div><strong>Verify the business listing</strong><small>Resolve the Maps link and confirm the correct profile.</small></div></div>
+            <div class="step"><b>02</b><div><strong>Connect with owner consent</strong><small>Use official Google authorisation for private insights.</small></div></div>
+            <div class="step"><b>03</b><div><strong>Run the first verified audit</strong><small>Turn evidence into prioritised recommendations.</small></div></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="view-panel hidden" id="audit-view">
+        <div class="section-heading"><div><h2>Local presence audit</h2><p>Separate confirmed facts from information still to verify.</p></div><span class="tag pending-tag">Connection pending</span></div>
+        <div class="panel audit-detail">
+          <div class="audit-summary"><div><span class="eyebrow">OWNER-CONFIRMED IDENTITY</span><h2>Paanagam <span class="tamil">பானகம்</span></h2><p>Google listing URL supplied by owner</p><a href="https://maps.app.goo.gl/FNeN88d971ZM2afb8?g_st=ac" target="_blank" rel="noopener">Open supplied Maps link ↗</a></div><div class="identity-badge">✓<small>Identity confirmed</small></div></div>
+          <div class="divider"></div>
+          <h3>Verification checklist</h3>
+          <div class="check-row"><span class="check-icon done">✓</span><div><strong>Display name</strong><small>Confirmed by business owner</small></div><span class="tag confirmed">Confirmed</span></div>
+          <div class="check-row"><span class="check-icon pending">○</span><div><strong>Exact Google listing</strong><small>Technical resolution not completed</small></div><span class="tag pending-tag">Pending</span></div>
+          <div class="check-row"><span class="check-icon pending">○</span><div><strong>Address, phone and hours</strong><small>Not yet independently verified</small></div><span class="tag pending-tag">Not verified</span></div>
+          <div class="check-row"><span class="check-icon pending">○</span><div><strong>Google Business Profile authorisation</strong><small>No OAuth connection is active</small></div><span class="tag pending-tag">Not connected</span></div>
+        </div>
+      </section>
+
+      <section class="view-panel hidden" id="competitors-view"><div class="empty-state"><div class="empty-icon">◎</div><h2>Competitor intelligence</h2><p>Add nearby competitors after the business location is verified. We will not invent competitor names, rankings or performance.</p><button class="secondary-button" data-go="audit">Complete business verification</button></div></section>
+      <section class="view-panel hidden" id="reviews-view"><div class="empty-state"><div class="empty-icon">✳</div><h2>Review intelligence</h2><p>No reviews have been imported or supplied yet. Connect an authorised source or provide review data to analyse real customer feedback.</p><span class="tag pending-tag">Waiting for verified source</span></div></section>
+      <section class="view-panel hidden" id="content-view">
+        <div class="section-heading"><div><h2>Content studio</h2><p>Create drafts for review. Nothing is published from this prototype.</p></div></div>
+        <div class="panel composer"><label for="content-topic">What would you like to promote?</label><input id="content-topic" type="text" placeholder="e.g. Filter coffee, evening snacks, new menu"><label for="content-tone">Tone</label><select id="content-tone"><option>Friendly and local</option><option>Warm and traditional</option><option>Offer-led and energetic</option></select><button class="primary-button" id="make-draft">Generate sample draft</button><div id="draft-output" class="draft-output hidden"></div></div>
+      </section>
+      <section class="view-panel hidden" id="approvals-view"><div class="section-heading"><div><h2>Approval centre</h2><p>Approval-first workflow · demo items only</p></div></div><div class="panel"><div class="check-row"><span class="check-icon pending">✎</span><div><strong>Morning filter coffee post</strong><small>Demo draft · no publishing connection</small></div><span class="tag pending-tag">Needs review</span></div><div class="check-row"><span class="check-icon pending">✎</span><div><strong>Evening menu highlight</strong><small>Demo draft · no publishing connection</small></div><span class="tag pending-tag">Needs review</span></div><p class="footnote">Approval controls are illustrative in this prototype. No external action is available or triggered.</p></div></section>
+
+      <footer>LOCALBOOST AI <span>·</span> PAANAGAM PILOT <span>·</span> EVIDENCE BEFORE OPTIMISATION</footer>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
