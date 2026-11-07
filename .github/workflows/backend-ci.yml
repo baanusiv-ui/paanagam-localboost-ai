@@ -4,6 +4,10 @@ on:
   push:
     paths:
       - "backend/**"
+      - "app.js"
+      - "config.js"
+      - "index.html"
+      - "styles.css"
       - ".github/workflows/backend-ci.yml"
   pull_request:
     paths:
