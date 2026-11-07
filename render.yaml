@@ -8,7 +8,6 @@ services:
     dockerContext: ./backend
     healthCheckPath: /health
     autoDeployTrigger: checksPass
-    dockerCommand: sh -c "cd /app && npx prisma migrate deploy && node /app/dist/server.js"
     envVars:
       - key: NODE_ENV
         value: production
