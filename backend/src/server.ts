@@ -77,7 +77,7 @@ async function googleGet<T>(url: string, accessToken: string): Promise<T> {
   }
   return data;
 }
-\nasync function ownedBusiness(userId: string, businessId: string) {
+async function ownedBusiness(userId: string, businessId: string) {
   return prisma.business.findFirst({ where: { id: businessId, ownerId: userId } });
 }
 
