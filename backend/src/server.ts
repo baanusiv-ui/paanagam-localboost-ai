@@ -7,7 +7,7 @@ import { createHash } from "node:crypto";
 import { EvidenceSource, Prisma } from "@prisma/client";
 import { prisma } from "./db.js";
 import { env, corsOrigins } from "./env.js";
-import { hashPassword, verifyPassword, issueAccessToken, verifyAccessToken, encryptSecret, randomUrlToken } from "./security.js";
+import { hashPassword, verifyPassword, issueAccessToken, verifyAccessToken, encryptSecret, randomUrlToken, decryptSecret } from "./security.js";
 import { buildAudit } from "./audit.js";
 
 const app = Fastify({ logger: true, bodyLimit: 1024 * 1024 });
