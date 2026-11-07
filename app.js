@@ -84,7 +84,14 @@
     $("#register-button").hidden = true;
     $("#session-status").textContent = "Signed in as " + user.email;
     $("#api-status").textContent = "API connected";
-    $("#data-mode").textContent = "LIVE OWNER DATA";
+    $("#data-mode").textContent = "OWNER SESSION";
+    document.querySelectorAll(".metric-card").forEach((card, index) => {
+      const value = card.querySelector("strong");
+      const note = card.querySelector("small");
+      if (index === 0) { if (value) value.textContent = "—"; if (note) note.textContent = "Run your first evidence audit"; const bar = card.querySelector(".progress i"); if (bar) bar.style.width = "0%"; }
+      if (index === 2) { if (value) value.textContent = "0"; if (note) note.textContent = "No saved content drafts yet"; }
+      if (index === 3) { if (value) value.textContent = "0"; if (note) note.textContent = "No Google API evidence yet"; }
+    });
   }
 
   async function refreshBusinesses() {
