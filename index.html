@@ -113,6 +113,7 @@
           <div class="check-row"><span class="check-icon pending">○</span><div><strong>Address, phone and hours</strong><small>Not yet independently verified</small></div><span class="tag pending-tag">Not verified</span></div>
           <div class="check-row"><span class="check-icon pending">○</span><div><strong>Google Business Profile authorisation</strong><small>No OAuth connection is active</small></div><span class="tag pending-tag">Not connected</span></div>
         </div>
+        <div class="panel hidden" id="live-audit-results" aria-live="polite"></div>
         <div class="panel google-picker hidden" id="google-picker">
           <div class="panel-heading"><div><h3>Choose the correct Google listing</h3><p>Review the account and listing names before importing. Nothing on Google will be edited.</p></div><span class="tag confirmed">Read only</span></div>
           <label for="google-account-select">Google account</label>
@@ -125,7 +126,6 @@
         </div>
       </section>
 
-      <section class="view-panel hidden" id="live-audit-results" aria-live="polite"></section>
       <section class="view-panel hidden" id="competitors-view"><div class="empty-state"><div class="empty-icon">◎</div><h2>Competitor intelligence</h2><p>Add nearby competitors after the business location is verified. We will not invent competitor names, rankings or performance.</p><button class="secondary-button" data-go="audit">Complete business verification</button></div></section>
       <section class="view-panel hidden" id="reviews-view"><div class="empty-state"><div class="empty-icon">✳</div><h2>Review intelligence</h2><p>No reviews have been imported or supplied yet. Connect an authorised source or provide review data to analyse real customer feedback.</p><span class="tag pending-tag">Waiting for verified source</span></div></section>
       <section class="view-panel hidden" id="content-view">
