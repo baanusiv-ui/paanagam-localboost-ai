@@ -37,3 +37,14 @@ The API lives in [backend/](backend/). It includes owner authentication, busines
 See [backend setup and API documentation](backend/README.md) before running it locally.
 
 **Current stage:** backend foundation and OAuth consent storage only. Google profile/location data import, AI model orchestration, production hosting, and frontend-to-API integration are not yet complete.
+
+
+## Run the connected pilot locally
+
+1. Start the API and PostgreSQL by following [backend/README.md](backend/README.md). For Docker Compose, create `backend/.env` from `backend/.env.example`, then run `docker compose up --build` from the `backend` folder.
+2. Serve the repository root over HTTP (for example, `python -m http.server 5500`); do not open `index.html` as a `file://` URL.
+3. Open the local dashboard at `http://localhost:5500`. The default API origin in `config.js` is `http://localhost:4100`.
+4. Create an owner account, sign in, and save the Paanagam business workspace.
+5. Run an audit to create a live snapshot from the evidence saved to your account.
+
+For hosting, set `window.LOCALBOOST_API_BASE` in `config.js` to the HTTPS API origin and configure the API's `CORS_ORIGIN` and `APP_BASE_URL` to the exact dashboard origin. Add Google OAuth credentials only through the backend host's secret manager; never commit them.
