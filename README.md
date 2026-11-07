@@ -48,3 +48,26 @@ See [backend setup and API documentation](backend/README.md) before running it l
 5. Run an audit to create a live snapshot from the evidence saved to your account.
 
 For hosting, set `window.LOCALBOOST_API_BASE` in `config.js` to the HTTPS API origin and configure the API's `CORS_ORIGIN` and `APP_BASE_URL` to the exact dashboard origin. Add Google OAuth credentials only through the backend host's secret manager; never commit them.
+
+
+## Render deployment blueprint
+
+The repository includes [render.yaml](render.yaml) for a Singapore-region Render pilot:
+- Docker-based Fastify API with a health check at `/health`.
+- Managed PostgreSQL database.
+- Static dashboard hosted separately from backend source files.
+- Database migrations run before the API process starts.
+- Dashboard API origin is injected during the static-site build.
+- Google OAuth credentials, JWT signing secret and token-encryption key are configured as Render environment secrets, never committed.
+
+### Deploy
+
+1. Import this GitHub repository into Render as a Blueprint and select `render.yaml`.
+2. Review the resources and their current prices before applying. The blueprint currently uses free plans for an initial pilot only; free Render Postgres is temporary and must not hold production/customer data. Upgrade the database to a paid plan with backups before real use.
+3. Enter `JWT_SECRET` as a cryptographically random value of at least 32 characters.
+4. Enter `TOKEN_ENCRYPTION_KEY_BASE64` as the Base64 encoding of exactly 32 random bytes (for example, generate it locally with `openssl rand -base64 32`). Keep a secure offline backup; changing it makes previously encrypted Google tokens unreadable.
+5. Leave Google OAuth credentials blank until Google Cloud is configured. When ready, set the OAuth web-client ID and secret in Render and register this exact redirect URI in Google Cloud: `https://paanagam-localboost-api.onrender.com/v1/google/callback`.
+6. Confirm the dashboard and API service URLs match the names in `render.yaml`. If Render assigns different subdomains, update the API's `CORS_ORIGIN` and `APP_BASE_URL`, and update the dashboard build API origin in `render.yaml`.
+7. After deployment, verify `https://paanagam-localboost-api.onrender.com/health`, create an owner account, create the Paanagam workspace, and run an audit using verified evidence only.
+
+**Deployment status:** Blueprint committed; no Render resources have been created yet. Render account authorisation and review of any paid plan costs are required before resources can be provisioned. Do not use the free database for production data.
