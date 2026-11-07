@@ -36,7 +36,7 @@ The API lives in [backend/](backend/). It includes owner authentication, busines
 
 See [backend setup and API documentation](backend/README.md) before running it locally.
 
-**Current stage:** backend foundation and OAuth consent storage only. Google profile/location data import, AI model orchestration, production hosting, and frontend-to-API integration are not yet complete.
+**Current stage:** the dashboard is connected to the authenticated API. Owner onboarding, evidence-based audits, Google OAuth, explicit Google account/listing selection, and read-only Business Profile evidence import are implemented. Actual Google data availability still depends on configuring credentials, enabling the required APIs, and receiving Google Business Profile API access/quota. AI model orchestration and production hosting are still pending.
 
 
 ## Run the connected pilot locally
