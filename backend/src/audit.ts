@@ -23,6 +23,7 @@ type Finding = {
 
 export function buildAudit(evidence: Evidence[]) {
   const now = Date.now();
+  const usedEvidenceIds: string[] = [];
   const findings: Finding[] = checklist.map((item) => {
     const candidates = evidence
       .filter((entry) => entry.category === item.key && (!entry.expiresAt || entry.expiresAt.getTime() > now))
@@ -31,6 +32,8 @@ export function buildAudit(evidence: Evidence[]) {
       ?? candidates.find((entry) => entry.verified && entry.source === EvidenceSource.OWNER_CONFIRMED)
       ?? candidates.find((entry) => entry.source === EvidenceSource.PUBLIC_OBSERVATION)
       ?? candidates.find((entry) => entry.source === EvidenceSource.DEMO);
+
+    if (selected) usedEvidenceIds.push(selected.id);
 
     let status: Finding["status"] = "missing";
     if (selected?.source === EvidenceSource.GOOGLE_API && selected.verified) status = "verified";
@@ -67,6 +70,6 @@ export function buildAudit(evidence: Evidence[]) {
     status: findings.every((item) => item.status === "verified" || item.status === "owner_confirmed") ? "COMPLETED" as const : "INCOMPLETE" as const,
     scoreMeaning: "Percentage of checklist fields with current verified or owner-confirmed evidence. This is not a Google ranking, visibility, or performance score.",
     findings,
-    evidenceIds: [...new Set(evidence.map((item) => item.id))]
+    evidenceIds: [...new Set(usedEvidenceIds)]
   };
 }
