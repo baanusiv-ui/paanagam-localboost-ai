@@ -9,6 +9,7 @@ import { prisma } from "./db.js";
 import { findOwnedBusiness } from "./modules/businesses/access.js";
 import { recordBusinessActivity } from "./modules/activity/record.js";
 import { createRequireUser } from "./modules/identity/auth.js";
+import { registerIdentityRoutes } from "./modules/identity/routes.js";
 import { env, corsOrigins } from "./env.js";
 import { hashPassword, verifyPassword, issueAccessToken, verifyAccessToken, encryptSecret, randomUrlToken, decryptSecret } from "./security.js";
 import { buildAudit } from "./audit.js";
@@ -39,6 +40,7 @@ await app.register(rateLimit, { max: 100, timeWindow: "1 minute" });
 const requireUser = createRequireUser(verifyAccessToken);
 
 app.decorateRequest("userId", null);
+registerIdentityRoutes(app, prisma, requireUser, { hashPassword, verifyPassword, issueAccessToken });
 declare module "fastify" {
   interface FastifyRequest { userId: string | null }
 }
@@ -436,43 +438,6 @@ app.post("/v1/businesses/:businessId/google-content/draft", {
 });
 
 app.get("/health", async () => ({ ok: true, service: "localboost-api", version: "0.1.0" }));
-
-app.post("/v1/auth/register", async (request, reply) => {
-  const parsed = z.object({
-    email: z.string().email().max(254).transform((value) => value.toLowerCase()),
-    password: z.string().min(12).max(128),
-    name: z.string().trim().min(1).max(100).optional()
-  }).safeParse(request.body);
-  if (!parsed.success) return reply.code(400).send({ error: "Invalid registration details", details: parsed.error.flatten() });
-  try {
-    const user = await prisma.user.create({
-      data: { email: parsed.data.email, passwordHash: await hashPassword(parsed.data.password), name: parsed.data.name },
-      select: { id: true, email: true, name: true, createdAt: true }
-    });
-    return reply.code(201).send({ user, accessToken: await issueAccessToken(user.id), expiresIn: 900 });
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      return reply.code(409).send({ error: "An account with this email already exists" });
-    }
-    throw error;
-  }
-});
-
-app.post("/v1/auth/login", async (request, reply) => {
-  const parsed = z.object({ email: z.string().email().transform((value) => value.toLowerCase()), password: z.string().min(1).max(128) }).safeParse(request.body);
-  if (!parsed.success) return reply.code(400).send({ error: "Invalid login details" });
-  const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
-  if (!user || !(await verifyPassword(user.passwordHash, parsed.data.password))) {
-    return reply.code(401).send({ error: "Email or password is incorrect" });
-  }
-  return { user: { id: user.id, email: user.email, name: user.name }, accessToken: await issueAccessToken(user.id), expiresIn: 900 };
-});
-
-app.get("/v1/me", { preHandler: requireUser }, async (request, reply) => {
-  const user = await prisma.user.findUnique({ where: { id: request.userId! }, select: { id: true, email: true, name: true, createdAt: true } });
-  if (!user) return reply.code(404).send({ error: "User not found" });
-  return { user };
-});
 
 app.get("/v1/businesses", { preHandler: requireUser }, async (request) => {
   return prisma.business.findMany({
