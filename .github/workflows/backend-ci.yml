@@ -8,6 +8,8 @@ on:
       - "config.js"
       - "index.html"
       - "styles.css"
+      - "growth-intelligence.js"
+      - "growth-intelligence.css"
       - ".github/workflows/backend-ci.yml"
   pull_request:
     paths:
@@ -38,4 +40,4 @@ jobs:
       - run: npm test
       - name: Check dashboard JavaScript syntax
         working-directory: .
-        run: node --check app.js
+        run: node --check app.js && node --check growth-intelligence.js
