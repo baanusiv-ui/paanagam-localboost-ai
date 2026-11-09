@@ -1,11 +1,6 @@
 /*
- * LocalBoost dashboard configuration.
- *
- * Local development uses the API at http://localhost:4100.
- * The Render Blueprint writes the production API origin into the
- * generated public-dist/config.js during its static-site build.
- *
- * This file is public browser configuration. Never place passwords,
- * OAuth client secrets, JWT signing keys, database URLs, or access tokens here.
+ * LocalBoost dashboard public configuration.
+ * These URLs are public identifiers, never secrets.
  */
 window.LOCALBOOST_API_BASE = window.LOCALBOOST_API_BASE || "http://localhost:4100";
+window.LOCALBOOST_NEON_AUTH_URL = window.LOCALBOOST_NEON_AUTH_URL || "https://ep-floral-paper-aotvi0zj.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth";
