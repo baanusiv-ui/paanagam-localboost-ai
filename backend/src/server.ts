@@ -9,6 +9,7 @@ import { prisma } from "./db.js";
 import { env, corsOrigins } from "./env.js";
 import { hashPassword, verifyPassword, issueAccessToken, verifyAccessToken, encryptSecret, randomUrlToken, decryptSecret } from "./security.js";
 import { buildAudit } from "./audit.js";
+import { buildBusinessIntelligence } from "./intelligence.js";
 
 const app = Fastify({ logger: true, bodyLimit: 1024 * 1024 });
 await app.register(helmet);
@@ -147,6 +148,27 @@ app.delete("/v1/businesses/:businessId/growth-records/:recordId", { preHandler: 
   return reply.code(204).send();
 });
 
+
+
+app.get("/v1/businesses/:businessId/intelligence", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const records = await prisma.growthRecord.findMany({
+    where: { businessId: business.id, recordType: { in: ["MENU_ITEM", "DAILY_SALES", "RETENTION_SNAPSHOT"] } },
+    orderBy: [{ recordedAt: "asc" }, { createdAt: "asc" }],
+    take: 500
+  });
+  const report = buildBusinessIntelligence(records.map(record => ({
+    id: record.id,
+    recordType: record.recordType,
+    payload: record.payload as Record<string, unknown>,
+    recordedAt: record.recordedAt,
+    source: record.source
+  })));
+  return { business: { id: business.id, displayName: business.displayName }, ...report };
+});
 
 app.get("/health", async () => ({ ok: true, service: "localboost-api", version: "0.1.0" }));
 
