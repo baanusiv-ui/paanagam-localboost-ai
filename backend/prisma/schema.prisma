@@ -59,6 +59,7 @@ model Business {
   growthRecords   GrowthRecord[]
   growthActions   GrowthAction[]
   growthGoals     GrowthGoal[]
+  growthBaselines GrowthBaseline[]
   activityEvents  ActivityEvent[]
   @@index([ownerId, createdAt])
 }
@@ -195,4 +196,22 @@ model ActivityEvent {
   createdAt   DateTime @default(now())
   @@index([businessId, createdAt])
   @@index([businessId, eventType, createdAt])
+}
+
+
+model GrowthBaseline {
+  id           String           @id @default(cuid())
+  businessId   String
+  business     Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  metric       GrowthGoalMetric
+  baselineValue Float
+  periodStart  DateTime
+  periodEnd    DateTime
+  sourceLabel  String
+  ownerNote    String?
+  archivedAt   DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  @@index([businessId, metric, periodStart, periodEnd])
+  @@index([businessId, archivedAt, createdAt])
 }
