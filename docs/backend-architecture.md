@@ -28,7 +28,7 @@ The first incremental module extractions are present:
 - `modules/businesses/access.ts`: owner-scoped business lookup.
 - `modules/activity/record.ts`: shared business activity event writer.
 
-The existing server delegates to these modules. Route handlers remain in `server.ts` for now; they will be moved in small domain-by-domain changes only after tests protect existing behavior. CI includes the backend test suite, OpenAPI structural validation and a static guard requiring authentication on discovered business-scoped route registrations.
+The server delegates shared access, activity and authentication concerns to these modules. Registration, login and current-user routes have also been extracted into `modules/identity/routes.ts` and are covered by Fastify injection tests. The remaining business, growth and integration route handlers are still in `server.ts`; move them in small domain-by-domain changes only after tests protect existing behavior. CI includes the backend test suite, OpenAPI structural validation and a static guard requiring authentication on discovered business-scoped route registrations.
 
 ## Target module boundaries
 
