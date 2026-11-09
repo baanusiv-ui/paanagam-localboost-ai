@@ -699,11 +699,58 @@ app.get("/v1/businesses/:businessId/growth-overview", { preHandler: requireUser 
     prisma.growthRecord.findMany({ where: { businessId: business.id }, orderBy: { recordedAt: "desc" }, take: 1000 }),
     prisma.evidence.findMany({ where: { businessId: business.id }, select: { id: true, category: true, source: true, verified: true, observedAt: true, expiresAt: true }, orderBy: { observedAt: "desc" }, take: 500 })
   ]);
+  const [overviewActions] = await Promise.all([prisma.growthAction.findMany({ where: { businessId: business.id } })]);
   const overview = buildGrowthOverview({
     records: growthRows.map(row => ({ id: row.id, recordType: row.recordType, payload: row.payload as unknown as Record<string, unknown>, recordedAt: row.recordedAt, source: row.source })),
     evidence: evidenceRows
   });
-  return { business: { id: business.id, displayName: business.displayName }, ...overview };
+  const tracked = new Map(overviewActions.map(item => [item.actionId, item]));
+  const actions = overview.actions.map(action => {
+    const saved = tracked.get(action.id);
+    return { ...action, status: saved?.status ?? action.status, ownerNote: saved?.ownerNote ?? "", trackingUpdatedAt: saved?.updatedAt?.toISOString() ?? null };
+  });
+  return { business: { id: business.id, displayName: business.displayName }, ...overview, actions };
+});
+
+app.patch("/v1/businesses/:businessId/growth-overview/:actionId", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1), actionId: z.string().min(1).max(100) }).safeParse(request.params);
+  const body = z.object({
+    status: z.enum(["ACCEPTED", "IN_PROGRESS", "COMPLETED", "DISMISSED", "SUGGESTED"]),
+    ownerNote: z.string().trim().max(1000).optional()
+  }).safeParse(request.body);
+  if (!params.success || !body.success) return reply.code(400).send({ error: "Invalid growth action update", details: body.success ? undefined : body.error.flatten() });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const [growthRows, evidenceRows] = await Promise.all([
+    prisma.growthRecord.findMany({ where: { businessId: business.id }, orderBy: { recordedAt: "desc" }, take: 1000 }),
+    prisma.evidence.findMany({ where: { businessId: business.id }, select: { id: true, category: true, source: true, verified: true, observedAt: true, expiresAt: true }, orderBy: { observedAt: "desc" }, take: 500 })
+  ]);
+  const overview = buildGrowthOverview({
+    records: growthRows.map(row => ({ id: row.id, recordType: row.recordType, payload: row.payload as unknown as Record<string, unknown>, recordedAt: row.recordedAt, source: row.source })),
+    evidence: evidenceRows
+  });
+  const action = overview.actions.find(item => item.id === params.data.actionId);
+  if (!action) return reply.code(404).send({ error: "Growth action is no longer active. Refresh the overview before updating it." });
+  const existing = await prisma.growthAction.findUnique({ where: { businessId_actionId: { businessId: business.id, actionId: action.id } } });
+  const now = new Date();
+  const status = body.data.status;
+  const saved = await prisma.growthAction.upsert({
+    where: { businessId_actionId: { businessId: business.id, actionId: action.id } },
+    create: {
+      businessId: business.id, actionId: action.id, title: action.title, status,
+      ownerNote: body.data.ownerNote ?? null, evidence: action.evidence as Prisma.InputJsonValue, priority: action.priority,
+      acceptedAt: status === "ACCEPTED" || status === "IN_PROGRESS" || status === "COMPLETED" ? now : null,
+      completedAt: status === "COMPLETED" ? now : null, dismissedAt: status === "DISMISSED" ? now : null
+    },
+    update: {
+      title: action.title, status, ownerNote: body.data.ownerNote ?? existing?.ownerNote ?? null,
+      evidence: action.evidence as Prisma.InputJsonValue, priority: action.priority,
+      acceptedAt: status === "SUGGESTED" || status === "DISMISSED" ? existing?.acceptedAt ?? null : existing?.acceptedAt ?? now,
+      completedAt: status === "COMPLETED" ? existing?.completedAt ?? now : null,
+      dismissedAt: status === "DISMISSED" ? existing?.dismissedAt ?? now : null
+    }
+  });
+  return { action: saved, note: "Tracking status saved for this business. No external action was executed." };
 });
 app.get("/v1/businesses/:businessId/reviews/themes", { preHandler: requireUser }, async (request, reply) => {
   const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
