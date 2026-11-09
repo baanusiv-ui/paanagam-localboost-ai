@@ -16,6 +16,7 @@ test("monthly report aggregates saved sales, orders, reviews and owner goals", (
     { id: "g2", metric: "REVIEW_COUNT", targetValue: 2 },
     { id: "g3", metric: "AVERAGE_RATING", targetValue: 4 }
   ], [], new Date("2026-11-09T00:00:00Z"));
+
   assert.equal(result.sales.netSales, 2000);
   assert.equal(result.sales.orders, 20);
   assert.equal(result.sales.averageOrderValue, 100);
@@ -32,11 +33,16 @@ test("missing data is null and completed actions use completion month", () => {
     { actionId: "a1", title: "Improve service", status: "COMPLETED", completedAt: "2026-11-05T10:00:00Z" },
     { actionId: "a2", title: "Old action", status: "COMPLETED", completedAt: "2026-10-31T10:00:00Z" }
   ]);
+
   assert.equal(result.sales.netSales, null);
   assert.equal(result.reviews.averageRating, null);
-  assert.equal(result.goals[0].status, "NO_DATA");
+  const firstGoal = result.goals[0];
+  assert.ok(firstGoal);
+  assert.equal(firstGoal.status, "NO_DATA");
   assert.equal(result.actions.completedInMonth, 1);
-  assert.equal(result.actions.completed[0].actionId, "a1");
+  const firstCompletedAction = result.actions.completed[0];
+  assert.ok(firstCompletedAction);
+  assert.equal(firstCompletedAction.actionId, "a1");
 });
 
 test("invalid month is rejected", () => {
