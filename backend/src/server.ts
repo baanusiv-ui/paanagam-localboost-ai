@@ -693,6 +693,52 @@ app.post("/v1/businesses/:businessId/google/import", { preHandler: requireUser }
 });
 
 
+import { calculateGrowthGoal } from "./growth-goals.js";
+
+app.get("/v1/businesses/:businessId/growth-goals", { preHandler: requireUser }, async (request, reply) => {
+  const params=z.object({businessId:z.string().min(1)}).safeParse(request.params);
+  const query=z.object({month:z.string().regex(/^\d{4}-\d{2}$/).optional()}).safeParse(request.query);
+  if(!params.success||!query.success)return reply.code(400).send({error:"Invalid growth-goal query"});
+  const business=await ownedBusiness(request.userId!,params.data.businessId);
+  if(!business)return reply.code(404).send({error:"Business not found"});
+  const now=new Date(),month=query.data.month??now.toISOString().slice(0,7);
+  const monthStart=new Date(month+"-01T00:00:00.000Z");
+  const monthEnd=new Date(Date.UTC(monthStart.getUTCFullYear(),monthStart.getUTCMonth()+1,1));
+  const [goals,rows]=await Promise.all([
+    prisma.growthGoal.findMany({where:{businessId:business.id,monthStart,archivedAt:null},orderBy:{metric:"asc"}}),
+    prisma.growthRecord.findMany({where:{businessId:business.id,recordedAt:{gte:monthStart,lt:monthEnd},recordType:{in:["DAILY_SALES","REVIEW_ITEM"]}},orderBy:{recordedAt:"asc"},take:2000})
+  ]);
+  const records=rows.map(row=>({id:row.id,recordType:row.recordType,payload:row.payload as unknown as Record<string,unknown>,recordedAt:row.recordedAt,source:row.source}));
+  return {business:{id:business.id,displayName:business.displayName},month,goals:goals.map(goal=>calculateGrowthGoal(goal,records,now)),supportedMetrics:[{metric:"NET_SALES",label:"Monthly net sales",unit:"INR"},{metric:"REVIEW_COUNT",label:"Monthly review count",unit:"reviews"},{metric:"AVERAGE_RATING",label:"Average review rating",unit:"stars"}],guardrails:["Targets are entered by the business owner; no default target is created.","Progress uses saved non-demo records only.","No forecast or on-track prediction is generated.","Missing sales dates are not treated as zero."]};
+});
+
+app.post("/v1/businesses/:businessId/growth-goals", { preHandler: requireUser }, async (request, reply) => {
+  const params=z.object({businessId:z.string().min(1)}).safeParse(request.params);
+  const body=z.object({metric:z.enum(["NET_SALES","REVIEW_COUNT","AVERAGE_RATING"]),targetValue:z.number().finite().positive().max(1000000000),month:z.string().regex(/^\d{4}-\d{2}$/)}).safeParse(request.body);
+  if(!params.success||!body.success)return reply.code(400).send({error:"Enter a valid monthly target."});
+  if(body.data.metric==="AVERAGE_RATING"&&body.data.targetValue>5)return reply.code(400).send({error:"Average rating targets must be 5 stars or lower."});
+  if(body.data.metric==="REVIEW_COUNT"&&!Number.isInteger(body.data.targetValue))return reply.code(400).send({error:"Review count targets must be whole numbers."});
+  const business=await ownedBusiness(request.userId!,params.data.businessId);
+  if(!business)return reply.code(404).send({error:"Business not found"});
+  const monthStart=new Date(body.data.month+"-01T00:00:00.000Z");
+  const goal=await prisma.growthGoal.upsert({
+    where:{businessId_metric_monthStart:{businessId:business.id,metric:body.data.metric,monthStart}},
+    create:{businessId:business.id,metric:body.data.metric,targetValue:body.data.targetValue,monthStart},
+    update:{targetValue:body.data.targetValue,archivedAt:null}
+  });
+  return reply.code(200).send({goal});
+});
+
+app.delete("/v1/businesses/:businessId/growth-goals/:goalId", { preHandler: requireUser }, async (request, reply) => {
+  const params=z.object({businessId:z.string().min(1),goalId:z.string().min(1)}).safeParse(request.params);
+  if(!params.success)return reply.code(400).send({error:"Invalid growth goal identifier"});
+  const business=await ownedBusiness(request.userId!,params.data.businessId);
+  if(!business)return reply.code(404).send({error:"Business not found"});
+  const result=await prisma.growthGoal.updateMany({where:{id:params.data.goalId,businessId:business.id,archivedAt:null},data:{archivedAt:new Date()}});
+  if(!result.count)return reply.code(404).send({error:"Growth goal not found"});
+  return reply.code(204).send();
+});
+
 app.get("/v1/businesses/:businessId/growth-history", { preHandler: requireUser }, async (request, reply) => {
   const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
   if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
