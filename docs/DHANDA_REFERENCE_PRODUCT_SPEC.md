@@ -102,3 +102,7 @@ LocalBoost AI should deliver these capabilities as a practical growth workspace 
 
 ## Growth Overview Intelligence
 The owner workspace presents up to three deterministic, evidence-linked growth actions. Each action includes source provenance, date range, calculation, confidence, and explicit owner approval. Scores are rule-based signal-strength indicators, not predicted revenue impact. Demo records are excluded; the system does not automatically execute recommendations or publish content.
+
+
+## Growth Action Tracking
+Growth suggestions support owner-managed states (suggested, accepted, in progress, completed and dismissed) with optional progress notes and timestamps. Tracking is stored per business and reattached to refreshed recommendations using stable action IDs. Stale IDs are rejected. The feature requires the `20261109110000_growth_action_tracking` database migration. Tracking a recommendation does not execute it or publish anything.
