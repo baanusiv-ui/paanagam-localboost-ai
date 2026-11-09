@@ -43,7 +43,7 @@ export function registerIdentityRoutes(
     }).safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: "Invalid login details" });
     const user = await db.user.findUnique({ where: { email: parsed.data.email } });
-    if (!user || !(await security.verifyPassword(user.passwordHash, parsed.data.password))) {
+    if (!user || !user.passwordHash || !(await security.verifyPassword(user.passwordHash, parsed.data.password))) {
       return reply.code(401).send({ error: "Email or password is incorrect" });
     }
     return {
