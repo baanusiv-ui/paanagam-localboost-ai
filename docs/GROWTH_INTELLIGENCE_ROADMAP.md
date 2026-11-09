@@ -102,3 +102,9 @@ Approval is required separately for each profile edit, review reply, post, messa
 - Follow-up windows remain collecting until all seven post-completion dates have elapsed. Missing samples are reported as insufficient; missing dates are never treated as zero.
 - Other action types explicitly report that a comparable metric is not yet supported. No synthetic impact score, causal attribution, forecast or automatic action is produced.
 - The feature uses existing tenant-scoped GrowthAction completion timestamps and saved growth records; no new database migration is required.
+
+
+## Growth History dashboard
+- A tenant-scoped `GET /v1/businesses/:businessId/growth-history` endpoint lists saved owner-tracked actions in most-recently-updated order, including current status, progress note, acceptance/completion/dismissal timestamps and evidence-backed measurement when available.
+- The dashboard summarizes accepted, in-progress, completed and dismissed actions, and supports filtering by status. It does not invent status transitions that were not saved; each row reflects the latest persisted state for that action.
+- History is backed by the existing GrowthAction records and tenant ownership guard. No additional database migration is introduced.
