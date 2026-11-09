@@ -11,6 +11,7 @@ import { hashPassword, verifyPassword, issueAccessToken, verifyAccessToken, encr
 import { buildAudit } from "./audit.js";
 import { buildBusinessIntelligence } from "./intelligence.js";
 import { generateLocalConsultant, getLocalAiStatus } from "./consultant.js";
+import { generateLocalReviewReplyDraft } from "./review-replies.js";
 import { generateLocalKeywords } from "./local-seo.js";
 
 const app = Fastify({ logger: true, bodyLimit: 1024 * 1024 });
@@ -314,6 +315,36 @@ app.post("/v1/businesses/:businessId/consultant", {
   }
 });
 
+
+app.post("/v1/businesses/:businessId/reviews/reply-draft", {
+  preHandler: requireUser,
+  config: { rateLimit: { max: 5, timeWindow: "1 minute" } }
+}, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const body = z.object({
+    reviewText: z.string().trim().min(1).max(4000),
+    rating: z.coerce.number().int().min(1).max(5).optional(),
+    language: z.enum(["Tamil", "English", "Tamil + English"]).default("Tamil + English"),
+    tone: z.enum(["WARM", "PROFESSIONAL", "APOLOGETIC"]).default("WARM")
+  }).safeParse(request.body);
+  if (!params.success || !body.success) return reply.code(400).send({ error: "Invalid review reply request" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  try {
+    const draft = await generateLocalReviewReplyDraft({
+      businessName: business.displayName,
+      reviewText: body.data.reviewText,
+      rating: body.data.rating,
+      language: body.data.language,
+      tone: body.data.tone
+    });
+    return { business: { id: business.id, displayName: business.displayName }, ...draft };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Local AI review reply generation is unavailable";
+    request.log.warn({ message }, "Local AI review reply generation failed");
+    return reply.code(503).send({ error: message });
+  }
+});
 
 app.get("/health", async () => ({ ok: true, service: "localboost-api", version: "0.1.0" }));
 
