@@ -65,6 +65,7 @@
     sessionStorage.removeItem(TOKEN_KEY);
     sessionStorage.removeItem(BUSINESS_KEY);
     activeBusiness = null;
+    window.dispatchEvent(new Event("localboost:signed-out"));
     $("#business-form").hidden = true;
     $("#logout-button").hidden = true;
     $("#login-button").hidden = false;
