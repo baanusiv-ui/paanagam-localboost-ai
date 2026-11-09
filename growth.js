@@ -185,7 +185,9 @@
       };
       const localCount = Object.values(localCandidates).reduce((sum, items) => sum + items.length, 0);
       let imported = 0, skipped = 0;
-      if (localCount) {
+      if (localCount && cloud.truncated) {
+        setSyncStatus("Migration paused · the cloud record list reached its 10,000-record safety limit. No local records were imported or overwritten.", true);
+      } else if (localCount) {
         const cloudIds = new Set(cloud.records.map(record => record.recordType + ":" + record.externalId));
         const pending = [];
         for (const [type, items] of Object.entries(localCandidates)) {
