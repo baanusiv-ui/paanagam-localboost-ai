@@ -6,7 +6,7 @@ Fastify + TypeScript + Prisma + PostgreSQL API foundation.
 
 Requirements: Node.js 20+, npm, Docker Desktop.
 
-1. Copy `.env.example` to `.env`.
+1. Copy `.env.example` to `.env`. For local Docker PostgreSQL, keep both `DATABASE_URL` and `DIRECT_URL` pointed at the local database.
 2. Generate a JWT secret and a 32-byte encryption key:
    ```bash
    openssl rand -base64 48
@@ -106,6 +106,15 @@ The Growth consultant and review reply assistant use Ollama running on the owner
 
 The API restricts the Ollama URL to loopback or Docker Desktop's host gateway. If Ollama is not configured or the model is missing, the rules-based intelligence report continues to work. AI recommendations are suggestions and require owner approval.
 
+## Neon PostgreSQL connection
+
+The API uses Neon's standard PostgreSQL connection strings without changing the existing Fastify or Prisma architecture:
+
+- `DATABASE_URL`: pooled connection string (hostname includes `-pooler`) for normal API traffic.
+- `DIRECT_URL`: direct/unpooled connection string (hostname does not include `-pooler`) for Prisma migrations and direct database administration.
+
+Keep both values in the local ignored `.env` file or the hosting provider's secret/environment-variable manager. Never commit actual connection strings or paste them into source files. The checked-in `render.yaml` declares both as unsynchronized secrets; set them in the Render dashboard after retrieving them from the selected Neon project. The app config is prepared for the existing Neon project, but the actual secret values have not yet been retrieved or configured.
+
 ## Cloud deployment safety
 
-The checked-in Render Blueprint is a **manual-deploy pilot template**, not a provisioned environment. Automatic deploys are disabled. Both the API and PostgreSQL entries currently use the Free plan only as a preview placeholder. Do not store production or customer data on a Free Render Postgres database: Render documents a 30-day expiry, 1 GB storage limit, and no backups for Free databases. Select an appropriate paid database plan with backups before importing real business records; confirm pricing and backup/restore settings in the Render dashboard. No Render service or database has been provisioned by this repository change.
+The checked-in Render Blueprint is a **manual-deploy pilot template**, not a provisioned environment. Automatic deploys are disabled. It no longer provisions a Render PostgreSQL database; the API expects the Neon connection strings to be supplied as deployment secrets. No service has been deployed and no production/customer data has been imported. Keep the Free Neon project for preview/testing only until backup, restore, access control, and production retention requirements are confirmed.
