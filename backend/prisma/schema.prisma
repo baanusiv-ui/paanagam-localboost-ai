@@ -57,6 +57,7 @@ model Business {
   googleConnection GoogleConnection?
   oauthStates     OAuthState[]
   growthRecords   GrowthRecord[]
+  growthActions   GrowthAction[]
   @@index([ownerId, createdAt])
 }
 
@@ -127,4 +128,32 @@ model GrowthRecord {
   updatedAt   DateTime         @updatedAt
   @@unique([businessId, recordType, externalId])
   @@index([businessId, recordType, recordedAt])
+}
+
+
+enum GrowthActionStatus {
+  SUGGESTED
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  DISMISSED
+}
+
+model GrowthAction {
+  id          String             @id @default(cuid())
+  businessId  String
+  business    Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  actionId    String
+  title       String
+  status      GrowthActionStatus @default(SUGGESTED)
+  ownerNote   String?
+  evidence    Json
+  priority    String
+  acceptedAt  DateTime?
+  completedAt DateTime?
+  dismissedAt DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  @@unique([businessId, actionId])
+  @@index([businessId, status, updatedAt])
 }
