@@ -116,3 +116,9 @@ Approval is required separately for each profile edit, review reply, post, messa
 - Progress is calculated for the selected calendar month from recorded net sales, review count, or valid 1–5 star ratings. The response includes the sample size, source, calculation note and missing-data limitations.
 - No forecasts, "on track" predictions, retention assumptions, or automatic actions are generated. Sales records are summed as recorded; absent dates are not converted to zero.
 - Migration `20261109130000_growth_goals` must be applied and Prisma Client regenerated in the target environment before live use.
+
+ 
+## Growth Goals History & Monthly Comparison (implemented in code)
+- A tenant-scoped history endpoint returns up to 24 calendar months of saved goals with recorded monthly actuals, including archived targets.
+- Dashboard comparison shows month, metric, actual, owner target, achieved percentage and sample size. Months without a saved target are omitted rather than represented as missed goals.
+- The history is descriptive only: no forecast, no inferred target, and no causal claim. It uses recorded evidence and preserves archived target visibility.
