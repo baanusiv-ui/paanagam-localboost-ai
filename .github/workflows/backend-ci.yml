@@ -41,6 +41,7 @@ jobs:
       - run: npx prisma validate
         env:
           DATABASE_URL: postgresql://localboost:localboost_dev@localhost:5432/localboost?schema=public
+          DIRECT_URL: postgresql://localboost:localboost_dev@localhost:5432/localboost?schema=public
       - run: npm run db:generate
       - run: npm run build
       - run: npm test
