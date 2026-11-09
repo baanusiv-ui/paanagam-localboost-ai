@@ -19,6 +19,7 @@ import { analyzeReviewThemes } from "./review-themes.js";
 import { buildGrowthOverview } from "./growth-overview.js";
 import { mergeGrowthActionTracking } from "./growth-action-tracking.js";
 import { buildGrowthActionMeasurements } from "./growth-action-measurement.js";
+import { buildGrowthGoalHistory } from "./growth-goals.js";
 
 const app = Fastify({ logger: true, bodyLimit: 1024 * 1024 });
 await app.register(helmet);
@@ -694,6 +695,24 @@ app.post("/v1/businesses/:businessId/google/import", { preHandler: requireUser }
 
 
 import { calculateGrowthGoal } from "./growth-goals.js";
+
+
+app.get("/v1/businesses/:businessId/growth-goals/history", { preHandler: requireUser }, async (request, reply) => {
+  const params=z.object({businessId:z.string().min(1)}).safeParse(request.params);
+  const query=z.object({months:z.coerce.number().int().min(1).max(24).default(6)}).safeParse(request.query);
+  if(!params.success||!query.success)return reply.code(400).send({error:"Invalid growth-goal history query"});
+  const business=await ownedBusiness(request.userId!,params.data.businessId);
+  if(!business)return reply.code(404).send({error:"Business not found"});
+  const now=new Date(),currentMonth=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),1));
+  const start=new Date(Date.UTC(currentMonth.getUTCFullYear(),currentMonth.getUTCMonth()-(query.data.months-1),1));
+  const end=new Date(Date.UTC(currentMonth.getUTCFullYear(),currentMonth.getUTCMonth()+1,1));
+  const [goals,rows]=await Promise.all([
+    prisma.growthGoal.findMany({where:{businessId:business.id,monthStart:{gte:start,lt:end}},orderBy:[{monthStart:"desc"},{metric:"asc"}]}),
+    prisma.growthRecord.findMany({where:{businessId:business.id,recordedAt:{gte:start,lt:end},recordType:{in:["DAILY_SALES","REVIEW_ITEM"]}},orderBy:{recordedAt:"asc"},take:10000})
+  ]);
+  const records=rows.map(row=>({id:row.id,recordType:row.recordType,payload:row.payload as unknown as Record<string,unknown>,recordedAt:row.recordedAt,source:row.source}));
+  return {business:{id:business.id,displayName:business.displayName},months:query.data.months,from:start.toISOString().slice(0,7),to:currentMonth.toISOString().slice(0,7),history:buildGrowthGoalHistory(goals,records,now,query.data.months),limits:{maxMonths:24,maxRecords:10000},method:"Recorded actuals compared with owner-saved monthly targets; archived targets remain visible."};
+});
 
 app.get("/v1/businesses/:businessId/growth-goals", { preHandler: requireUser }, async (request, reply) => {
   const params=z.object({businessId:z.string().min(1)}).safeParse(request.params);
