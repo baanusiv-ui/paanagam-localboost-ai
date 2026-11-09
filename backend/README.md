@@ -37,7 +37,8 @@ All routes except health, registration, login and the Google OAuth callback requ
 - `GET /v1/businesses/:businessId/intelligence` — generate a tenant-scoped, evidence-linked report from owner-entered menu, sales and retention records.
 - `GET /v1/ai/status` — check whether the private local Ollama service and configured model are reachable.
 - `POST /v1/businesses/:businessId/consultant` — generate an optional AI explanation from the deterministic report; supported languages are Tamil, English and Tamil + English. Limited to five requests per minute per API instance.
-- `GET /v1/businesses/:businessId/data-status` — return owner-scoped evidence/growth source counts, latest timestamps, expired evidence count and Google connection metadata without exposing credentials.\n- `GET /v1/businesses/:businessId/growth-records?type=MENU_ITEM&limit=100` — list owner-entered growth records for the selected business. Supported types: `MENU_ITEM`, `DAILY_SALES`, `RETENTION_SNAPSHOT`, `CAMPAIGN_DRAFT`.
+- `POST /v1/businesses/:businessId/reviews/reply-draft` — generate a private Tamil/English review reply with local Ollama. Body: `reviewText`, optional `rating`, `language`, and `tone` (`WARM`, `PROFESSIONAL`, `APOLOGETIC`). Limited to five requests per minute per API instance; requires the authenticated owner of the business.
+- `GET /v1/businesses/:businessId/data-status` — return owner-scoped evidence/growth source counts, latest timestamps, expired evidence count and Google connection metadata without exposing credentials.\n- `GET /v1/businesses/:businessId/growth-records?type=MENU_ITEM&limit=100` — list owner-entered growth records for the selected business. Supported types: `MENU_ITEM`, `DAILY_SALES`, `RETENTION_SNAPSHOT`, `CAMPAIGN_DRAFT`, `COMPETITOR`, `LOCAL_KEYWORD`, `REVIEW_ITEM`, `GOOGLE_CONTENT`.
 - `POST /v1/businesses/:businessId/growth-records` — create or idempotently upsert a record using `type`, client-generated `externalId`, JSON `payload`, and optional `recordedAt`.
 - `DELETE /v1/businesses/:businessId/growth-records/:recordId` — delete one record belonging to the selected business.
 - `GET /v1/businesses/:businessId/google` — safe connection status; never returns tokens.
@@ -68,6 +69,10 @@ The requested scope is `https://www.googleapis.com/auth/business.manage`. The OA
 - Never commit secrets or real customer data.
 
 
+## Private review reply drafting
+
+The review reply endpoint uses the configured local Ollama model only. The review text is supplied by the owner and is not stored by the generation endpoint. Email addresses and Indian mobile numbers are redacted before the prompt is sent to Ollama. The model is instructed not to invent business facts, offers, compensation, opening hours or contact details. The generated reply is returned as an editable draft; the dashboard requires the owner to review and explicitly save it to the business-scoped `REVIEW_ITEM` record. The endpoint never sends a reply to Google and does not publish or schedule anything. Live Google review import remains unavailable until authorised API access is implemented.
+
 ## Google Business Profile read-only import
 
 After OAuth, the dashboard asks the owner to choose the correct Google account and then the exact Paanagam listing. The API checks that the account and selected location are accessible to the connected Google user before importing fields from the official Account Management and Business Information APIs.
@@ -84,9 +89,9 @@ The Google Business Profile APIs may require separate API enablement and access 
 
 Growth records are stored in LocalBoost's own PostgreSQL database and are scoped to a business owned by the authenticated account. The unique key `(businessId, recordType, externalId)` makes client retries idempotent. Each record is marked `OWNER_ENTERED`; this is not a POS import. Payloads are limited to 64 KB and must not contain customer personal data, payment credentials, or secrets. Menu, sales, retention and campaign data remain manually entered until a separately approved, documented read-only POS export is available. These endpoints do not write to Paanagam POS and do not publish campaign drafts. The browser workspace uses business-scoped local storage as an offline cache and syncs owner-entered records to the authenticated API when connected. The data-status endpoint reports provenance and freshness summaries; it does not guarantee that an external Google token remains valid or that API quota is available. The intelligence report is deterministic rules-based arithmetic, not an AI-generated forecast; it includes evidence IDs, calculations, confidence and owner-approval requirements.
 
-## Private local AI consultant (Windows)
+## Private local AI features (Windows)
 
-The consultant uses Ollama running on the owner's Windows PC. It sends only the deterministic intelligence report (findings, calculations and evidence record IDs) to the local model; it does not send Google tokens, customer identities, passwords or raw database credentials. The model explains the report and proposes actions. It does not calculate financial totals, alter records, publish content or execute recommendations.
+The Growth consultant and review reply assistant use Ollama running on the owner's Windows PC. The consultant sends only the deterministic intelligence report (findings, calculations and evidence record IDs) to the local model; it does not send Google tokens, customer identities, passwords or raw database credentials. The review assistant sends the owner-supplied review text after redacting email addresses and Indian mobile numbers. It returns an editable draft only. Neither feature publishes content, sends replies, alters records automatically or executes recommendations.
 
 1. Install Ollama for Windows and start the Ollama service.
 2. Pull the configured model in PowerShell: `ollama pull qwen2.5:7b`.
