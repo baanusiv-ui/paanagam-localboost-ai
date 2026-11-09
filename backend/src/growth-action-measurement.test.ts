@@ -8,3 +8,14 @@ test("compares complete seven-day sales windows and avoids causal claims",()=>{c
 test("reports missing sales days as insufficient, not zero",()=>{const rows=[...Array.from({length:6},(_,i)=>sales("2026-10-"+String(i+1).padStart(2,"0"),1000)),...Array.from({length:7},(_,i)=>sales("2026-10-"+String(i+9).padStart(2,"0"),1200))];const r=buildGrowthActionMeasurements([action("sales-trend-check")],[{actionId:"sales-trend-check",status:"COMPLETED",completedAt:"2026-10-08T10:00:00.000Z"}],rows,new Date("2026-10-16T00:00:00.000Z"));assert.equal(r[0]!.measurement.status,"INSUFFICIENT_DATA");assert.equal(r[0]!.measurement.before.coverageDays,6);});
 test("does not invent metrics for unsupported action types",()=>{const r=buildGrowthActionMeasurements([action("refresh-profile-evidence")],[{actionId:"refresh-profile-evidence",status:"COMPLETED",completedAt:"2026-10-08T10:00:00.000Z"}],[],new Date("2026-10-16T00:00:00.000Z"));assert.equal(r[0]!.measurement.status,"NOT_SUPPORTED");});
 test("does not measure actions before completion",()=>{const r=buildGrowthActionMeasurements([action("sales-trend-check")],[],[],new Date("2026-10-20T00:00:00.000Z"));assert.equal(r[0]!.measurement.status,"NOT_READY");});
+
+test("compares review feedback only when both windows have enough reviews",()=>{
+ const rows=[
+  ...["2026-10-01","2026-10-02","2026-10-03"].map((date,i)=>({id:"b"+i,recordType:"REVIEW_ITEM" as const,payload:{reviewDate:date,reviewText:"bad service",rating:2},recordedAt:date+"T12:00:00.000Z",source:"GOOGLE_API"})),
+  ...["2026-10-09","2026-10-10","2026-10-11"].map((date,i)=>({id:"a"+i,recordType:"REVIEW_ITEM" as const,payload:{reviewDate:date,reviewText:"good service",rating:5},recordedAt:date+"T12:00:00.000Z",source:"GOOGLE_API"}))
+ ];
+ const r=buildGrowthActionMeasurements([action("review-friction")],[{actionId:"review-friction",status:"COMPLETED",completedAt:"2026-10-08T10:00:00.000Z"}],rows,new Date("2026-10-16T00:00:00.000Z"));
+ assert.equal(r[0]!.measurement.status,"READY");
+ assert.equal(r[0]!.measurement.before.negativeThemeMatches,3);
+ assert.equal(r[0]!.measurement.after.averageRating,5);
+});
