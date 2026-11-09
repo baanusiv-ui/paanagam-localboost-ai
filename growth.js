@@ -366,11 +366,11 @@
     if (count) count.textContent = String(pending.length);
     const overview = $("overview-drafts"); if (overview) overview.textContent = String(pending.length);
     if (!data.drafts.length) { root.innerHTML = '<p class="empty-copy">No saved drafts. Create one in Campaign Studio.</p>'; return; }
-    root.innerHTML = data.drafts.slice().reverse().map((d,index) => '<article class="draft-card"><div class="draft-card-head"><strong>' + safe(d.topic) + '</strong><span class="tag ' + (d.status === "Pending" ? "pending-tag" : "confirmed") + '">' + safe(d.status) + '</span></div><small>' + safe(d.created) + ' · ' + safe(d.language) + ' · Saved draft · not published</small><p>' + safe(d.text) + '</p>' + (d.status === "Pending" ? '<button class="secondary-button draft-approve" data-index="' + (data.drafts.length - 1 - index) + '">Mark reviewed locally</button>' : '') + '</article>').join("");
+    root.innerHTML = data.drafts.slice().reverse().map((d,index) => '<article class="draft-card"><div class="draft-card-head"><strong>' + safe(d.topic) + '</strong><span class="tag ' + (d.status === "Pending" ? "pending-tag" : "confirmed") + '">' + safe(d.status) + '</span></div><small>' + safe(d.created) + ' · ' + safe(d.language) + ' · Saved draft · not published</small><p>' + safe(d.text) + '</p>' + (d.status === "Pending" ? '<button class="secondary-button draft-approve" data-index="' + (data.drafts.length - 1 - index) + '">Mark reviewed</button>' : '') + '</article>').join("");
     root.querySelectorAll(".draft-approve").forEach(button => button.addEventListener("click", () => {
       const item = data.drafts[Number(button.dataset.index)];
       if (!item) return;
-      item.status = "Reviewed locally";
+      item.status = "Reviewed";
       saveGrowthEntry("CAMPAIGN_DRAFT", item, Number(button.dataset.index)).then(ok => { if (ok) renderDrafts(); else item.status = "Pending"; });
     }));
   }
