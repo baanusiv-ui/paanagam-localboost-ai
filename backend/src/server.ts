@@ -7,6 +7,7 @@ import { createHash } from "node:crypto";
 import { EvidenceSource, Prisma } from "@prisma/client";
 import { prisma } from "./db.js";
 import { findOwnedBusiness } from "./modules/businesses/access.js";
+import { recordBusinessActivity } from "./modules/activity/record.js";
 import { env, corsOrigins } from "./env.js";
 import { hashPassword, verifyPassword, issueAccessToken, verifyAccessToken, encryptSecret, randomUrlToken, decryptSecret } from "./security.js";
 import { buildAudit } from "./audit.js";
@@ -99,11 +100,7 @@ async function recordActivity(input: {
   businessId: string; actorUserId: string; eventType: string; entityType: string;
   entityId?: string | null; summary: string; metadata?: Record<string, unknown>;
 }) {
-  return prisma.activityEvent.create({ data: {
-    businessId: input.businessId, actorUserId: input.actorUserId, eventType: input.eventType,
-    entityType: input.entityType, entityId: input.entityId ?? null, summary: input.summary,
-    metadata: input.metadata as Prisma.InputJsonValue | undefined
-  } });
+  return recordBusinessActivity(prisma, input);
 }
 
 app.get("/v1/businesses/:businessId/data-status", { preHandler: requireUser }, async (request, reply) => {
