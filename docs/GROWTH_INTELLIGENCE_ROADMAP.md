@@ -108,3 +108,11 @@ Approval is required separately for each profile edit, review reply, post, messa
 - A tenant-scoped `GET /v1/businesses/:businessId/growth-history` endpoint lists saved owner-tracked actions in most-recently-updated order, including current status, progress note, acceptance/completion/dismissal timestamps and evidence-backed measurement when available.
 - The dashboard summarizes accepted, in-progress, completed and dismissed actions, and supports filtering by status. It does not invent status transitions that were not saved; each row reflects the latest persisted state for that action.
 - History is backed by the existing GrowthAction records and tenant ownership guard. No additional database migration is introduced.
+
+
+## Growth Goals & Targets (implemented in code; migration pending deployment)
+- Owners can create or replace a monthly target for net sales, review count, and average review rating. Targets are never prefilled or inferred.
+- Tenant-scoped API reads only the selected business's goals and non-demo daily sales/review records; goals can be archived without deleting history.
+- Progress is calculated for the selected calendar month from recorded net sales, review count, or valid 1–5 star ratings. The response includes the sample size, source, calculation note and missing-data limitations.
+- No forecasts, "on track" predictions, retention assumptions, or automatic actions are generated. Sales records are summed as recorded; absent dates are not converted to zero.
+- Migration `20261109130000_growth_goals` must be applied and Prisma Client regenerated in the target environment before live use.
