@@ -118,7 +118,7 @@ import { createAuthClient } from "https://esm.sh/@neondatabase/auth@0.7.0-beta?b
     if (!token) { sessionStorage.removeItem(TOKEN_KEY); return; }
     const oldToken = sessionStorage.getItem(TOKEN_KEY);
     sessionStorage.setItem(TOKEN_KEY, token);
-    if (!oldToken && !sessionStorage.getItem("localboost_auth_recovering")) {
+    if ((!oldToken || oldToken !== token) && !sessionStorage.getItem("localboost_auth_recovering")) {
       sessionStorage.setItem("localboost_auth_recovering", "1");
       window.location.reload();
     }
