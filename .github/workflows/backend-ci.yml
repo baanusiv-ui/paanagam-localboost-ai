@@ -47,3 +47,10 @@ jobs:
       - name: Check dashboard JavaScript syntax
         working-directory: .
         run: node --check app.js && node --check growth.js && node --check growth-intelligence.js
+
+      - name: Validate Render dashboard bundle and manual-deploy guard
+        working-directory: .
+        run: |
+          grep -q 'cp index.html styles.css growth-intelligence.css app.js growth.js growth-intelligence.js config.js public-dist/' render.yaml
+          for asset in index.html styles.css growth-intelligence.css app.js growth.js growth-intelligence.js config.js; do test -f "$asset"; done
+          test "$(grep -c 'autoDeployTrigger: off' render.yaml)" -eq 2
