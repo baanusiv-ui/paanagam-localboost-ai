@@ -31,7 +31,7 @@ Paanagam LocalBoost is a standalone, multi-business growth intelligence platform
 - Added Campaign Studio with Tamil/English draft templates and a local approval/review queue.
 - Added a transparent rules-based Growth Consultant summary; no AI model is connected.
 - Added tenant-scoped PostgreSQL growth-record model and migration, plus authenticated list/upsert/delete API endpoints for menu, daily sales, retention snapshots and campaign drafts. Client retries are idempotent by business, record type and external ID; payloads are capped at 64 KB.
-- Remaining: wire the browser workspace to these API endpoints (the current UI still uses browser-local storage), then add business settings, source registry, data freshness, activity history and owner baseline management.
+- Completed follow-up: the browser workspace now syncs to the authenticated business-scoped API, keeps an offline local cache per business, performs a one-time migration from the old unscoped local store, and reconciles local-only records against server records. Added an owner-scoped data-status endpoint and dashboard provenance/freshness summary. Remaining: activity history, owner baseline management, sync pagination beyond the 200-record UI window, and stronger conflict-resolution/versioning for simultaneous edits.
 
 ### Stage 2 — Menu and sales intelligence (next)
 - Implement POS connection only after the POS team confirms and ships the versioned read-only export API.
