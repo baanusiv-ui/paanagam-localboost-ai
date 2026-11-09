@@ -12,6 +12,7 @@ on:
       - "growth-intelligence.js"
       - "growth.js"
       - "growth-intelligence.css"
+      - "render.yaml"
       - ".github/workflows/backend-ci.yml"
   pull_request:
     paths:
@@ -22,6 +23,7 @@ on:
       - "styles.css"
       - "growth-intelligence.js"
       - "growth-intelligence.css"
+      - "render.yaml"
       - ".github/workflows/backend-ci.yml"
 
 jobs:
