@@ -8,8 +8,9 @@ import { EvidenceSource, Prisma } from "@prisma/client";
 import { prisma } from "./db.js";
 import { findOwnedBusiness } from "./modules/businesses/access.js";
 import { recordBusinessActivity } from "./modules/activity/record.js";
+import { requireUser } from "./modules/identity/auth.js";
 import { env, corsOrigins } from "./env.js";
-import { hashPassword, verifyPassword, issueAccessToken, verifyAccessToken, encryptSecret, randomUrlToken, decryptSecret } from "./security.js";
+import { hashPassword, verifyPassword, issueAccessToken, encryptSecret, randomUrlToken, decryptSecret } from "./security.js";
 import { buildAudit } from "./audit.js";
 import { buildBusinessIntelligence } from "./intelligence.js";
 import { generateLocalConsultant, getLocalAiStatus } from "./consultant.js";
@@ -40,15 +41,7 @@ declare module "fastify" {
   interface FastifyRequest { userId: string | null }
 }
 
-async function requireUser(request: import("fastify").FastifyRequest, reply: import("fastify").FastifyReply) {
-  const header = request.headers.authorization;
-  if (!header?.startsWith("Bearer ")) return reply.code(401).send({ error: "Authentication required" });
-  try {
-    request.userId = await verifyAccessToken(header.slice(7));
-  } catch {
-    return reply.code(401).send({ error: "Invalid or expired access token" });
-  }
-}
+
 
 
 async function googleAccessToken(businessId: string): Promise<string> {
