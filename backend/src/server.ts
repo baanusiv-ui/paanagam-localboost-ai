@@ -65,6 +65,15 @@ const requireUser = createRequireUser(async (token) => {
 });
 
 app.decorateRequest("userId", null);
+app.get("/v1/me", { preHandler: requireUser }, async (request, reply) => {
+  const user = await prisma.user.findUnique({
+    where: { id: request.userId! },
+    select: { id: true, email: true, name: true, createdAt: true }
+  });
+  if (!user) return reply.code(404).send({ error: "User not found" });
+  return { user };
+});
+
 declare module "fastify" {
   interface FastifyRequest { userId: string | null }
 }
