@@ -7,10 +7,12 @@ test("ranks evidence-backed review and sales signals and limits output to three"
     ...Array.from({length:3},(_,i)=>({id:"r"+i,recordType:"REVIEW_ITEM" as const,payload:{reviewText:"slow service, bad service",rating:1,reviewDate:"2026-10-0"+(i+1)},recordedAt:"2026-10-0"+(i+1),source:"GOOGLE_API"})),
     ...Array.from({length:14},(_,i)=>({id:"s"+i,recordType:"DAILY_SALES" as const,payload:{net:i<7?1000:500,orders:10},recordedAt:new Date(Date.UTC(2026,9,1+i)).toISOString(),source:"OWNER_ENTERED"}))
   ];
-  const result=buildGrowthOverview({records,evidence:[],generatedAt:new Date("2026-11-01T00:00:00Z")});
+  const evidence = [{id:"e1",category:"hours",source:"GOOGLE_API",verified:false,observedAt:"2026-10-01",expiresAt:"2026-10-02"}];
+  const result=buildGrowthOverview({records,evidence,generatedAt:new Date("2026-11-01T00:00:00Z")});
   assert.equal(result.actions.length,3);
   assert.ok(result.actions.some(x=>x.id==="review-friction"));
   assert.ok(result.actions.some(x=>x.id==="sales-trend-check"));
+  assert.ok(result.actions.some(x=>x.id==="refresh-profile-evidence"));
   assert.ok(result.actions.every(x=>x.requiresOwnerApproval && x.status==="SUGGESTED"));
 });
 
