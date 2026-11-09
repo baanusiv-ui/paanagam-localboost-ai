@@ -10,7 +10,7 @@ test("monthly sales target sums recorded net sales and excludes demo",()=>{
 test("review count is calendar-month scoped and does not infer zero from missing records",()=>{
  const result=calculateGrowthGoal(goal("REVIEW_COUNT",10),[row("1","REVIEW_ITEM",{rating:5}),row("2","REVIEW_ITEM",{rating:4},"2026-10-31T23:00:00.000Z")],new Date("2026-11-10T00:00:00.000Z"));
  assert.equal(result.actualValue,1);assert.equal(result.progressPercent,10);
- const empty=calculateGrowthGoal(goal("REVIEW_COUNT",10),[],new Date("2026-11-10T00:00:00.000Z"));assert.equal(empty.actualValue,0);assert.equal(empty.sampleSize,0);
+ const empty=calculateGrowthGoal(goal("REVIEW_COUNT",10),[],new Date("2026-11-10T00:00:00.000Z"));assert.equal(empty.actualValue,null);assert.equal(empty.sampleSize,0);assert.equal(empty.status,"NO_DATA");
 });
 test("average rating uses valid ratings only and returns no data without samples",()=>{
  const result=calculateGrowthGoal(goal("AVERAGE_RATING",4.5),[row("1","REVIEW_ITEM",{rating:5}),row("2","REVIEW_ITEM",{rating:3}),row("3","REVIEW_ITEM",{rating:8})],new Date("2026-11-10T00:00:00.000Z"));
