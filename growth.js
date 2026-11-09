@@ -101,17 +101,19 @@
     const hasScopedData = localStorage.getItem(key) !== null;
     if (hasScopedData) {
       data = readLocal(key);
-    } else {
-      // One-time migration of the old browser-only workspace into the first selected business.
+    } else if (localStorage.getItem("localboost_legacy_workspace_migrated") !== "yes") {
+      // Migrate the old unscoped workspace once, into the first business selected after this update.
       data = readLocal(LEGACY_KEY);
-      if (Object.values(data).some(items => items.length)) {
-        localStorage.setItem(key, JSON.stringify(data));
-      }
+      if (Object.values(data).some(items => items.length)) localStorage.setItem(key, JSON.stringify(data));
+      localStorage.setItem("localboost_legacy_workspace_migrated", "yes");
+    } else {
+      data = emptyData();
     }
     setSyncStatus("Checking the selected business workspace…");
     try {
       const path = businessPath();
       const initial = await remoteApi(path + "/growth-records?limit=200");
+      remoteReady = true;
       const existing = new Set((initial.records || []).map(record => record.recordType + ":" + record.externalId));
       const groups = localGroups();
       let migrated = 0;
