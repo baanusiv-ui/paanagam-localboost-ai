@@ -221,7 +221,7 @@
     if(!records.COMPETITOR.length){root.innerHTML='<p class="empty-copy">No competitors recorded. Add a competitor, confirm its public identity and save a dated source snapshot.</p>';return;}
     const groups=new Map();
     records.COMPETITOR.forEach(item=>{
-      const key=String(item.name||"").trim().toLocaleLowerCase().replace(/\\s+/g," ");
+      const key=String(item.name||"").trim().toLocaleLowerCase().replace(/\s+/g," ");
       if(!key)return;
       if(!groups.has(key))groups.set(key,[]);
       groups.get(key).push(item);
@@ -234,7 +234,12 @@
       const delta=a-b;
       return (delta>0?"+":delta<0?"":"")+delta.toFixed(digits)+suffix+" since prior snapshot";
     };
-    root.innerHTML=ordered.map(items=>{
+    const comparisonRows=ordered.map(items=>{
+      const latest=items[0];
+      return '<tr><td>'+esc(latest.name)+'</td><td>'+(numeric(latest.rating)===null?'—':esc(String(latest.rating)))+'</td><td>'+(numeric(latest.reviewCount)===null?'—':esc(String(latest.reviewCount)))+'</td><td>'+esc(latest.offer||"Not recorded")+'</td><td>'+esc(dateText(latest.observedAt||latest._recordedAt))+'</td></tr>';
+    }).join("");
+    const snapshots=ordered.reduce((sum,items)=>sum+items.length,0);
+    const cards=ordered.map(items=>{
       const latest=items[0],previous=items[1],url=safeUrl(latest.url);
       const history=items.slice(0,5).map(item=>'<li><span>'+esc((item.observedAt||item._recordedAt||"").slice(0,10)||"Date not recorded")+'</span><span>Rating '+esc(item.rating||"—")+' · Reviews '+esc(item.reviewCount||"—")+'</span></li>').join("");
       return '<article class="gi-card gi-competitor-card"><div class="gi-card-head"><strong>'+esc(latest.name)+'</strong><span class="tag '+(latest.identityConfirmed?"confirmed":"pending-tag")+'">'+(latest.identityConfirmed?"Owner-confirmed identity":"Identity not confirmed")+'</span></div>'+
@@ -246,6 +251,7 @@
         '<details class="gi-history"><summary>'+items.length+' dated snapshot(s) · view history</summary><ul>'+history+'</ul></details>'+
         '<small class="gi-meta">Latest snapshot: '+esc(dateText(latest.observedAt||latest._recordedAt))+' · '+esc(sourceLabel(latest))+'</small></article>';
     }).join("");
+    root.innerHTML='<div class="gi-compare"><span>'+ordered.length+' identified competitor(s)</span><span>'+snapshots+' dated snapshot(s)</span><span>Latest observation per business</span></div><section class="gi-comparison"><h3>Side-by-side public snapshot comparison</h3><p class="footnote">Latest owner-entered observations only. This is a factual comparison, not a market ranking or Google position report.</p><div class="table-wrap"><table class="data-table"><thead><tr><th>Business</th><th>Rating</th><th>Reviews</th><th>Offer</th><th>Observed</th></tr></thead><tbody>'+comparisonRows+'</tbody></table></div></section>'+cards;
   }
   function renderKeywords(){
     const root=$("gi-keyword-list");if(!records.LOCAL_KEYWORD.length){root.innerHTML='<p class="empty-copy">No keywords saved yet. Search volume and ranking are not inferred.</p>';return;}
