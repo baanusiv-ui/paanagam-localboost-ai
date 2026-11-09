@@ -85,3 +85,12 @@ Approval is required separately for each profile edit, review reply, post, messa
 - Signals include negative review themes, recorded seven-day sales movement, stale/unverified profile evidence, repeated owner-confirmed competitor observations, and missing sales/review baselines.
 - Each action includes priority score, evidence source, record IDs, date coverage, calculation, confidence, and owner-approval requirement.
 - Demo records are excluded. Scores are rule-based signal-strength indicators, not predicted revenue impact. No automatic execution or publishing.
+
+
+## Growth Action Tracking (implemented in code; migration pending deployment)
+- Owners can mark a suggested action as ACCEPTED, IN_PROGRESS, COMPLETED, DISMISSED or return it to SUGGESTED.
+- Optional owner progress notes (maximum 1,000 characters) and status timestamps are stored per business.
+- Tracking is persisted in the `GrowthAction` table and merged back into the current evidence-generated overview by stable action ID.
+- API routes are authenticated and tenant-scoped. Stale action IDs are rejected rather than attaching notes to a different recommendation.
+- The database migration `20261109110000_growth_action_tracking` must be applied in the target environment before using the feature.
+- Status changes are internal workflow records only; they do not execute recommendations or publish content.
