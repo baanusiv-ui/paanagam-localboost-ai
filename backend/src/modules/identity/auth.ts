@@ -1,6 +1,4 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { verifyAccessToken } from "../../security.js";
-
 declare module "fastify" {
   interface FastifyRequest {
     userId: string | null;
@@ -9,7 +7,7 @@ declare module "fastify" {
 
 type TokenVerifier = (token: string) => Promise<string>;
 
-export function createRequireUser(verifyToken: TokenVerifier = verifyAccessToken) {
+export function createRequireUser(verifyToken: TokenVerifier) {
   return async function requireUser(
     request: FastifyRequest,
     reply: FastifyReply
@@ -26,4 +24,3 @@ export function createRequireUser(verifyToken: TokenVerifier = verifyAccessToken
   };
 }
 
-export const requireUser = createRequireUser();
