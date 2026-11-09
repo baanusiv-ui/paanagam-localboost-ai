@@ -84,8 +84,8 @@
       const status = await remoteApi(businessPath() + "/data-status");
       const sourceCounts = status.evidence?.sourceCounts || {};
       const growthCounts = status.growthRecords?.sourceCounts || {};
-      const googleText = status.google?.authorised
-        ? "Google Business Profile: authorised" + (status.google.hasBusinessManageScope ? " · business.manage scope present" : " · required scope not confirmed")
+      const googleText = status.google?.connectionSaved
+        ? "Google Business Profile: connection saved" + (status.google.hasBusinessManageScope ? " · business.manage scope recorded" : " · required scope not confirmed; reconnect or verify access")
         : "Google Business Profile: not connected";
       const evidenceText = "Evidence: " + (status.evidence?.sampledCount || 0) + " records · " +
         (sourceCounts.GOOGLE_API || 0) + " Google API · " + (sourceCounts.OWNER_CONFIRMED || 0) + " owner-confirmed · " +
