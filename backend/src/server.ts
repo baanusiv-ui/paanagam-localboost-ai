@@ -700,7 +700,7 @@ app.get("/v1/businesses/:businessId/growth-overview", { preHandler: requireUser 
     prisma.evidence.findMany({ where: { businessId: business.id }, select: { id: true, category: true, source: true, verified: true, observedAt: true, expiresAt: true }, orderBy: { observedAt: "desc" }, take: 500 })
   ]);
   const overview = buildGrowthOverview({
-    records: growthRows.map(row => ({ id: row.id, recordType: row.recordType, payload: row.payload as Record<string, unknown>, recordedAt: row.recordedAt, source: row.source })),
+    records: growthRows.map(row => ({ id: row.id, recordType: row.recordType, payload: row.payload as unknown as Record<string, unknown>, recordedAt: row.recordedAt, source: row.source })),
     evidence: evidenceRows
   });
   return { business: { id: business.id, displayName: business.displayName }, ...overview };
