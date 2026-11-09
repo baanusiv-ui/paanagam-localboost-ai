@@ -6,6 +6,7 @@ import { z } from "zod";
 import { createHash } from "node:crypto";
 import { EvidenceSource, Prisma } from "@prisma/client";
 import { prisma } from "./db.js";
+import { findOwnedBusiness } from "./modules/businesses/access.js";
 import { env, corsOrigins } from "./env.js";
 import { hashPassword, verifyPassword, issueAccessToken, verifyAccessToken, encryptSecret, randomUrlToken, decryptSecret } from "./security.js";
 import { buildAudit } from "./audit.js";
@@ -91,7 +92,7 @@ async function googleGet<T>(url: string, accessToken: string): Promise<T> {
   return data;
 }
 async function ownedBusiness(userId: string, businessId: string) {
-  return prisma.business.findFirst({ where: { id: businessId, ownerId: userId } });
+  return findOwnedBusiness(prisma, userId, businessId);
 }
 
 async function recordActivity(input: {
