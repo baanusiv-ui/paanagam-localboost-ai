@@ -330,8 +330,23 @@
     const sorted = data.retention.slice().sort((a,b) => b.date.localeCompare(a.date));
     const sums = data.retention.reduce((a,x) => ({ fresh:a.fresh+Number(x.fresh||0), issued:a.issued+Number(x.issued||0), redeemed:a.redeemed+Number(x.redeemed||0) }), {fresh:0,issued:0,redeemed:0});
     const latestActive = sorted.length ? Number(sorted[0].active || 0) : 0;
+    const redemptionRate = sums.issued > 0 ? (sums.redeemed / sums.issued * 100).toFixed(1) + "%" : "No data";
+    const activePoints = sorted.slice(0,14).reverse().filter(x => Number.isFinite(Number(x.active)));
+    let activeChart = '<div class="lb-chart-empty">Add dated active-member snapshots to see the retention trend.</div>';
+    if (activePoints.length) {
+      const w=720,h=180,l=36,r=20,t=14,b=34;
+      const values=activePoints.map(x=>Math.max(0,Number(x.active)));
+      const max=Math.max(1,...values);
+      const px=i=>l+(activePoints.length===1?(w-l-r)/2:i*(w-l-r)/(activePoints.length-1));
+      const py=v=>t+(max-v)/max*(h-t-b);
+      const line=activePoints.map((x,i)=>(i?"L":"M")+px(i).toFixed(1)+" "+py(Number(x.active)).toFixed(1)).join(" ");
+      const area=line+" L "+px(activePoints.length-1).toFixed(1)+" "+(h-b)+" L "+px(0).toFixed(1)+" "+(h-b)+" Z";
+      const dots=activePoints.map((x,i)=>'<circle cx="'+px(i).toFixed(1)+'" cy="'+py(Number(x.active)).toFixed(1)+'" r="4"><title>'+safe(x.date)+': '+Number(x.active)+'</title></circle>').join("");
+      const labels=activePoints.map((x,i)=>'<text x="'+px(i).toFixed(1)+'" y="'+(h-10)+'" text-anchor="middle">'+safe(String(x.date||"").slice(5))+'</text>').join("");
+      activeChart='<div class="lb-chart-wrap"><div class="lb-chart-legend"><span><i></i> Active members · dated snapshots</span><small>Latest '+activePoints.length+' records</small></div><svg class="lb-sales-chart" viewBox="0 0 '+w+' '+h+'" role="img" aria-label="Active member snapshot trend"><line x1="'+l+'" y1="'+t+'" x2="'+(w-r)+'" y2="'+t+'"/><line x1="'+l+'" y1="'+((h-b+t)/2)+'" x2="'+(w-r)+'" y2="'+((h-b+t)/2)+'"/><line x1="'+l+'" y1="'+(h-b)+'" x2="'+(w-r)+'" y2="'+(h-b)+'"/><path class="lb-chart-area" d="'+area+'"/><path class="lb-chart-line" d="'+line+'"/>'+dots+labels+'</svg></div>';
+    }
     $("retention-summary").innerHTML = data.retention.length
-      ? '<div class="retention-grid"><div><strong>' + sums.fresh + '</strong><small>New members (sum of dated entries)</small></div><div><strong>' + latestActive + '</strong><small>Active members · latest snapshot only</small></div><div><strong>' + sums.issued + '</strong><small>Rewards issued (sum)</small></div><div><strong>' + sums.redeemed + '</strong><small>Rewards redeemed (sum)</small></div></div><p class="footnote">Active-member counts are point-in-time snapshots and are never added across dates.</p>'
+      ? '<div class="retention-grid"><div><strong>' + sums.fresh.toLocaleString("en-IN") + '</strong><small>New members · sum of entries</small></div><div><strong>' + latestActive.toLocaleString("en-IN") + '</strong><small>Active members · latest snapshot</small></div><div><strong>' + sums.issued.toLocaleString("en-IN") + '</strong><small>Rewards issued · sum</small></div><div><strong>' + redemptionRate + '</strong><small>Reward redemption rate · combined entries</small></div></div>'+activeChart+'<p class="footnote">New members and reward counts are summed across dated owner-entered entries. Active-member counts are point-in-time snapshots and are never added across dates. This is aggregate loyalty tracking, not identified customer-level retention or cohort analysis.</p>'
       : '<p class="empty-copy">No aggregates entered.</p>';
     table("retention-table", ["Date","New","Active snapshot","Issued","Redeemed"], sorted.map(x => [x.date,x.fresh,x.active,x.issued,x.redeemed]));
   }
