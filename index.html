@@ -65,7 +65,12 @@
             <label for="owner-password">Password <small>(minimum 12 characters)</small></label>
             <input id="owner-password" type="password" placeholder="Enter password" minlength="12" required autocomplete="current-password">
             <div class="form-actions"><button class="primary-button" type="submit" id="login-button">Sign in</button><button class="secondary-button" type="button" id="register-button">Create account</button><button class="quiet-button" type="button" id="logout-button" hidden>Sign out</button></div>
-            <p class="form-message" id="auth-message" role="status"></p>
+            <div id="email-verification-panel" hidden>
+            <label for="owner-otp">Email verification code</label>
+            <input id="owner-otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="Enter the code from your email">
+            <div class="form-actions"><button class="primary-button" type="button" id="verify-email-button">Verify email</button><button class="secondary-button" type="button" id="resend-email-code">Resend code</button></div>
+          </div>
+          <p class="form-message" id="auth-message" role="status"></p>
           </form>
           <form id="business-form" class="setup-form" hidden>
             <h3>Business workspace</h3>
