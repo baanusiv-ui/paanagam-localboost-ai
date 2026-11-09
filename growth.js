@@ -192,5 +192,4 @@
     root.innerHTML = '<ul class="insight-list-items">' + items.map(x=>'<li>'+safe(x)+'</li>').join("") + '</ul><p class="footnote">Rules-based summary of browser-local owner entries only. Not AI-generated, not POS-verified and not a forecast.</p>';
   });
   renderAll();
-  if (sessionStorage.getItem(TOKEN_KEY) && sessionStorage.getItem(BUSINESS_KEY)) hydrateCloudWorkspace();
 })();
