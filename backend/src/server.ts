@@ -698,9 +698,10 @@ app.post("/v1/businesses/:businessId/google/reviews/import", {
   if (!business) return reply.code(404).send({ error: "Business not found" });
 
   const connection = await prisma.googleConnection.findUnique({ where: { businessId: business.id } });
-  const account = connection?.googleAccountId?.match(/^accounts\/[A-Za-z0-9_-]+$/);
-  const location = connection?.googleLocationResourceName?.match(/^locations\/[A-Za-z0-9_-]+$/);
-  if (!connection || !account || !location) {
+  const accountName = connection?.googleAccountId;
+  const locationName = connection?.googleLocationResourceName;
+  if (!connection || !accountName || !/^accounts\/[A-Za-z0-9_-]+$/.test(accountName) ||
+      !locationName || !/^locations\/[A-Za-z0-9_-]+$/.test(locationName)) {
     return reply.code(409).send({ error: "Connect Google and import the selected verified Business Profile location before importing reviews." });
   }
   if (!connection.scope.split(" ").includes("https://www.googleapis.com/auth/business.manage")) {
@@ -709,7 +710,7 @@ app.post("/v1/businesses/:businessId/google/reviews/import", {
 
   try {
     const accessToken = await googleAccessToken(business.id);
-    const url = new URL("https://mybusiness.googleapis.com/v4/" + connection.googleAccountId + "/" + connection.googleLocationResourceName + "/reviews");
+    const url = new URL("https://mybusiness.googleapis.com/v4/" + accountName + "/" + locationName + "/reviews");
     url.searchParams.set("pageSize", "50");
     url.searchParams.set("orderBy", "updateTime desc");
 
