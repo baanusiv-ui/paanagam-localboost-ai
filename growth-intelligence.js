@@ -41,6 +41,8 @@
       const options=statuses.map(value=>'<option value="'+value+'" '+(current===value?'selected':'')+'>'+labels[value]+'</option>').join("");
       const measurement=item.measurement||{};
       let measurementText=measurement.note||"Complete this action to start its observation window.";
+      const beforeRange=measurement.before||measurement.windows?.before,afterRange=measurement.after||measurement.windows?.after;
+      if(beforeRange&&afterRange)measurementText+=" Windows: before "+beforeRange.from+" to "+beforeRange.to+"; after "+afterRange.from+" to "+afterRange.to+".";
       if(measurement.status==="READY"&&measurement.metric==="NET_SALES"){
         const before=Number(measurement.before.netSales).toLocaleString("en-IN"),after=Number(measurement.after.netSales).toLocaleString("en-IN");
         measurementText="Before ₹"+before+" · After ₹"+after+" · Observed change: "+(measurement.observedChangePercent===null?"baseline is ₹0":Number(measurement.observedChangePercent).toFixed(2)+"%")+". "+measurementText;
