@@ -30,7 +30,7 @@ import { createAuthClient } from "https://esm.sh/@neondatabase/auth@0.7.0-beta?b
     try {
       unwrap(await auth.signIn.email({ email, password }));
       const token = await currentAccessToken();
-      if (!token) throw new Error("Sign-in completed, but Neon Auth did not return an API access token.");
+      if (!token) throw new Error("No active Neon Auth session was returned. Verify your email first.");
       sessionStorage.setItem(TOKEN_KEY, token);
       sessionStorage.removeItem("localboost_auth_recovering");
       window.location.reload();
@@ -46,7 +46,12 @@ import { createAuthClient } from "https://esm.sh/@neondatabase/auth@0.7.0-beta?b
     try {
       unwrap(await auth.signUp.email({ email, password, name }));
       const token = await currentAccessToken();
-      if (!token) throw new Error("Account created. Complete any email verification required, then sign in.");
+      if (!token) {
+        document.getElementById("email-verification-panel").hidden = false;
+        showMessage("Account created. Enter the verification code sent to your email.");
+        button.disabled = false;
+        return;
+      }
       sessionStorage.setItem(TOKEN_KEY, token);
       window.location.reload();
     } catch (error) { showMessage(error.message || "Could not create account.", true); button.disabled = false; }
@@ -63,6 +68,32 @@ import { createAuthClient } from "https://esm.sh/@neondatabase/auth@0.7.0-beta?b
   document.getElementById("auth-form")?.addEventListener("submit", signIn, true);
   document.getElementById("register-button")?.addEventListener("click", register, true);
   document.getElementById("logout-button")?.addEventListener("click", signOut, true);
+
+  document.getElementById("verify-email-button")?.addEventListener("click", async () => {
+    const email = document.getElementById("owner-email").value.trim();
+    const otp = document.getElementById("owner-otp").value.trim();
+    const button = document.getElementById("verify-email-button");
+    if (!email || !otp) return showMessage("Enter your email and verification code.", true);
+    button.disabled = true;
+    try {
+      unwrap(await auth.emailOtp.verifyEmail({ email, otp }));
+      const token = await currentAccessToken();
+      if (!token) throw new Error("Email verified. Please sign in to continue.");
+      sessionStorage.setItem(TOKEN_KEY, token);
+      window.location.reload();
+    } catch (error) {
+      showMessage(error.message || "Email verification failed.", true);
+      button.disabled = false;
+    }
+  });
+  document.getElementById("resend-email-code")?.addEventListener("click", async () => {
+    const email = document.getElementById("owner-email").value.trim();
+    if (!email) return showMessage("Enter your email first.", true);
+    try {
+      unwrap(await auth.emailOtp.sendVerificationOtp({ email, type: "email-verification" }));
+      showMessage("A new verification code has been sent.");
+    } catch (error) { showMessage(error.message || "Could not resend verification code.", true); }
+  });
   const nativeFetch = window.fetch.bind(window);
   window.fetch = async (input, init = {}) => {
     const requestUrl = typeof input === "string" ? input : input?.url || "";
