@@ -26,7 +26,7 @@ Expected behavior:
 
 ## Endpoint inventory
 
-This inventory records the 42 routes present in the inspected `backend/src/server.ts`. It is a route index, not a substitute for endpoint-specific Zod request/response schemas. Those schemas must be transcribed from the implementation and kept in sync when each route is extracted into a module.
+This inventory records the 42 routes present in `backend/src/server.ts`. The OpenAPI file now contains source-derived request/response contracts for the core identity, business workspace, evidence, and growth-record operations: `POST /v1/auth/register`, `POST /v1/auth/login`, `GET /v1/me`, `GET/POST /v1/businesses`, `GET/POST /v1/businesses/{businessId}/evidence`, and `GET/POST /v1/businesses/{businessId}/growth-records`. Remaining operations are currently route-index entries and must be completed from their Zod validation and actual response behavior before the OpenAPI file is treated as a complete client contract.
 
 ### Health and identity
 
@@ -119,4 +119,4 @@ Clients should handle JSON error responses without depending on the exact wordin
 
 ## Contract maintenance
 
-The OpenAPI document is the machine-readable route contract. For each route, add exact path/query/body schemas, success response schemas, and endpoint-specific error responses from the implementation. Do not infer request schemas from route names. Update the OpenAPI file and this guide in the same change as any API behavior change. Add contract validation to CI before treating the OpenAPI document as complete.
+The OpenAPI document is the machine-readable API contract. For each remaining route, add exact path/query/body schemas, success response schemas, and endpoint-specific error responses from the implementation. Do not infer request schemas from route names. Update the OpenAPI file and this guide in the same change as any API behavior change. CI runs `npm run api:check` to validate the OpenAPI structure, route count, path parameters, and local references; this structural check does not replace source-level schema review.
