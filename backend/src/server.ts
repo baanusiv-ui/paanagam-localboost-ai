@@ -700,7 +700,7 @@ import { calculateGrowthGoal } from "./growth-goals.js";
 
 app.get("/v1/businesses/:businessId/growth-performance-report", { preHandler: requireUser }, async (request, reply) => {
   const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
-  const query = z.object({ month: z.string().regex(/^\\d{4}-(0[1-9]|1[0-2])$/).optional() }).safeParse(request.query);
+  const query = z.object({ month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).optional() }).safeParse(request.query);
   if (!params.success || !query.success) return reply.code(400).send({ error: "Select a valid report month using YYYY-MM." });
   const business = await ownedBusiness(request.userId!, params.data.businessId);
   if (!business) return reply.code(404).send({ error: "Business not found" });
