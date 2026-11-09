@@ -148,3 +148,12 @@ Approval is required separately for each profile edit, review reply, post, messa
 - Workspace hydration now fetches pages of 200 and reconciles against the full retrieved set instead of assuming the first 200 records are the entire server history.
 - Client hydration is capped at 10,000 records per pass (50 pages); when that cap is reached, the dashboard explicitly warns that older records remain on the server. The server remains the canonical source for already-synced records.
 - This improves completeness but does not yet resolve simultaneous edit conflicts or provide a full audit trail. No POS integration or deployment was performed.
+
+
+## Business Activity History (implemented in code; migration pending deployment)
+- Added an append-only, tenant-scoped `ActivityEvent` table with actor user ID, event type, entity type/ID, concise summary, safe metadata and timestamp. Events are removed only when the parent business is deleted.
+- Owner activity is recorded when growth actions change status, monthly growth targets are saved or archived, and owner-entered growth records are created, updated or deleted.
+- Added authenticated `GET /v1/businesses/:businessId/activity-history` with business ownership checks, event-type filtering, stable cursor pagination and a maximum page size of 100.
+- The Growth Intelligence dashboard shows a read-only activity timeline, loads 50 events initially and supports loading older events. It clearly distinguishes this owner-workspace audit timeline from POS activity.
+- The migration `20261109150000_activity_history` must be applied and Prisma Client regenerated before the endpoint and event writes can run in a deployed environment. Existing historical actions are not backfilled; the timeline begins recording after migration.
+- No external action, POS write-back, or deployment is performed.
