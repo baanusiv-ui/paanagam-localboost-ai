@@ -45,7 +45,7 @@ Paanagam LocalBoost is a standalone, multi-business growth intelligence platform
 - Added a competitor comparison workspace: owner-confirmed public profile identity, required source URL and observation date, repeatable snapshots, latest-to-prior rating/review-count comparisons, and a dated history. These are owner-entered observations, not independently verified rankings or scraped data.
 - Added Tamil/English local keyword idea workspace; measured search volume and rank tracking remain pending an authorised data source.
 - Added owner-supplied review capture and private Tamil/English reply drafting through optional local Ollama. Email addresses and Indian mobile numbers are redacted before generation; drafts are reviewed and saved by the owner and are never sent automatically. Live Google review import and review-theme analysis remain pending authorised API access and actual review data.
-- Added Google content calendar drafts and approve/reject workflow. Approval is for manual publishing only; no automatic scheduling or publishing is connected.
+- Added Google content calendar drafts and approve/reject workflow. Optional local Ollama now generates editable Tamil/English post copy and a format-specific visual creative brief from owner-supplied facts. The brief is not an image; approval is for manual publishing only, with no automatic scheduling or publishing.
 
 ### Stage 4 — Retention and campaign execution
 - Add privacy-safe loyalty and repeat-visit cohort summaries.
