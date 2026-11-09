@@ -141,6 +141,32 @@
       root.querySelector("#gi-performance-month")?.addEventListener("change",renderGrowthPerformanceReport);
     }catch(error){root.innerHTML='<div class="panel"><h3>Growth performance report</h3><p class="empty-copy">Report unavailable: '+esc(error.message)+'</p></div>';}
   }
+  async function renderGrowthBaselines(){
+    const root=$("gi-growth-baselines");if(!root||!businessId)return;
+    const labels={NET_SALES:"Net sales (₹)",REVIEW_COUNT:"Review count",AVERAGE_RATING:"Average rating (1–5)"};
+    try{
+      const result=await api(base()+"/growth-baselines?includeArchived=true");
+      const rows=(result.baselines||[]).map(item=>{
+        const value=item.metric==="NET_SALES"?"₹"+Number(item.baselineValue).toLocaleString("en-IN"):item.metric==="AVERAGE_RATING"?Number(item.baselineValue).toFixed(2)+" / 5":Number(item.baselineValue).toLocaleString("en-IN");
+        const period=new Date(item.periodStart).toLocaleDateString()+" – "+new Date(item.periodEnd).toLocaleDateString();
+        return '<article class="gi-card"><div class="gi-card-head"><strong>'+esc(labels[item.metric]||item.metric)+'</strong><span class="tag">'+(item.archivedAt?'Archived':'Active baseline')+'</span></div><div class="gi-compare"><span>Starting value: '+esc(value)+'</span><span>Period: '+esc(period)+'</span></div><small>Source: '+esc(item.sourceLabel)+' · Saved: '+esc(dateText(item.createdAt))+'</small>'+(item.ownerNote?'<p>'+esc(item.ownerNote)+'</p>':'')+(!item.archivedAt?'<button class="secondary-button" type="button" data-archive-baseline="'+esc(item.id)+'">Archive baseline</button>':'')+'</article>';
+      }).join("");
+      root.innerHTML='<div class="panel"><div class="panel-heading"><div><h3>Owner baseline management</h3><p>Record a starting point using your own verified business records.</p></div><span class="tag">Owner-entered</span></div><form id="gi-baseline-form" class="gi-form"><label>Metric<select id="gi-baseline-metric"><option value="NET_SALES">Net sales (₹)</option><option value="REVIEW_COUNT">Review count</option><option value="AVERAGE_RATING">Average rating (1–5)</option></select></label><label>Baseline value<input id="gi-baseline-value" type="number" min="0" step="any" required placeholder="Enter starting value"></label><label>Period start<input id="gi-baseline-start" type="date" required></label><label>Period end<input id="gi-baseline-end" type="date" required></label><label>Source / reference<input id="gi-baseline-source" type="text" maxlength="120" required placeholder="e.g. POS closing report, Google reviews"></label><label>Owner note (optional)<input id="gi-baseline-note" type="text" maxlength="1000" placeholder="Context or calculation note"></label><button class="primary-button" type="submit">Save baseline</button></form><div class="gi-goal-list">'+(rows||'<p class="empty-copy">No baseline recorded. Add a starting value and its date range to establish a reference point.</p>')+'</div><p class="footnote">Baselines are owner-entered reference points, not independently verified results. Saving a baseline does not alter historical sales or review records, targets, or reports.</p></div>';
+      const form=$("gi-baseline-form");
+      form?.addEventListener("submit",async event=>{
+        event.preventDefault();const button=form.querySelector("button");button.disabled=true;
+        try{
+          const payload={metric:$("gi-baseline-metric").value,baselineValue:Number($("gi-baseline-value").value),periodStart:$("gi-baseline-start").value,periodEnd:$("gi-baseline-end").value,sourceLabel:$("gi-baseline-source").value,ownerNote:$("gi-baseline-note").value};
+          await api(base()+"/growth-baselines",{method:"POST",body:JSON.stringify(payload)});
+          message("Starting baseline saved.");await renderGrowthBaselines();
+        }catch(error){message(error.message,true);}finally{button.disabled=false;}
+      });
+      root.querySelectorAll("[data-archive-baseline]").forEach(button=>button.addEventListener("click",async()=>{
+        button.disabled=true;try{await api(base()+"/growth-baselines/"+encodeURIComponent(button.dataset.archiveBaseline),{method:"DELETE"});message("Baseline archived.");await renderGrowthBaselines();}catch(error){message(error.message,true);}finally{button.disabled=false;}
+      }));
+    }catch(error){root.innerHTML='<div class="panel"><h3>Owner baseline management</h3><p class="empty-copy">Baseline data unavailable: '+esc(error.message)+'</p></div>';}
+  }
+
   async function renderActivityHistory(){
     const root=$("gi-activity-history");if(!root||!businessId)return;
     root.innerHTML='<section class="gi-history"><h3>Business activity history</h3><p class="empty-copy">Loading recorded owner activity…</p></section>';
@@ -167,7 +193,7 @@
   async function loadGrowthOverview(){
     const root=$("gi-growth-overview");if(!root||!businessId)return;
     root.innerHTML='<p class="empty-copy">Preparing evidence-backed growth actions…</p>';
-    try{const [overview,history,goals]=await Promise.all([api(base()+"/growth-overview"),api(base()+"/growth-history"),api(base()+"/growth-goals")]);renderGrowthOverview(overview);root.insertAdjacentHTML("beforeend",renderGrowthHistory(history));root.insertAdjacentHTML("beforeend",'<div id="gi-activity-history"></div><div id="gi-growth-goals"></div><div id="gi-growth-goal-history"></div><div id="gi-growth-performance-report"></div>');await renderActivityHistory();renderGrowthGoals(goals);await renderGrowthGoalHistory();await renderGrowthPerformanceReport();root.querySelectorAll("[data-history-filter]").forEach(button=>button.addEventListener("click",()=>{const filter=button.dataset.historyFilter;root.querySelectorAll("[data-history-status]").forEach(row=>{row.hidden=filter!=="ALL"&&row.dataset.historyStatus!==filter;});}));}catch(error){root.innerHTML='<p class="empty-copy">Growth overview unavailable: '+esc(error.message)+'</p>';}
+    try{const [overview,history,goals]=await Promise.all([api(base()+"/growth-overview"),api(base()+"/growth-history"),api(base()+"/growth-goals")]);renderGrowthOverview(overview);root.insertAdjacentHTML("beforeend",renderGrowthHistory(history));root.insertAdjacentHTML("beforeend",'<div id="gi-activity-history"></div><div id="gi-growth-baselines"></div><div id="gi-growth-goals"></div><div id="gi-growth-goal-history"></div><div id="gi-growth-performance-report"></div>');await renderActivityHistory();await renderGrowthBaselines();renderGrowthGoals(goals);await renderGrowthGoalHistory();await renderGrowthPerformanceReport();root.querySelectorAll("[data-history-filter]").forEach(button=>button.addEventListener("click",()=>{const filter=button.dataset.historyFilter;root.querySelectorAll("[data-history-status]").forEach(row=>{row.hidden=filter!=="ALL"&&row.dataset.historyStatus!==filter;});}));}catch(error){root.innerHTML='<p class="empty-copy">Growth overview unavailable: '+esc(error.message)+'</p>';}
   }
   function renderAudit(audit) {
     const root=$("gi-audit-results"); if(!root)return;
