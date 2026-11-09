@@ -210,17 +210,23 @@ app.get("/v1/businesses/:businessId/growth-records", { preHandler: requireUser }
   const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
   const query = z.object({
     type: growthRecordType.optional(),
-    limit: z.coerce.number().int().min(1).max(200).default(100)
+    limit: z.coerce.number().int().min(1).max(200).default(100),
+    cursor: z.string().min(1).max(64).optional()
   }).safeParse(request.query);
   if (!params.success || !query.success) return reply.code(400).send({ error: "Invalid growth record query" });
   const business = await ownedBusiness(request.userId!, params.data.businessId);
   if (!business) return reply.code(404).send({ error: "Business not found" });
+  if (query.data.cursor) {
+    const cursorExists = await prisma.growthRecord.findFirst({ where: { id: query.data.cursor, businessId: business.id }, select: { id: true } });
+    if (!cursorExists) return reply.code(400).send({ error: "Invalid growth record cursor" });
+  }
   const records = await prisma.growthRecord.findMany({
     where: { businessId: business.id, ...(query.data.type ? { recordType: query.data.type } : {}) },
-    orderBy: [{ recordedAt: "desc" }, { createdAt: "desc" }],
+    orderBy: [{ recordedAt: "desc" }, { createdAt: "desc" }, { id: "desc" }],
+    ...(query.data.cursor ? { cursor: { id: query.data.cursor }, skip: 1 } : {}),
     take: query.data.limit
   });
-  return { records, source: "OWNER_ENTERED", storage: "SERVER" };
+  return { records, nextCursor: records.length === query.data.limit ? records[records.length - 1]?.id ?? null : null, source: "OWNER_ENTERED", storage: "SERVER" };
 });
 
 app.post("/v1/businesses/:businessId/growth-records", { preHandler: requireUser }, async (request, reply) => {
