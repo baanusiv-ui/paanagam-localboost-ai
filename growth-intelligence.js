@@ -418,6 +418,12 @@
     setupForms();
   }
   window.addEventListener("localboost:business-ready",event=>{businessId=event.detail?.businessId||sessionStorage.getItem(BUSINESS);businessName=$("business-switcher-name")?.textContent||businessName;if(businessId)refreshAll();});
+  window.addEventListener("localboost:signed-out",()=>{
+    businessId=null;
+    records={COMPETITOR:[],LOCAL_KEYWORD:[],REVIEW_ITEM:[],GOOGLE_CONTENT:[]};
+    ["gi-growth-overview","gi-competitor-list","gi-keyword-list","gi-review-list","gi-content-list"].forEach(id=>{const node=$(id);if(node)node.innerHTML="<p class=empty-copy>Sign in and select a business to load its private workspace.</p>";});
+    message("Signed out · private growth intelligence cleared from this page.");
+  });
   install();
   if(sessionStorage.getItem(BUSINESS)){businessId=sessionStorage.getItem(BUSINESS);businessName=$("business-switcher-name")?.textContent||businessName;}
 })();
