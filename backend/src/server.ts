@@ -692,6 +692,57 @@ app.post("/v1/businesses/:businessId/google/import", { preHandler: requireUser }
   }
 });
 
+
+app.get("/v1/businesses/:businessId/growth-history", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const [savedActions, growthRows] = await Promise.all([
+    prisma.growthAction.findMany({ where: { businessId: business.id }, orderBy: { updatedAt: "desc" }, take: 200 }),
+    prisma.growthRecord.findMany({ where: { businessId: business.id }, orderBy: { recordedAt: "desc" }, take: 1000 })
+  ]);
+  const records = growthRows.map(row => ({
+    id: row.id, recordType: row.recordType,
+    payload: row.payload as unknown as Record<string, unknown>,
+    recordedAt: row.recordedAt, source: row.source
+  }));
+  const historyActions = savedActions.map(item => ({
+    id: item.actionId,
+    priority: item.priority as "HIGH" | "MEDIUM" | "INFO",
+    score: 0,
+    title: item.title,
+    action: "Previously saved owner-tracked recommendation.",
+    why: "Saved in this business workspace.",
+    evidence: item.evidence as unknown as import("./growth-overview.js").OverviewAction["evidence"],
+    confidence: "LOW" as const,
+    requiresOwnerApproval: true as const,
+    status: item.status
+  }));
+  const measured = buildGrowthActionMeasurements(historyActions, savedActions, records, new Date());
+  const items = measured.map((item, index) => ({
+    ...item,
+    ownerNote: savedActions[index]!.ownerNote,
+    acceptedAt: savedActions[index]!.acceptedAt,
+    completedAt: savedActions[index]!.completedAt,
+    dismissedAt: savedActions[index]!.dismissedAt,
+    createdAt: savedActions[index]!.createdAt,
+    updatedAt: savedActions[index]!.updatedAt
+  }));
+  return {
+    business: { id: business.id, displayName: business.displayName },
+    total: items.length,
+    counts: {
+      suggested: items.filter(item => item.status === "SUGGESTED").length,
+      accepted: items.filter(item => item.status === "ACCEPTED").length,
+      inProgress: items.filter(item => item.status === "IN_PROGRESS").length,
+      completed: items.filter(item => item.status === "COMPLETED").length,
+      dismissed: items.filter(item => item.status === "DISMISSED").length
+    },
+    items
+  };
+});
+
 app.get("/v1/businesses/:businessId/growth-overview", { preHandler: requireUser }, async (request, reply) => {
   const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
   if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
