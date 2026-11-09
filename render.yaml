@@ -7,7 +7,7 @@ services:
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     healthCheckPath: /health
-    autoDeployTrigger: checksPass
+    autoDeployTrigger: off
     envVars:
       - key: NODE_ENV
         value: production
@@ -37,7 +37,7 @@ services:
     runtime: static
     buildCommand: mkdir -p public-dist && cp index.html styles.css growth-intelligence.css app.js growth.js growth-intelligence.js config.js public-dist/ && printf '%s\n' 'window.LOCALBOOST_API_BASE = "https://paanagam-localboost-api.onrender.com";' > public-dist/config.js
     staticPublishPath: ./public-dist
-    autoDeployTrigger: checksPass
+    autoDeployTrigger: off
     headers:
       - path: /*
         name: X-Content-Type-Options
