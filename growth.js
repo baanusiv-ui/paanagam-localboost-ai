@@ -249,6 +249,13 @@
   }
 
   window.addEventListener("localboost:business-ready", hydrateCloudWorkspace);
+  window.addEventListener("localboost:signed-out", () => {
+    remoteReady = false;
+    activeBusinessId = null;
+    data = emptyData();
+    renderAll();
+    setSyncStatus("Signed out · private cloud workspace cleared from this page.");
+  });
   if ($("sales-date")) $("sales-date").value = today;
   if ($("retention-date")) $("retention-date").value = today;
 
