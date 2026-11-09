@@ -846,6 +846,26 @@ app.delete("/v1/businesses/:businessId/growth-goals/:goalId", { preHandler: requ
   return reply.code(204).send();
 });
 
+app.get("/v1/businesses/:businessId/activity-history", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const query = z.object({ limit: z.coerce.number().int().min(1).max(100).default(50), cursor: z.string().min(1).max(64).optional(), eventType: z.string().trim().min(1).max(80).optional() }).safeParse(request.query);
+  if (!params.success || !query.success) return reply.code(400).send({ error: "Invalid activity history query" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  if (query.data.cursor) {
+    const cursorExists = await prisma.activityEvent.findFirst({ where: { id: query.data.cursor, businessId: business.id }, select: { id: true } });
+    if (!cursorExists) return reply.code(400).send({ error: "Invalid activity history cursor" });
+  }
+  const events = await prisma.activityEvent.findMany({
+    where: { businessId: business.id, ...(query.data.eventType ? { eventType: query.data.eventType } : {}) },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    ...(query.data.cursor ? { cursor: { id: query.data.cursor }, skip: 1 } : {}),
+    take: query.data.limit,
+    select: { id: true, eventType: true, entityType: true, entityId: true, summary: true, metadata: true, createdAt: true }
+  });
+  return { business: { id: business.id, displayName: business.displayName }, events, nextCursor: events.length === query.data.limit ? events[events.length - 1]?.id ?? null : null };
+});
+
 app.get("/v1/businesses/:businessId/growth-history", { preHandler: requireUser }, async (request, reply) => {
   const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
   if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
