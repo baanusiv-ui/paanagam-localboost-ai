@@ -2,7 +2,6 @@
   "use strict";
 
   const LEGACY_KEY = "localboost_growth_workspace_v1";
-  const KEY_PREFIX = "localboost_growth_workspace_v2:";
   const TOKEN_KEY = "localboost_access_token";
   const BUSINESS_KEY = "localboost_business_id";
   const $ = id => document.getElementById(id);
@@ -19,7 +18,7 @@
     } catch { return emptyData(); }
   };
   const readLocal = key => parseData(localStorage.getItem(key));
-  let data = readLocal(LEGACY_KEY);
+  let data = emptyData();
   let activeBusinessId = null;
   let remoteReady = false;
   let syncInProgress = false;
@@ -28,11 +27,6 @@
   const today = new Date().toLocaleDateString("en-CA");
   const API_BASE = (window.LOCALBOOST_API_BASE || "http://localhost:4100").replace(/\/$/, "");
 
-  const scopedKey = businessId => KEY_PREFIX + businessId;
-  const save = () => {
-    const key = activeBusinessId ? scopedKey(activeBusinessId) : LEGACY_KEY;
-    localStorage.setItem(key, JSON.stringify(data));
-  };
   const setSyncStatus = (text, isError = false) => {
     const note = $("#cloud-sync-status");
     if (!note) return;
@@ -62,20 +56,14 @@
     return item._id;
   }
   async function syncRecord(type, item, index = 0) {
-    if (!remoteReady || !activeBusinessId) return false;
+    if (!remoteReady || !activeBusinessId) throw new Error("Connect to the cloud workspace before saving.");
     const recordedAt = item.created || item.date || new Date().toISOString();
-    try {
-      const result = await remoteApi(businessPath() + "/growth-records", {
-        method: "POST",
-        body: JSON.stringify({ type, externalId: recordExternalId(type, item, index), payload: item, recordedAt })
-      });
-      item._recordId = result?.record?.id || item._recordId;
-      save();
-      return true;
-    } catch (error) {
-      setSyncStatus("Cloud sync pending · saved on this device (" + error.message + ")", true);
-      return false;
-    }
+    const result = await remoteApi(businessPath() + "/growth-records", {
+      method: "POST",
+      body: JSON.stringify({ type, externalId: recordExternalId(type, item, index), payload: item, recordedAt })
+    });
+    item._recordId = result?.record?.id || item._recordId;
+    return result?.record || null;
   }
   async function loadDataStatus() {
     const root = $("data-freshness-status");
@@ -176,73 +164,84 @@
     remoteReady = false;
     activeBusinessId = businessId;
     sessionStorage.setItem(BUSINESS_KEY, businessId);
-    const key = scopedKey(businessId);
-    const hasScopedData = localStorage.getItem(key) !== null;
-    if (hasScopedData) {
-      data = readLocal(key);
-    } else if (localStorage.getItem("localboost_legacy_workspace_migrated") !== "yes") {
-      // Migrate the old unscoped workspace once, into the first business selected after this update.
-      data = readLocal(LEGACY_KEY);
-      if (Object.values(data).some(items => items.length)) localStorage.setItem(key, JSON.stringify(data));
-      localStorage.setItem("localboost_legacy_workspace_migrated", "yes");
-    } else {
-      data = emptyData();
-    }
-    setSyncStatus("Checking the selected business workspace…");
+    data = emptyData();
+    renderAll();
+    setSyncStatus("Connecting to the selected cloud workspace…");
     try {
       const path = businessPath();
-      const initial = await fetchAllGrowthRecords(path);
-      remoteReady = true;
-      const existing = new Set(initial.records.map(record => record.recordType + ":" + record.externalId));
-      const paginationTruncated = initial.truncated;
-      const groups = localGroups();
-      let migrated = 0;
-      for (const [type, items] of Object.entries(groups)) {
-        for (const [index, item] of items.entries()) {
-          const externalId = recordExternalId(type, item, index);
-          if (!existing.has(type + ":" + externalId)) {
-            const ok = await syncRecord(type, item, index);
-            if (ok) migrated++;
+      let cloud = await fetchAllGrowthRecords(path);
+      if (cloud.truncated) {
+        setSyncStatus("Cloud workspace contains more than 10,000 records; older records remain in the database.", true);
+      }
+      const scopedKey = "localboost_growth_workspace_v2:" + businessId;
+      const scoped = localStorage.getItem(scopedKey) !== null ? readLocal(scopedKey) : emptyData();
+      const legacy = localStorage.getItem(LEGACY_KEY) !== null ? readLocal(LEGACY_KEY) : emptyData();
+      const localCandidates = {
+        MENU_ITEM: [...scoped.menu, ...legacy.menu],
+        DAILY_SALES: [...scoped.sales, ...legacy.sales],
+        RETENTION_SNAPSHOT: [...scoped.retention, ...legacy.retention],
+        CAMPAIGN_DRAFT: [...scoped.drafts, ...legacy.drafts]
+      };
+      const localCount = Object.values(localCandidates).reduce((sum, items) => sum + items.length, 0);
+      let imported = 0, skipped = 0;
+      if (localCount) {
+        const cloudIds = new Set(cloud.records.map(record => record.recordType + ":" + record.externalId));
+        const pending = [];
+        for (const [type, items] of Object.entries(localCandidates)) {
+          for (const [index, item] of items.entries()) {
+            const externalId = recordExternalId(type, item, index);
+            if (cloudIds.has(type + ":" + externalId)) { skipped++; continue; }
+            if (!pending.some(row => row.type === type && row.externalId === externalId)) pending.push({ type, item, index, externalId });
+          }
+        }
+        const legacyCount = Object.values(legacy).reduce((sum, items) => sum + items.length, 0);
+        const assignmentNote = legacyCount
+          ? "\n\nThis includes " + legacyCount + " older unassigned record(s). Confirm that they belong to this selected business before importing."
+          : "";
+        const approved = pending.length && window.confirm(
+          "Legacy data migration preview\n\nSelected business: " + businessId +
+          "\nRecords found on this PC: " + localCount +
+          "\nNew records to import: " + pending.length +
+          "\nAlready present in cloud (will not be overwritten): " + skipped +
+          assignmentNote +
+          "\n\nImport these records to the cloud database now? Your local copies will not be deleted."
+        );
+        if (approved) {
+          for (const row of pending) {
+            await syncRecord(row.type, row.item, row.index);
+            imported++;
           }
         }
       }
-      const latest = await fetchAllGrowthRecords(path);
+      cloud = await fetchAllGrowthRecords(path);
       const grouped = { MENU_ITEM: [], DAILY_SALES: [], RETENTION_SNAPSHOT: [], CAMPAIGN_DRAFT: [] };
-      for (const record of latest.records) {
+      for (const record of cloud.records) {
         if (grouped[record.recordType]) grouped[record.recordType].push({ ...record.payload, _id: record.externalId, _recordId: record.id });
       }
-      // The server is canonical for records already synced; local-only records remain available for retry.
-      const remoteIds = new Set(latest.records.map(record => record.recordType + ":" + record.externalId));
-      const localOnly = { MENU_ITEM: [], DAILY_SALES: [], RETENTION_SNAPSHOT: [], CAMPAIGN_DRAFT: [] };
-      for (const [type, items] of Object.entries(groups)) {
-        for (const [index, item] of items.entries()) {
-          const externalId = recordExternalId(type, item, index);
-          if (!remoteIds.has(type + ":" + externalId)) localOnly[type].push(item);
-        }
-      }
       data = {
-        menu: [...grouped.MENU_ITEM, ...localOnly.MENU_ITEM],
-        sales: [...grouped.DAILY_SALES, ...localOnly.DAILY_SALES],
-        retention: [...grouped.RETENTION_SNAPSHOT, ...localOnly.RETENTION_SNAPSHOT],
-        drafts: [...grouped.CAMPAIGN_DRAFT, ...localOnly.CAMPAIGN_DRAFT]
+        menu: grouped.MENU_ITEM,
+        sales: grouped.DAILY_SALES,
+        retention: grouped.RETENTION_SNAPSHOT,
+        drafts: grouped.CAMPAIGN_DRAFT
       };
-      save();
       remoteReady = true;
       renderAll();
-      const pendingCount = Object.values(localOnly).reduce((total, items) => total + items.length, 0);
-      setSyncStatus("Cloud database connected · " + latest.records.length + " server record(s)" + ((paginationTruncated || latest.truncated) ? " · showing first 10,000 server records; older records remain on server" : "") + (migrated ? " · " + migrated + " local record(s) migrated" : "") + (pendingCount ? " · retrying " + pendingCount + " device-only record(s)" : " · all records synced") + " · owner-entered data");
+      const remainingLocal = localCount && imported === 0 && skipped < localCount
+        ? " · PC legacy records were left untouched; import was not approved"
+        : "";
+      setSyncStatus("Cloud database connected · " + cloud.records.length + " server record(s)" +
+        (cloud.truncated ? " · first 10,000 displayed; older records remain on server" : "") +
+        (imported ? " · " + imported + " legacy record(s) imported" : "") +
+        (skipped ? " · " + skipped + " duplicate record(s) skipped" : "") +
+        remainingLocal + " · cloud is the source of truth");
       await loadServerIntelligence();
       await loadDataStatus();
-      // Retry any device-only records after the server has become available.
-      let remaining = 0;
-      for (const [type, items] of Object.entries(localOnly)) {
-        for (const [index, item] of items.entries()) if (!await syncRecord(type, item, index)) remaining++;
-      }
-      setSyncStatus("Cloud database connected · " + latest.records.length + " server record(s)" + (latest.truncated ? " · showing first 10,000 server records; older records remain on server" : "") + (remaining ? " · " + remaining + " device-only record(s) still pending" : " · all local records synced") + " · owner-entered data", remaining > 0);
+      await loadMenuSalesIntelligence();
     } catch (error) {
       remoteReady = false;
-      setSyncStatus("Cloud sync unavailable · local data remains on this device (" + error.message + ")", true);
+      data = emptyData();
       renderAll();
+      setSyncStatus("Cloud workspace unavailable · no local fallback is being used. Existing PC data is preserved and can be imported after the connection is restored. (" + error.message + ")", true);
     } finally {
       syncInProgress = false;
     }
@@ -362,37 +361,55 @@
       const item = data.drafts[Number(button.dataset.index)];
       if (!item) return;
       item.status = "Reviewed locally";
-      save(); renderDrafts();
+      saveGrowthEntry("CAMPAIGN_DRAFT", item, Number(button.dataset.index)).then(ok => { if (ok) renderDrafts(); else item.status = "Pending"; });
     }));
   }
   function renderAll() { renderMenu(); renderSales(); renderRetention(); renderDrafts(); }
+
+  async function saveGrowthEntry(type, item, index = 0) {
+    if (!remoteReady || !activeBusinessId) {
+      setSyncStatus("Not saved · sign in and connect to the cloud workspace first.", true);
+      return false;
+    }
+    try {
+      await syncRecord(type, item, index);
+      return true;
+    } catch (error) {
+      setSyncStatus("Cloud save failed · nothing was saved locally (" + error.message + ")", true);
+      return false;
+    }
+  }
 
   $("menu-form")?.addEventListener("submit", async event => {
     event.preventDefault();
     const name = $("menu-name").value.trim(), price = Number($("menu-price").value), costText = $("menu-cost").value, qty = Number($("menu-qty").value || 0);
     if (!name || !Number.isFinite(price) || price < 0 || (costText && (!Number.isFinite(Number(costText)) || Number(costText) < 0)) || qty < 0) return;
     const item = { _id: "menu:" + Date.now() + ":" + data.menu.length, name, price, cost: costText === "" ? null : Number(costText), qty, source: "OWNER_ENTERED", created: new Date().toISOString() };
-    data.menu.push(item); save(); renderMenu(); await syncRecord("MENU_ITEM", item, data.menu.length - 1); await loadMenuSalesIntelligence();
+    if (!await saveGrowthEntry("MENU_ITEM", item, data.menu.length)) return;
+    data.menu.push(item); renderMenu(); await loadMenuSalesIntelligence();
     event.target.reset(); $("menu-qty").value = "0";
   });
   $("sales-form")?.addEventListener("submit", async event => {
     event.preventDefault();
     const item = { date:$("sales-date").value, net:Number($("sales-net").value), orders:Number($("sales-orders").value), discounts:Number($("sales-discounts").value||0), refunds:Number($("sales-refunds").value||0) };
     if (!item.date || Object.values(item).some(v => typeof v === "number" && (!Number.isFinite(v) || v < 0))) return;
-    data.sales = data.sales.filter(x => x.date !== item.date); data.sales.push(item); save(); renderSales(); await syncRecord("DAILY_SALES", item); await loadMenuSalesIntelligence();
+    if (!await saveGrowthEntry("DAILY_SALES", item)) return;
+    data.sales = data.sales.filter(x => x.date !== item.date); data.sales.push(item); renderSales(); await loadMenuSalesIntelligence();
     $("sales-net").value = ""; $("sales-orders").value = "";
   });
   $("retention-form")?.addEventListener("submit", async event => {
     event.preventDefault();
     const item = { date:$("retention-date").value, fresh:Number($("retention-new").value), active:Number($("retention-active").value), issued:Number($("retention-issued").value||0), redeemed:Number($("retention-redeemed").value||0) };
     if (!item.date || Object.values(item).some(v => typeof v === "number" && (!Number.isFinite(v) || v < 0))) return;
-    data.retention = data.retention.filter(x => x.date !== item.date); data.retention.push(item); save(); renderRetention(); await syncRecord("RETENTION_SNAPSHOT", item);
+    if (!await saveGrowthEntry("RETENTION_SNAPSHOT", item)) return;
+    data.retention = data.retention.filter(x => x.date !== item.date); data.retention.push(item); renderRetention();
   });
   $("save-draft")?.addEventListener("click", async () => {
     const output = $("draft-output");
     if (!output || output.classList.contains("hidden") || !output.textContent.trim()) return;
     const item = { _id: "draft:" + Date.now() + ":" + data.drafts.length, topic:$("content-topic").value.trim(), language:$("content-language")?.value || "Tamil", text:output.textContent, status:"Pending", created:new Date().toISOString() };
-    data.drafts.push(item); save(); renderDrafts(); await syncRecord("CAMPAIGN_DRAFT", item, data.drafts.length - 1);
+    if (!await saveGrowthEntry("CAMPAIGN_DRAFT", item, data.drafts.length)) return;
+    data.drafts.push(item); renderDrafts();
     $("save-draft").disabled = true; $("save-draft").textContent = "Saved to approval centre";
   });
   $("make-draft")?.addEventListener("click", () => {
