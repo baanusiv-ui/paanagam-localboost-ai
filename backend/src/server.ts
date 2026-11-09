@@ -17,6 +17,7 @@ import { generateLocalKeywords } from "./local-seo.js";
 import { normalizeGoogleReview, type GoogleReviewApiRecord } from "./google-reviews.js";
 import { analyzeReviewThemes } from "./review-themes.js";
 import { buildGrowthOverview } from "./growth-overview.js";
+import { mergeGrowthActionTracking } from "./growth-action-tracking.js";
 
 const app = Fastify({ logger: true, bodyLimit: 1024 * 1024 });
 await app.register(helmet);
@@ -704,11 +705,7 @@ app.get("/v1/businesses/:businessId/growth-overview", { preHandler: requireUser 
     records: growthRows.map(row => ({ id: row.id, recordType: row.recordType, payload: row.payload as unknown as Record<string, unknown>, recordedAt: row.recordedAt, source: row.source })),
     evidence: evidenceRows
   });
-  const tracked = new Map(overviewActions.map(item => [item.actionId, item]));
-  const actions = overview.actions.map(action => {
-    const saved = tracked.get(action.id);
-    return { ...action, status: saved?.status ?? action.status, ownerNote: saved?.ownerNote ?? "", trackingUpdatedAt: saved?.updatedAt?.toISOString() ?? null };
-  });
+  const actions = mergeGrowthActionTracking(overview.actions, overviewActions);
   return { business: { id: business.id, displayName: business.displayName }, ...overview, actions };
 });
 
