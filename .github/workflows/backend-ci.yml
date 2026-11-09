@@ -18,6 +18,8 @@ on:
       - "config.js"
       - "index.html"
       - "styles.css"
+      - "growth-intelligence.js"
+      - "growth-intelligence.css"
       - ".github/workflows/backend-ci.yml"
 
 jobs:
