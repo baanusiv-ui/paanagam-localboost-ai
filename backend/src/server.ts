@@ -8,9 +8,9 @@ import { EvidenceSource, Prisma } from "@prisma/client";
 import { prisma } from "./db.js";
 import { findOwnedBusiness } from "./modules/businesses/access.js";
 import { recordBusinessActivity } from "./modules/activity/record.js";
-import { requireUser } from "./modules/identity/auth.js";
+import { createRequireUser } from "./modules/identity/auth.js";
 import { env, corsOrigins } from "./env.js";
-import { hashPassword, verifyPassword, issueAccessToken, encryptSecret, randomUrlToken, decryptSecret } from "./security.js";
+import { hashPassword, verifyPassword, issueAccessToken, verifyAccessToken, encryptSecret, randomUrlToken, decryptSecret } from "./security.js";
 import { buildAudit } from "./audit.js";
 import { buildBusinessIntelligence } from "./intelligence.js";
 import { generateLocalConsultant, getLocalAiStatus } from "./consultant.js";
@@ -35,6 +35,8 @@ await app.register(cors, {
   }
 });
 await app.register(rateLimit, { max: 100, timeWindow: "1 minute" });
+
+const requireUser = createRequireUser(verifyAccessToken);
 
 app.decorateRequest("userId", null);
 declare module "fastify" {
