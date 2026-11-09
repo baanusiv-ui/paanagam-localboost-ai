@@ -21,6 +21,7 @@ import { mergeGrowthActionTracking } from "./growth-action-tracking.js";
 import { buildGrowthActionMeasurements } from "./growth-action-measurement.js";
 import { calculateGrowthGoal, buildGrowthGoalHistory } from "./growth-goals.js";
 import { buildGrowthPerformanceReport } from "./growth-performance-report.js";
+import { buildMenuSalesIntelligence } from "./menu-sales-intelligence.js";
 
 const app = Fastify({ logger: true, bodyLimit: 1024 * 1024 });
 await app.register(helmet);
@@ -290,6 +291,24 @@ app.get("/v1/businesses/:businessId/intelligence", { preHandler: requireUser }, 
   })));
   return { business: { id: business.id, displayName: business.displayName }, ...report };
 });
+app.get("/v1/businesses/:businessId/menu-sales-intelligence", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const query = z.object({ from: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/).optional(), to: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/).optional() }).safeParse(request.query);
+  if (!params.success || !query.success || (query.data.from && query.data.to && query.data.from > query.data.to)) return reply.code(400).send({ error: "Invalid menu and sales date range" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const records = await prisma.growthRecord.findMany({
+    where: { businessId: business.id, recordType: { in: ["MENU_ITEM", "DAILY_SALES"] } },
+    orderBy: [{ recordedAt: "asc" }, { createdAt: "asc" }],
+    take: 5000
+  });
+  const report = buildMenuSalesIntelligence(records.map(record => ({
+    id: record.id, recordType: record.recordType as "MENU_ITEM" | "DAILY_SALES",
+    payload: record.payload as unknown as Record<string, unknown>, recordedAt: record.recordedAt, source: record.source
+  })), query.data.from, query.data.to);
+  return { business: { id: business.id, displayName: business.displayName }, ...report, limits: { maxRecords: 5000, mayBeIncomplete: records.length === 5000 } };
+});
+
 app.get("/v1/ai/status", { preHandler: requireUser }, async () => getLocalAiStatus());
 
 app.post("/v1/businesses/:businessId/consultant", {
