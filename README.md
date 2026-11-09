@@ -7,8 +7,8 @@ LocalBoost has its own repository, backend, database, authentication and deploym
 ## Product modules
 - Growth overview and daily priorities
 - Local presence audit and local SEO
-- Competitor intelligence based on verified observations
-- Review intelligence based on real, authorised review data
+- Competitor intelligence based on dated public observations
+- Review capture and private reply drafts; authorised Google review import remains pending
 - Menu and sales intelligence (optional POS aggregate feed)
 - Customer retention and loyalty cohort analysis (privacy-safe aggregates)
 - Tamil/English campaign and content studio
@@ -24,7 +24,7 @@ LocalBoost has its own repository, backend, database, authentication and deploym
 - No POS write-back. No customer personal data in the first POS integration phase.
 
 ## Repository status
-The current product includes an authenticated owner workspace, business workspaces, evidence provenance, audit snapshots, Google OAuth consent and account/listing selection, and read-only Business Profile evidence import. The growth workspace supports menu item records, owner-entered daily sales summaries, privacy-safe retention aggregates and campaign drafts. Records sync to the selected business's owner-scoped PostgreSQL API, with business-specific browser storage as an offline fallback. A data-status endpoint reports evidence provenance, source counts and freshness. These are owner-entered records, not POS imports. Competitor and review intelligence remain source-dependent placeholders. AI orchestration and production hosting are not complete. Google data depends on credentials, enabled APIs and granted access/quota.
+The current product includes an authenticated owner workspace, business workspaces, evidence provenance, audit snapshots, Google OAuth consent and account/listing selection, and read-only Business Profile evidence import. The growth workspace supports menu item records, owner-entered daily sales summaries, privacy-safe retention aggregates and campaign drafts. Records sync to the selected business's owner-scoped PostgreSQL API, with business-specific browser storage as an offline fallback. A data-status endpoint reports evidence provenance, source counts and freshness. These are owner-entered records, not POS imports. Competitor observations, Tamil/English keyword ideas, owner-supplied review records with private reply drafts, and Google content drafts with manual approval are available as owner-scoped growth records. Competitor entries are not independently verified rankings; keyword ideas have no measured volume or rank; review data is not a live Google review import. Content approval is manual-only and does not publish or schedule. AI orchestration and production hosting are not complete. Google data depends on credentials, enabled APIs and granted access/quota.
 
 ## Roadmap and integration
 - Growth Intelligence delivery roadmap: docs/GROWTH_INTELLIGENCE_ROADMAP.md
