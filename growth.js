@@ -248,6 +248,32 @@
       item.cost == null ? "Not calculated" : money(item.price - item.cost), "Owner-entered · not POS verified"
     ]));
   }
+  async function loadMenuSalesIntelligence() {
+    if (!activeBusinessId || !remoteReady) return;
+    const menuView = $("menu-view"), salesView = $("sales-view");
+    if (!menuView || !salesView) return;
+    let menuRoot = $("menu-sales-mix"), salesRoot = $("sales-trend-intelligence");
+    if (!menuRoot) { menuRoot=document.createElement("section"); menuRoot.id="menu-sales-mix"; menuRoot.className="panel"; menuView.appendChild(menuRoot); }
+    if (!salesRoot) { salesRoot=document.createElement("section"); salesRoot.id="sales-trend-intelligence"; salesRoot.className="panel"; salesView.appendChild(salesRoot); }
+    menuRoot.innerHTML='<h3>Recorded menu mix</h3><p class="empty-copy">Loading saved menu records…</p>';
+    salesRoot.innerHTML='<h3>Sales trend intelligence</h3><p class="empty-copy">Loading saved daily summaries…</p>';
+    try {
+      const end=new Date(); const start=new Date(end); start.setDate(start.getDate()-29);
+      const from=start.toLocaleDateString("en-CA"),to=end.toLocaleDateString("en-CA");
+      const report=await remoteApi(businessPath()+"/menu-sales-intelligence?from="+encodeURIComponent(from)+"&to="+encodeURIComponent(to));
+      const menu=report.menu||{},sales=report.sales||{},dayparts=report.dayparts||{};
+      const itemRows=(menu.items||[]).map(x=>'<tr><td>'+safe(x.name)+'</td><td>'+x.units+'</td><td>'+(x.grossSales===null?'Not available':money(x.grossSales))+'</td><td>'+(x.unitContribution===null?'Not costed':money(x.unitContribution))+'</td></tr>').join("");
+      menuRoot.innerHTML='<div class="section-heading"><div><h3>Recorded menu mix</h3><p>Last 30 days · owner-entered quantities · not POS-verified</p></div><span class="tag pending-tag">'+menu.itemCount+' item(s)</span></div>'+(itemRows?'<div class="table-scroll"><table><thead><tr><th>Item</th><th>Units</th><th>Indicative sales</th><th>Contribution*</th></tr></thead><tbody>'+itemRows+'</tbody></table></div>':'<p class="empty-copy">No dated menu quantities are available for this period.</p>')+'<p class="footnote">*Contribution uses supplied selling price minus supplied unit cost, multiplied by units. It is not full profit. Indicative sales are not reconciled receipts.</p>';
+      const dailyRows=(sales.daily||[]).slice(-14).reverse().map(x=>'<tr><td>'+safe(x.date)+'</td><td>'+money(x.netSales)+'</td><td>'+x.orders+'</td></tr>').join("");
+      const weeklyRows=(sales.weekly||[]).slice(-8).reverse().map(x=>'<tr><td>Week of '+safe(x.weekStart)+'</td><td>'+money(x.netSales)+'</td><td>'+x.orders+'</td><td>'+x.days+'</td></tr>').join("");
+      const partRows=(dayparts.items||[]).map(x=>'<tr><td>'+safe(x.name)+'</td><td>'+money(x.netSales)+'</td><td>'+x.orders+'</td></tr>').join("");
+      salesRoot.innerHTML='<div class="section-heading"><div><h3>Sales trend intelligence</h3><p>'+safe(from)+' to '+safe(to)+' · saved daily summaries</p></div><span class="tag pending-tag">'+sales.coverageDays+' recorded day(s)</span></div><div class="metric-grid"><article class="metric-card"><div class="metric-top">Net sales</div><strong>'+money(sales.netSales||0)+'</strong><small>Saved summaries only</small></article><article class="metric-card"><div class="metric-top">Orders</div><strong>'+Number(sales.orders||0).toLocaleString("en-IN")+'</strong><small>Saved summaries only</small></article><article class="metric-card"><div class="metric-top">Average order value</div><strong>'+(sales.averageOrderValue===null?'No data':money(sales.averageOrderValue))+'</strong><small>Net sales ÷ orders</small></article></div><h4>Daily sales · latest 14 records</h4>'+(dailyRows?'<div class="table-scroll"><table><thead><tr><th>Date</th><th>Net sales</th><th>Orders</th></tr></thead><tbody>'+dailyRows+'</tbody></table></div>':'<p class="empty-copy">No daily sales summaries in this period.</p>')+'<h4>Weekly comparison</h4>'+(weeklyRows?'<div class="table-scroll"><table><thead><tr><th>Week start</th><th>Net sales</th><th>Orders</th><th>Recorded days</th></tr></thead><tbody>'+weeklyRows+'</tbody></table></div>':'<p class="empty-copy">No weekly sales totals available.</p>')+'<h4>Daypart analysis</h4>'+(partRows?'<div class="table-scroll"><table><thead><tr><th>Daypart</th><th>Net sales</th><th>Orders</th></tr></thead><tbody>'+partRows+'</tbody></table></div>':'<p class="empty-copy">'+safe(dayparts.note||"No explicit daypart data supplied.")+'</p>')+'<p class="footnote">'+safe((report.limitations||[]).join(" "))+(report.limits?.mayBeIncomplete?" Retrieval limit reached; records may be incomplete.":"")+'</p>';
+    } catch(error) {
+      menuRoot.innerHTML='<h3>Recorded menu mix</h3><p class="empty-copy">Unavailable: '+safe(error.message)+'</p>';
+      salesRoot.innerHTML='<h3>Sales trend intelligence</h3><p class="empty-copy">Unavailable: '+safe(error.message)+'</p>';
+    }
+  }
+
   function renderSales() {
     const total = data.sales.reduce((sum, item) => sum + Number(item.net || 0), 0);
     const orders = data.sales.reduce((sum, item) => sum + Number(item.orders || 0), 0);
@@ -288,14 +314,14 @@
     const name = $("menu-name").value.trim(), price = Number($("menu-price").value), costText = $("menu-cost").value, qty = Number($("menu-qty").value || 0);
     if (!name || !Number.isFinite(price) || price < 0 || (costText && (!Number.isFinite(Number(costText)) || Number(costText) < 0)) || qty < 0) return;
     const item = { _id: "menu:" + Date.now() + ":" + data.menu.length, name, price, cost: costText === "" ? null : Number(costText), qty, source: "OWNER_ENTERED", created: new Date().toISOString() };
-    data.menu.push(item); save(); renderMenu(); await syncRecord("MENU_ITEM", item, data.menu.length - 1);
+    data.menu.push(item); save(); renderMenu(); await syncRecord("MENU_ITEM", item, data.menu.length - 1); await loadMenuSalesIntelligence();
     event.target.reset(); $("menu-qty").value = "0";
   });
   $("sales-form")?.addEventListener("submit", async event => {
     event.preventDefault();
     const item = { date:$("sales-date").value, net:Number($("sales-net").value), orders:Number($("sales-orders").value), discounts:Number($("sales-discounts").value||0), refunds:Number($("sales-refunds").value||0) };
     if (!item.date || Object.values(item).some(v => typeof v === "number" && (!Number.isFinite(v) || v < 0))) return;
-    data.sales = data.sales.filter(x => x.date !== item.date); data.sales.push(item); save(); renderSales(); await syncRecord("DAILY_SALES", item);
+    data.sales = data.sales.filter(x => x.date !== item.date); data.sales.push(item); save(); renderSales(); await syncRecord("DAILY_SALES", item); await loadMenuSalesIntelligence();
     $("sales-net").value = ""; $("sales-orders").value = "";
   });
   $("retention-form")?.addEventListener("submit", async event => {
