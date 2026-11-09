@@ -94,6 +94,17 @@ async function ownedBusiness(userId: string, businessId: string) {
   return prisma.business.findFirst({ where: { id: businessId, ownerId: userId } });
 }
 
+async function recordActivity(input: {
+  businessId: string; actorUserId: string; eventType: string; entityType: string;
+  entityId?: string | null; summary: string; metadata?: Record<string, unknown>;
+}) {
+  return prisma.activityEvent.create({ data: {
+    businessId: input.businessId, actorUserId: input.actorUserId, eventType: input.eventType,
+    entityType: input.entityType, entityId: input.entityId ?? null, summary: input.summary,
+    metadata: input.metadata as Prisma.InputJsonValue | undefined
+  } });
+}
+
 app.get("/v1/businesses/:businessId/data-status", { preHandler: requireUser }, async (request, reply) => {
   const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
   if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
@@ -797,6 +808,12 @@ app.post("/v1/businesses/:businessId/growth-goals", { preHandler: requireUser },
     create:{businessId:business.id,metric:body.data.metric,targetValue:body.data.targetValue,monthStart},
     update:{targetValue:body.data.targetValue,archivedAt:null}
   });
+  await recordActivity({
+    businessId: business.id, actorUserId: request.userId!, eventType: "GROWTH_GOAL_SAVED",
+    entityType: "GROWTH_GOAL", entityId: goal.id,
+    summary: body.data.metric + " monthly target saved for " + body.data.month,
+    metadata: { metric: body.data.metric, month: body.data.month, targetValue: body.data.targetValue }
+  });
   return reply.code(200).send({goal});
 });
 
@@ -807,6 +824,7 @@ app.delete("/v1/businesses/:businessId/growth-goals/:goalId", { preHandler: requ
   if(!business)return reply.code(404).send({error:"Business not found"});
   const result=await prisma.growthGoal.updateMany({where:{id:params.data.goalId,businessId:business.id,archivedAt:null},data:{archivedAt:new Date()}});
   if(!result.count)return reply.code(404).send({error:"Growth goal not found"});
+  await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "GROWTH_GOAL_ARCHIVED", entityType: "GROWTH_GOAL", entityId: params.data.goalId, summary: "Monthly growth target archived" });
   return reply.code(204).send();
 });
 
@@ -917,6 +935,12 @@ app.patch("/v1/businesses/:businessId/growth-overview/:actionId", { preHandler: 
       completedAt: status === "COMPLETED" ? existing?.completedAt ?? now : null,
       dismissedAt: status === "DISMISSED" ? existing?.dismissedAt ?? now : null
     }
+  });
+  await recordActivity({
+    businessId: business.id, actorUserId: request.userId!, eventType: "GROWTH_ACTION_STATUS_CHANGED",
+    entityType: "GROWTH_ACTION", entityId: saved.id,
+    summary: "Growth action “" + action.title.slice(0, 120) + "” marked " + status.toLowerCase().replaceAll("_", " "),
+    metadata: { actionId: action.id, status, previousStatus: existing?.status ?? "SUGGESTED" }
   });
   return { action: saved, note: "Tracking status saved for this business. No external action was executed." };
 });
