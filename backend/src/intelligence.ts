@@ -1,6 +1,6 @@
 export type GrowthRecordInput = {
   id: string;
-  recordType: "MENU_ITEM" | "DAILY_SALES" | "RETENTION_SNAPSHOT" | "CAMPAIGN_DRAFT";
+  recordType: "MENU_ITEM" | "DAILY_SALES" | "RETENTION_SNAPSHOT" | "CAMPAIGN_DRAFT" | "COMPETITOR" | "LOCAL_KEYWORD" | "REVIEW_ITEM" | "GOOGLE_CONTENT";
   payload: Record<string, unknown>;
   recordedAt: Date | string;
   source?: string;
@@ -27,7 +27,7 @@ const dateOf = (value: Date | string): string => new Date(value).toISOString().s
 const money = (value: number): string => "₹" + value.toLocaleString("en-IN", { maximumFractionDigits: 2 });
 
 export function buildBusinessIntelligence(records: GrowthRecordInput[]) {
-  const usable = records.filter(record => record.source !== "DEMO");
+  const usable = records.filter(record => record.source !== "DEMO" && ["MENU_ITEM", "DAILY_SALES", "RETENTION_SNAPSHOT"].includes(record.recordType));
   const sales = usable.filter(record => record.recordType === "DAILY_SALES").map(record => ({
     record, date: dateOf(record.recordedAt),
     net: numeric(record.payload.net ?? record.payload.netSales),
