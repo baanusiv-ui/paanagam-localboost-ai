@@ -4,7 +4,7 @@
   const API_BASE = (window.LOCALBOOST_API_BASE || "http://localhost:4100").replace(/\/$/, "");
   const TOKEN_KEY = "localboost_access_token";
   const BUSINESS_KEY = "localboost_business_id";
-  const views = ["overview", "audit", "competitors", "reviews", "content", "approvals"];
+  const views = ["overview", "audit", "menu", "sales", "retention", "competitors", "reviews", "content", "approvals", "consultant"];
   const titles = {
     overview: "Overview", audit: "Local presence audit", competitors: "Competitors",
     reviews: "Reviews", content: "Content studio", approvals: "Approval centre"
