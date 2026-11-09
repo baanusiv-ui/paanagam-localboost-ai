@@ -17,9 +17,20 @@ import { createAuthClient } from "https://esm.sh/@neondatabase/auth@0.7.0-beta?b
     if (result?.error) throw new Error(result.error.message || "Authentication failed");
     return result?.data ?? result;
   }
+  function tokenFrom(result) {
+    const data = unwrap(result);
+    return data?.session?.access_token || data?.access_token || data?.session?.token || null;
+  }
   async function currentAccessToken() {
-    const result = unwrap(await auth.getSession());
-    return result?.session?.access_token || result?.access_token || null;
+    try { return tokenFrom(await auth.getSession()); }
+    catch { return null; }
+  }
+  function saveToken(token) {
+    if (typeof token === "string" && token.split(".").length === 3) {
+      sessionStorage.setItem(TOKEN_KEY, token);
+      return token;
+    }
+    return null;
   }
   async function signIn(event) {
     event.preventDefault(); event.stopImmediatePropagation();
@@ -28,10 +39,10 @@ import { createAuthClient } from "https://esm.sh/@neondatabase/auth@0.7.0-beta?b
     if (!email || !password) return showMessage("Enter your email and password.", true);
     const button = document.getElementById("login-button"); button.disabled = true;
     try {
-      unwrap(await auth.signIn.email({ email, password }));
-      const token = await currentAccessToken();
-      if (!token) throw new Error("No active Neon Auth session was returned. Verify your email first.");
-      sessionStorage.setItem(TOKEN_KEY, token);
+      const signInResult = await auth.signIn.email({ email, password });
+      const signInData = unwrap(signInResult);
+      const token = saveToken(signInData?.session?.access_token || signInData?.access_token || signInData?.session?.token) || saveToken(await currentAccessToken());
+      if (!token) throw new Error("Sign-in was accepted, but no JWT session token was available to the dashboard. Check browser cookie settings or try a supported browser.");
       sessionStorage.removeItem("localboost_auth_recovering");
       window.location.reload();
     } catch (error) {
@@ -48,8 +59,9 @@ import { createAuthClient } from "https://esm.sh/@neondatabase/auth@0.7.0-beta?b
     if (!name || !email || password.length < 12) return showMessage("Enter your name, email and a password with at least 12 characters.", true);
     const button = document.getElementById("register-button"); button.disabled = true;
     try {
-      unwrap(await auth.signUp.email({ email, password, name }));
-      const token = await currentAccessToken();
+      const signUpResult = await auth.signUp.email({ email, password, name });
+      const signUpData = unwrap(signUpResult);
+      const token = saveToken(signUpData?.session?.access_token || signUpData?.access_token || signUpData?.session?.token) || saveToken(await currentAccessToken());
       if (!token) {
         document.getElementById("email-verification-panel").hidden = false;
         showMessage("Account created. Enter the verification code sent to your email.");
@@ -80,8 +92,9 @@ import { createAuthClient } from "https://esm.sh/@neondatabase/auth@0.7.0-beta?b
     if (!email || !otp) return showMessage("Enter your email and verification code.", true);
     button.disabled = true;
     try {
-      unwrap(await auth.emailOtp.verifyEmail({ email, otp }));
-      const token = await currentAccessToken();
+      const verifyResult = await auth.emailOtp.verifyEmail({ email, otp });
+      const verifyData = unwrap(verifyResult);
+      const token = saveToken(verifyData?.session?.access_token || verifyData?.access_token || verifyData?.session?.token) || saveToken(await currentAccessToken());
       if (!token) throw new Error("Email verified. Please sign in to continue.");
       sessionStorage.setItem(TOKEN_KEY, token);
       window.location.reload();
@@ -103,9 +116,8 @@ import { createAuthClient } from "https://esm.sh/@neondatabase/auth@0.7.0-beta?b
     const requestUrl = typeof input === "string" ? input : input?.url || "";
     if (API_BASE && requestUrl.startsWith(API_BASE + "/v1/")) {
       try {
-        const freshToken = await currentAccessToken();
+        const freshToken = saveToken(await currentAccessToken()) || sessionStorage.getItem(TOKEN_KEY);
         if (freshToken) {
-          sessionStorage.setItem(TOKEN_KEY, freshToken);
           const headers = new Headers(init.headers || (input instanceof Request ? input.headers : undefined));
           headers.set("authorization", "Bearer " + freshToken);
           return nativeFetch(input, { ...init, headers });
@@ -115,12 +127,8 @@ import { createAuthClient } from "https://esm.sh/@neondatabase/auth@0.7.0-beta?b
     return nativeFetch(input, init);
   };
   currentAccessToken().then(token => {
-    if (!token) { sessionStorage.removeItem(TOKEN_KEY); return; }
-    const oldToken = sessionStorage.getItem(TOKEN_KEY);
-    sessionStorage.setItem(TOKEN_KEY, token);
-    if ((!oldToken || oldToken !== token) && !sessionStorage.getItem("localboost_auth_recovering")) {
-      sessionStorage.setItem("localboost_auth_recovering", "1");
-      window.location.reload();
-    }
-  }).catch(error => showMessage(error.message || "Could not restore Neon Auth session.", true));
+    if (token) saveToken(token);
+    // Preserve the token returned by sign-in when cross-site cookie lookup is unavailable.
+    // The API remains authoritative and verifies the JWT signature, issuer, subject and email.
+  });
 })();
