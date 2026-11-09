@@ -2,7 +2,7 @@ import type { OverviewAction } from "./growth-overview.js";
 import type { GrowthRecordInput } from "./intelligence.js";
 
 type TrackingInput = { actionId: string; status: string; completedAt?: Date | string | null };
-type WindowSummary = { from: string; to: string; sampleSize: number; coverageDays?: number; netSales?: number; orders?: number; averageOrderValue?: number; reviewCount?: number; averageRating?: number | null; negativeThemeMatches?: number };
+type WindowSummary = { from: string; to: string; sampleSize: number; coverageDays?: number; netSales?: number; orders?: number; averageOrderValue?: number | null; reviewCount?: number; averageRating?: number | null; negativeThemeMatches?: number };
 
 const dateKey = (value: Date | string) => new Date(value).toISOString().slice(0, 10);
 const numberValue = (value: unknown): number | null => {
@@ -26,7 +26,7 @@ function salesWindow(records: GrowthRecordInput[], from: string, to: string): Wi
   const values = [...unique.values()];
   const netSales = values.reduce((sum, row) => sum + (row.net ?? 0), 0);
   const orders = values.reduce((sum, row) => sum + (row.orders ?? 0), 0);
-  return { from, to, sampleSize: values.length, coverageDays: values.length, netSales: round(netSales), orders, averageOrderValue: orders ? round(netSales / orders) : null as unknown as number };
+  return { from, to, sampleSize: values.length, coverageDays: values.length, netSales: round(netSales), orders, averageOrderValue: orders ? round(netSales / orders) : null };
 }
 
 function reviewWindow(records: GrowthRecordInput[], from: string, to: string): WindowSummary {
