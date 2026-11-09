@@ -82,12 +82,12 @@
       const status=item.status||'SUGGESTED';
       return '<article class=gi-history-item data-history-status='+esc(status)+'><strong>'+esc(item.title)+'</strong><span class=tag>'+esc(names[status]||status)+'</span><small>Updated: '+esc(dateText(item.updatedAt))+' · Completed: '+esc(dateText(item.completedAt))+'</small>'+(item.ownerNote?'<p><b>Owner note:</b> '+esc(item.ownerNote)+'</p>':'')+'<p><b>Measurement:</b> '+esc(result)+'</p></article>';
     }).join('');
-    return '<section class=gi-history><h3>Growth history</h3><p>Accepted '+(counts.accepted||0)+' · In progress '+(counts.inProgress||0)+' · Completed '+(counts.completed||0)+' · Dismissed '+(counts.dismissed||0)+'</p>'+(rows||'<p>No saved actions yet.</p>')+'</section>';
+    return '<section class=gi-history><h3>Growth history</h3><p>Accepted '+(counts.accepted||0)+' · In progress '+(counts.inProgress||0)+' · Completed '+(counts.completed||0)+' · Dismissed '+(counts.dismissed||0)+'</p><div class=gi-history-filters><button type=button data-history-filter=ALL>All</button><button type=button data-history-filter=IN_PROGRESS>In progress</button><button type=button data-history-filter=COMPLETED>Completed</button><button type=button data-history-filter=DISMISSED>Dismissed</button></div>'+(rows||'<p>No saved actions yet.</p>')+'</section>';
   }
   async function loadGrowthOverview(){
     const root=$("gi-growth-overview");if(!root||!businessId)return;
     root.innerHTML='<p class="empty-copy">Preparing evidence-backed growth actions…</p>';
-    try{const [overview,history]=await Promise.all([api(base()+"/growth-overview"),api(base()+"/growth-history")]);renderGrowthOverview(overview);root.insertAdjacentHTML("beforeend",renderGrowthHistory(history));}catch(error){root.innerHTML='<p class="empty-copy">Growth overview unavailable: '+esc(error.message)+'</p>';}
+    try{const [overview,history]=await Promise.all([api(base()+"/growth-overview"),api(base()+"/growth-history")]);renderGrowthOverview(overview);root.insertAdjacentHTML("beforeend",renderGrowthHistory(history));root.querySelectorAll("[data-history-filter]").forEach(button=>button.addEventListener("click",()=>{const filter=button.dataset.historyFilter;root.querySelectorAll("[data-history-status]").forEach(row=>{row.hidden=filter!=="ALL"&&row.dataset.historyStatus!==filter;});}));}catch(error){root.innerHTML='<p class="empty-copy">Growth overview unavailable: '+esc(error.message)+'</p>';}
   }
   function renderAudit(audit) {
     const root=$("gi-audit-results"); if(!root)return;
