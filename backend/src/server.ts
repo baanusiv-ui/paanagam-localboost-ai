@@ -706,7 +706,7 @@ app.get("/v1/businesses/:businessId/growth-goals", { preHandler: requireUser }, 
   const monthEnd=new Date(Date.UTC(monthStart.getUTCFullYear(),monthStart.getUTCMonth()+1,1));
   const [goals,rows]=await Promise.all([
     prisma.growthGoal.findMany({where:{businessId:business.id,monthStart,archivedAt:null},orderBy:{metric:"asc"}}),
-    prisma.growthRecord.findMany({where:{businessId:business.id,recordType:{in:["DAILY_SALES","REVIEW_ITEM"]}},orderBy:{recordedAt:"asc"},take:2000})
+    prisma.growthRecord.findMany({where:{businessId:business.id,recordedAt:{gte:monthStart,lt:monthEnd},recordType:{in:["DAILY_SALES","REVIEW_ITEM"]}},orderBy:{recordedAt:"asc"},take:2000})
   ]);
   const records=rows.map(row=>({id:row.id,recordType:row.recordType,payload:row.payload as unknown as Record<string,unknown>,recordedAt:row.recordedAt,source:row.source}));
   return {business:{id:business.id,displayName:business.displayName},month,goals:goals.map(goal=>calculateGrowthGoal(goal,records,now)),supportedMetrics:[{metric:"NET_SALES",label:"Monthly net sales",unit:"INR"},{metric:"REVIEW_COUNT",label:"Monthly review count",unit:"reviews"},{metric:"AVERAGE_RATING",label:"Average review rating",unit:"stars"}],guardrails:["Targets are entered by the business owner; no default target is created.","Progress uses saved non-demo records only.","No forecast or on-track prediction is generated.","Missing sales dates are not treated as zero."]};
