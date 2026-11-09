@@ -293,7 +293,7 @@ app.get("/v1/businesses/:businessId/intelligence", { preHandler: requireUser }, 
 });
 app.get("/v1/businesses/:businessId/menu-sales-intelligence", { preHandler: requireUser }, async (request, reply) => {
   const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
-  const query = z.object({ from: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/).optional(), to: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/).optional() }).safeParse(request.query);
+  const query = z.object({ from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(), to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }).safeParse(request.query);
   if (!params.success || !query.success || (query.data.from && query.data.to && query.data.from > query.data.to)) return reply.code(400).send({ error: "Invalid menu and sales date range" });
   const business = await ownedBusiness(request.userId!, params.data.businessId);
   if (!business) return reply.code(404).send({ error: "Business not found" });
