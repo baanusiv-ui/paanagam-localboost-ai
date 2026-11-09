@@ -42,6 +42,7 @@ jobs:
       - run: npm run build
       - run: npm test
       - run: npm run api:check
+      - run: npm run security:check
       - name: Check dashboard JavaScript syntax
         working-directory: .
         run: node --check app.js && node --check growth-intelligence.js
