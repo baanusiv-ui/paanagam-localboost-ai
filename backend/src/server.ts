@@ -15,6 +15,7 @@ import { generateLocalReviewReplyDraft } from "./review-replies.js";
 import { generateLocalContentDraft } from "./content-drafts.js";
 import { generateLocalKeywords } from "./local-seo.js";
 import { normalizeGoogleReview, type GoogleReviewApiRecord } from "./google-reviews.js";
+import { analyzeReviewThemes } from "./review-themes.js";
 
 const app = Fastify({ logger: true, bodyLimit: 1024 * 1024 });
 await app.register(helmet);
@@ -686,6 +687,24 @@ app.post("/v1/businesses/:businessId/google/import", { preHandler: requireUser }
     request.log.warn({ error: error instanceof Error ? error.message : "unknown" }, "Google profile import failed");
     return reply.code(502).send({ error: error instanceof Error ? error.message : "Could not import Google Business Profile data" });
   }
+});
+
+app.get("/v1/businesses/:businessId/reviews/themes", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const rows = await prisma.growthRecord.findMany({
+    where: { businessId: business.id, recordType: "REVIEW_ITEM" },
+    orderBy: { recordedAt: "desc" },
+    take: 1000
+  });
+  const reviews = rows.map(row => {
+    const payload = row.payload && typeof row.payload === "object" && !Array.isArray(row.payload)
+      ? row.payload as Record<string, unknown> : {};
+    return { reviewText: payload.reviewText, rating: payload.rating, reviewDate: payload.reviewDate };
+  });
+  return analyzeReviewThemes(reviews);
 });
 
 app.post("/v1/businesses/:businessId/google/reviews/import", {
