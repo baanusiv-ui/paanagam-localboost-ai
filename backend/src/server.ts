@@ -795,6 +795,62 @@ app.get("/v1/businesses/:businessId/growth-goals/history", { preHandler: require
   return {business:{id:business.id,displayName:business.displayName},months:query.data.months,from:start.toISOString().slice(0,7),to:currentMonth.toISOString().slice(0,7),history:buildGrowthGoalHistory(goals,records,now,query.data.months),limits:{maxMonths:24,maxRecords:10000},method:"Recorded actuals compared with owner-saved monthly targets; archived targets remain visible."};
 });
 
+app.get("/v1/businesses/:businessId/growth-baselines", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const query = z.object({ includeArchived: z.enum(["true", "false"]).optional() }).safeParse(request.query);
+  if (!params.success || !query.success) return reply.code(400).send({ error: "Invalid growth baseline query" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const baselines = await prisma.growthBaseline.findMany({
+    where: { businessId: business.id, ...(query.data.includeArchived === "true" ? {} : { archivedAt: null }) },
+    orderBy: [{ periodEnd: "desc" }, { createdAt: "desc" }]
+  });
+  return { business: { id: business.id, displayName: business.displayName }, baselines, supportedMetrics: ["NET_SALES", "REVIEW_COUNT", "AVERAGE_RATING"], guardrails: ["Baseline values are owner-entered reference points, not independently verified actuals.", "Each baseline retains its source label and comparison period.", "Archived baselines remain available when includeArchived=true."] };
+});
+
+app.post("/v1/businesses/:businessId/growth-baselines", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const body = z.object({
+    metric: z.enum(["NET_SALES", "REVIEW_COUNT", "AVERAGE_RATING"]),
+    baselineValue: z.number().finite().nonnegative().max(1000000000),
+    periodStart: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/),
+    periodEnd: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/),
+    sourceLabel: z.string().trim().min(2).max(120),
+    ownerNote: z.string().trim().max(1000).optional()
+  }).safeParse(request.body);
+  if (!params.success || !body.success) return reply.code(400).send({ error: "Enter a valid baseline and its source." });
+  if (body.data.metric === "AVERAGE_RATING" && (body.data.baselineValue < 1 || body.data.baselineValue > 5)) return reply.code(400).send({ error: "Average rating baselines must be between 1 and 5." });
+  if (body.data.metric === "REVIEW_COUNT" && !Number.isInteger(body.data.baselineValue)) return reply.code(400).send({ error: "Review count baselines must be whole numbers." });
+  const periodStart = new Date(body.data.periodStart + "T00:00:00.000Z");
+  const periodEnd = new Date(body.data.periodEnd + "T23:59:59.999Z");
+  if (!Number.isFinite(periodStart.getTime()) || !Number.isFinite(periodEnd.getTime()) || periodStart > periodEnd) return reply.code(400).send({ error: "Baseline period end must be on or after its start." });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const baseline = await prisma.growthBaseline.create({ data: {
+    businessId: business.id, metric: body.data.metric, baselineValue: body.data.baselineValue,
+    periodStart, periodEnd, sourceLabel: body.data.sourceLabel,
+    ownerNote: body.data.ownerNote || null
+  } });
+  await recordActivity({
+    businessId: business.id, actorUserId: request.userId!, eventType: "GROWTH_BASELINE_CREATED",
+    entityType: "GROWTH_BASELINE", entityId: baseline.id,
+    summary: body.data.metric + " starting baseline recorded",
+    metadata: { metric: body.data.metric, baselineValue: body.data.baselineValue, periodStart: body.data.periodStart, periodEnd: body.data.periodEnd, sourceLabel: body.data.sourceLabel }
+  });
+  return reply.code(201).send({ baseline });
+});
+
+app.delete("/v1/businesses/:businessId/growth-baselines/:baselineId", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1), baselineId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid baseline identifier" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const result = await prisma.growthBaseline.updateMany({ where: { id: params.data.baselineId, businessId: business.id, archivedAt: null }, data: { archivedAt: new Date() } });
+  if (!result.count) return reply.code(404).send({ error: "Growth baseline not found" });
+  await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "GROWTH_BASELINE_ARCHIVED", entityType: "GROWTH_BASELINE", entityId: params.data.baselineId, summary: "Growth baseline archived" });
+  return reply.code(204).send();
+});
+
 app.get("/v1/businesses/:businessId/growth-goals", { preHandler: requireUser }, async (request, reply) => {
   const params=z.object({businessId:z.string().min(1)}).safeParse(request.params);
   const query=z.object({month:z.string().regex(/^\d{4}-\d{2}$/).optional()}).safeParse(request.query);
