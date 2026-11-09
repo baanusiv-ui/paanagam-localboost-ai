@@ -59,6 +59,374 @@
         "scheme": "bearer",
         "bearerFormat": "JWT"
       }
+    },
+    "schemas": {
+      "UserSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "UserProfile": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "name",
+          "createdAt"
+        ],
+        "additionalProperties": false
+      },
+      "AuthSession": {
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserSummary"
+          },
+          "accessToken": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "const": 900
+          }
+        },
+        "required": [
+          "user",
+          "accessToken",
+          "expiresIn"
+        ],
+        "additionalProperties": false
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 254
+          },
+          "password": {
+            "type": "string",
+            "minLength": 12,
+            "maxLength": 128
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "additionalProperties": false
+      },
+      "LoginRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "additionalProperties": false
+      },
+      "BusinessCreateRequest": {
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "category": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "address": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "website": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 500
+          },
+          "phone": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "countryCode": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2,
+            "default": "IN"
+          }
+        },
+        "required": [
+          "displayName"
+        ],
+        "additionalProperties": false
+      },
+      "BusinessSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "category": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "address": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "website": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "displayName",
+          "createdAt"
+        ],
+        "additionalProperties": false
+      },
+      "EvidenceCreateRequest": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[a-z0-9_]+$"
+          },
+          "value": {},
+          "source": {
+            "type": "string",
+            "enum": [
+              "OWNER_CONFIRMED",
+              "GOOGLE_API",
+              "PUBLIC_OBSERVATION",
+              "DEMO"
+            ]
+          },
+          "sourceLabel": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "verified": {
+            "type": "boolean",
+            "default": false
+          },
+          "observedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "category",
+          "value",
+          "source"
+        ],
+        "additionalProperties": false
+      },
+      "EvidenceItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "value": {},
+          "source": {
+            "type": "string",
+            "enum": [
+              "OWNER_CONFIRMED",
+              "GOOGLE_API",
+              "PUBLIC_OBSERVATION",
+              "DEMO"
+            ]
+          },
+          "sourceLabel": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "verified": {
+            "type": "boolean"
+          },
+          "observedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "category",
+          "value",
+          "source",
+          "verified",
+          "observedAt"
+        ],
+        "additionalProperties": false
+      },
+      "GrowthRecordCreateRequest": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "MENU_ITEM",
+              "DAILY_SALES",
+              "RETENTION_SNAPSHOT",
+              "CAMPAIGN_DRAFT",
+              "COMPETITOR",
+              "LOCAL_KEYWORD",
+              "REVIEW_ITEM",
+              "GOOGLE_CONTENT"
+            ]
+          },
+          "externalId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "pattern": "^[A-Za-z0-9._:-]+$"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "recordedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "type",
+          "externalId",
+          "payload"
+        ],
+        "additionalProperties": false
+      },
+      "GrowthRecordEnvelope": {
+        "type": "object",
+        "properties": {
+          "record": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "source": {
+            "type": "string",
+            "const": "OWNER_ENTERED"
+          },
+          "storage": {
+            "type": "string",
+            "const": "SERVER"
+          }
+        },
+        "required": [
+          "record",
+          "source",
+          "storage"
+        ],
+        "additionalProperties": false
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "details": {}
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": false
+      }
     }
   },
   "paths": {
@@ -92,20 +460,51 @@
         ],
         "summary": "Register an account",
         "responses": {
-          "200": {
-            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          "201": {
+            "description": "Account created and access token issued.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSession"
+                }
+              }
+            }
           },
           "400": {
-            "description": "Invalid request or parameters."
+            "description": "Invalid registration input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
-          "429": {
-            "description": "Rate limit exceeded."
+          "409": {
+            "description": "An account with this email already exists.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "500": {
             "description": "Unexpected server error."
           }
         },
-        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+        "x-contract-status": "request-and-response-schema-derived-from-current-Zod-route",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        }
       }
     },
     "/v1/auth/login": {
@@ -116,19 +515,50 @@
         "summary": "Authenticate and issue an access token",
         "responses": {
           "200": {
-            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+            "description": "Authenticated session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSession"
+                }
+              }
+            }
           },
           "400": {
-            "description": "Invalid request or parameters."
+            "description": "Invalid login input.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
-          "429": {
-            "description": "Rate limit exceeded."
+          "401": {
+            "description": "Email or password is incorrect.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "500": {
             "description": "Unexpected server error."
           }
         },
-        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+        "x-contract-status": "request-and-response-schema-derived-from-current-Zod-route",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        }
       }
     },
     "/v1/me": {
@@ -144,22 +574,45 @@
         ],
         "responses": {
           "200": {
-            "description": "Successful response. Exact response schema is pending source-derived contract completion."
-          },
-          "400": {
-            "description": "Invalid request or parameters."
+            "description": "Current user profile.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "user": {
+                      "$ref": "#/components/schemas/UserProfile"
+                    }
+                  },
+                  "required": [
+                    "user"
+                  ]
+                }
+              }
+            }
           },
           "401": {
-            "description": "Missing, invalid or expired access token."
+            "description": "Authentication required or token invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
-          "429": {
-            "description": "Rate limit exceeded."
-          },
-          "500": {
-            "description": "Unexpected server error."
+          "404": {
+            "description": "User not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         },
-        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+        "x-contract-status": "request-and-response-schema-derived-from-current-Zod-route"
       }
     },
     "/v1/businesses": {
@@ -175,22 +628,30 @@
         ],
         "responses": {
           "200": {
-            "description": "Successful response. Exact response schema is pending source-derived contract completion."
-          },
-          "400": {
-            "description": "Invalid request or parameters."
+            "description": "Businesses owned by the authenticated user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BusinessSummary"
+                  }
+                }
+              }
+            }
           },
           "401": {
-            "description": "Missing, invalid or expired access token."
-          },
-          "429": {
-            "description": "Rate limit exceeded."
-          },
-          "500": {
-            "description": "Unexpected server error."
+            "description": "Authentication required or token invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         },
-        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+        "x-contract-status": "request-and-response-schema-derived-from-current-Zod-route"
       },
       "post": {
         "tags": [
@@ -203,23 +664,56 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          "201": {
+            "description": "Business workspace created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "business": {
+                      "$ref": "#/components/schemas/BusinessSummary"
+                    }
+                  },
+                  "required": [
+                    "business"
+                  ]
+                }
+              }
+            }
           },
           "400": {
-            "description": "Invalid request or parameters."
+            "description": "Invalid business details.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "401": {
-            "description": "Missing, invalid or expired access token."
-          },
-          "429": {
-            "description": "Rate limit exceeded."
-          },
-          "500": {
-            "description": "Unexpected server error."
+            "description": "Authentication required or token invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         },
-        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+        "x-contract-status": "request-and-response-schema-derived-from-current-Zod-route",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BusinessCreateRequest"
+              }
+            }
+          }
+        }
       }
     },
     "/v1/businesses/{businessId}/data-status": {
@@ -288,26 +782,76 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          "201": {
+            "description": "Evidence item created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "evidence": {
+                      "$ref": "#/components/schemas/EvidenceItem"
+                    }
+                  },
+                  "required": [
+                    "evidence"
+                  ]
+                }
+              }
+            }
           },
           "400": {
-            "description": "Invalid request or parameters."
+            "description": "Invalid evidence or prohibited verification state.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "401": {
-            "description": "Missing, invalid or expired access token."
+            "description": "Authentication required or token invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Google API evidence can only be created by the trusted integration service.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "404": {
-            "description": "Business or requested resource not found, including resources outside the user's ownership."
-          },
-          "429": {
-            "description": "Rate limit exceeded."
-          },
-          "500": {
-            "description": "Unexpected server error."
+            "description": "Business not found or not owned by the authenticated user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         },
-        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+        "x-contract-status": "request-and-response-schema-derived-from-current-Zod-route",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvidenceCreateRequest"
+              }
+            }
+          }
+        }
       },
       "get": {
         "tags": [
@@ -331,25 +875,50 @@
         ],
         "responses": {
           "200": {
-            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+            "description": "Evidence items for the business.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EvidenceItem"
+                  }
+                }
+              }
+            }
           },
           "400": {
-            "description": "Invalid request or parameters."
+            "description": "Invalid business ID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "401": {
-            "description": "Missing, invalid or expired access token."
+            "description": "Authentication required or token invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "404": {
-            "description": "Business or requested resource not found, including resources outside the user's ownership."
-          },
-          "429": {
-            "description": "Rate limit exceeded."
-          },
-          "500": {
-            "description": "Unexpected server error."
+            "description": "Business not found or not owned by the authenticated user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         },
-        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+        "x-contract-status": "request-and-response-schema-derived-from-current-Zod-route"
       }
     },
     "/v1/businesses/{businessId}/audits": {
@@ -672,6 +1241,45 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MENU_ITEM",
+                "DAILY_SALES",
+                "RETENTION_SNAPSHOT",
+                "CAMPAIGN_DRAFT",
+                "COMPETITOR",
+                "LOCAL_KEYWORD",
+                "REVIEW_ITEM",
+                "GOOGLE_CONTENT"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
           }
         ],
         "security": [
@@ -681,25 +1289,76 @@
         ],
         "responses": {
           "200": {
-            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+            "description": "Paginated growth records.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "records": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    },
+                    "nextCursor": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "source": {
+                      "type": "string",
+                      "const": "OWNER_ENTERED"
+                    },
+                    "storage": {
+                      "type": "string",
+                      "const": "SERVER"
+                    }
+                  },
+                  "required": [
+                    "records",
+                    "nextCursor",
+                    "source",
+                    "storage"
+                  ]
+                }
+              }
+            }
           },
           "400": {
-            "description": "Invalid request or parameters."
+            "description": "Invalid query or cursor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "401": {
-            "description": "Missing, invalid or expired access token."
+            "description": "Authentication required or token invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "404": {
-            "description": "Business or requested resource not found, including resources outside the user's ownership."
-          },
-          "429": {
-            "description": "Rate limit exceeded."
-          },
-          "500": {
-            "description": "Unexpected server error."
+            "description": "Business not found or not owned by the authenticated user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         },
-        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+        "x-contract-status": "request-and-response-schema-derived-from-current-Zod-route"
       },
       "post": {
         "tags": [
@@ -723,25 +1382,67 @@
         ],
         "responses": {
           "200": {
-            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+            "description": "Growth record created or updated using its business/type/external ID key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GrowthRecordEnvelope"
+                }
+              }
+            }
           },
           "400": {
-            "description": "Invalid request or parameters."
+            "description": "Invalid growth record.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "401": {
-            "description": "Missing, invalid or expired access token."
+            "description": "Authentication required or token invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "404": {
-            "description": "Business or requested resource not found, including resources outside the user's ownership."
+            "description": "Business not found or not owned by the authenticated user.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
-          "429": {
-            "description": "Rate limit exceeded."
-          },
-          "500": {
-            "description": "Unexpected server error."
+          "413": {
+            "description": "Growth record payload exceeds 64 KB.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           }
         },
-        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+        "x-contract-status": "request-and-response-schema-derived-from-current-Zod-route",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GrowthRecordCreateRequest"
+              }
+            }
+          }
+        }
       }
     },
     "/v1/businesses/{businessId}/growth-records/{recordId}": {
