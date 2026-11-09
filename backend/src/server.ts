@@ -14,6 +14,7 @@ import { generateLocalConsultant, getLocalAiStatus } from "./consultant.js";
 import { generateLocalReviewReplyDraft } from "./review-replies.js";
 import { generateLocalContentDraft } from "./content-drafts.js";
 import { generateLocalKeywords } from "./local-seo.js";
+import { normalizeGoogleReview, type GoogleReviewApiRecord } from "./google-reviews.js";
 
 const app = Fastify({ logger: true, bodyLimit: 1024 * 1024 });
 await app.register(helmet);
@@ -684,6 +685,107 @@ app.post("/v1/businesses/:businessId/google/import", { preHandler: requireUser }
   } catch (error) {
     request.log.warn({ error: error instanceof Error ? error.message : "unknown" }, "Google profile import failed");
     return reply.code(502).send({ error: error instanceof Error ? error.message : "Could not import Google Business Profile data" });
+  }
+});
+
+app.post("/v1/businesses/:businessId/google/reviews/import", {
+  preHandler: requireUser,
+  config: { rateLimit: { max: 2, timeWindow: "1 minute" } }
+}, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+
+  const connection = await prisma.googleConnection.findUnique({ where: { businessId: business.id } });
+  const account = connection?.googleAccountId?.match(/^accounts\/[A-Za-z0-9_-]+$/);
+  const location = connection?.googleLocationResourceName?.match(/^locations\/[A-Za-z0-9_-]+$/);
+  if (!connection || !account || !location) {
+    return reply.code(409).send({ error: "Connect Google and import the selected verified Business Profile location before importing reviews." });
+  }
+  if (!connection.scope.split(" ").includes("https://www.googleapis.com/auth/business.manage")) {
+    return reply.code(403).send({ error: "The connected Google account has not granted Business Profile review access. Reconnect and approve the requested permission." });
+  }
+
+  try {
+    const accessToken = await googleAccessToken(business.id);
+    const url = new URL("https://mybusiness.googleapis.com/v4/" + connection.googleAccountId + "/" + connection.googleLocationResourceName + "/reviews");
+    url.searchParams.set("pageSize", "50");
+    url.searchParams.set("orderBy", "updateTime desc");
+
+    const normalized: Array<NonNullable<ReturnType<typeof normalizeGoogleReview>>> = [];
+    let pageToken: string | undefined;
+    let averageRating: number | null = null;
+    let totalReviewCount: number | null = null;
+    let pagesFetched = 0;
+    for (let page = 0; page < 5; page++) {
+      if (pageToken) url.searchParams.set("pageToken", pageToken);
+      const result = await googleGet<{
+        reviews?: GoogleReviewApiRecord[];
+        nextPageToken?: string;
+        averageRating?: number;
+        totalReviewCount?: number;
+      }>(url.toString(), accessToken);
+      pagesFetched += 1;
+      if (page === 0) {
+        averageRating = typeof result.averageRating === "number" ? result.averageRating : null;
+        totalReviewCount = typeof result.totalReviewCount === "number" ? result.totalReviewCount : null;
+      }
+      for (const review of result.reviews ?? []) {
+        const item = normalizeGoogleReview(review);
+        if (item) normalized.push(item);
+      }
+      pageToken = result.nextPageToken;
+      if (!pageToken) break;
+    }
+
+    const unique = [...new Map(normalized.map(item => [item.reviewId, item])).values()];
+    const externalIds = unique.map(item => "google-review:" + createHash("sha256").update(item.reviewId).digest("hex").slice(0, 40));
+    const existing = externalIds.length ? await prisma.growthRecord.findMany({
+      where: { businessId: business.id, recordType: "REVIEW_ITEM", externalId: { in: externalIds } }
+    }) : [];
+    const existingById = new Map(existing.map(record => [record.externalId, record]));
+    const importedAt = new Date();
+
+    await Promise.all(unique.map(async (item) => {
+      const externalId = "google-review:" + createHash("sha256").update(item.reviewId).digest("hex").slice(0, 40);
+      const previous = existingById.get(externalId);
+      const previousPayload = (previous?.payload ?? {}) as Record<string, unknown>;
+      const recorded = item.reviewDate ? new Date(item.reviewDate) : importedAt;
+      const recordedAt = Number.isNaN(recorded.getTime()) ? importedAt : recorded;
+      const payload = {
+        ...previousPayload,
+        ...item,
+        replyDraft: typeof previousPayload.replyDraft === "string" ? previousPayload.replyDraft : "",
+        status: previousPayload.status === "REPLY_DRAFT" ? "REPLY_DRAFT" : item.status,
+        importedAt: importedAt.toISOString()
+      };
+      await prisma.growthRecord.upsert({
+        where: { businessId_recordType_externalId: { businessId: business.id, recordType: "REVIEW_ITEM", externalId } },
+        create: {
+          businessId: business.id, recordType: "REVIEW_ITEM", externalId,
+          payload: payload as Prisma.InputJsonValue, source: "GOOGLE_API", recordedAt
+        },
+        update: {
+          payload: payload as Prisma.InputJsonValue, source: "GOOGLE_API", recordedAt
+        }
+      });
+    }));
+
+    return {
+      importedCount: unique.length,
+      totalReviewCount,
+      averageRating,
+      pagesFetched,
+      pageLimitReached: Boolean(pageToken),
+      importedAt: importedAt.toISOString(),
+      source: "GOOGLE_API",
+      note: "Reviews were imported read-only. No replies were sent, edited or published."
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Google review import failed";
+    request.log.warn({ message }, "Google Business Profile review import failed");
+    return reply.code(502).send({ error: message });
   }
 });
 
