@@ -48,12 +48,11 @@
       const path = businessPath();
       const current = await remoteApi(path + "/growth-records?limit=200");
       const records = current.records || [];
-      if (!records.length) {
-        for (const [index, item] of data.menu.entries()) await syncRecord("MENU_ITEM", item, index);
-        for (const item of data.sales) await syncRecord("DAILY_SALES", item);
-        for (const item of data.retention) await syncRecord("RETENTION_SNAPSHOT", item);
-        for (const [index, item] of data.drafts.entries()) await syncRecord("CAMPAIGN_DRAFT", item, index);
-      }
+      remoteReady = true;
+      for (const [index, item] of data.menu.entries()) await syncRecord("MENU_ITEM", item, index);
+      for (const item of data.sales) await syncRecord("DAILY_SALES", item);
+      for (const item of data.retention) await syncRecord("RETENTION_SNAPSHOT", item);
+      for (const [index, item] of data.drafts.entries()) await syncRecord("CAMPAIGN_DRAFT", item, index);
       const latest = await remoteApi(path + "/growth-records?limit=200");
       const grouped = { MENU_ITEM: [], DAILY_SALES: [], RETENTION_SNAPSHOT: [], CAMPAIGN_DRAFT: [] };
       for (const record of latest.records || []) {
