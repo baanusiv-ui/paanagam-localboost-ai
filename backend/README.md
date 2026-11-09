@@ -105,3 +105,7 @@ The Growth consultant and review reply assistant use Ollama running on the owner
 5. Use the Local AI consultant button. The status endpoint checks the service and model before sending a request.
 
 The API restricts the Ollama URL to loopback or Docker Desktop's host gateway. If Ollama is not configured or the model is missing, the rules-based intelligence report continues to work. AI recommendations are suggestions and require owner approval.
+
+## Cloud deployment safety
+
+The checked-in Render Blueprint is a **manual-deploy pilot template**, not a provisioned environment. Automatic deploys are disabled. Both the API and PostgreSQL entries currently use the Free plan only as a preview placeholder. Do not store production or customer data on a Free Render Postgres database: Render documents a 30-day expiry, 1 GB storage limit, and no backups for Free databases. Select an appropriate paid database plan with backups before importing real business records; confirm pricing and backup/restore settings in the Render dashboard. No Render service or database has been provisioned by this repository change.
