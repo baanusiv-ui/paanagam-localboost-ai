@@ -19,6 +19,17 @@ enum AuditStatus {
   INCOMPLETE
 }
 
+enum GrowthRecordType {
+  MENU_ITEM
+  DAILY_SALES
+  RETENTION_SNAPSHOT
+  CAMPAIGN_DRAFT
+  COMPETITOR
+  LOCAL_KEYWORD
+  REVIEW_ITEM
+  GOOGLE_CONTENT
+}
+
 model User {
   id           String        @id @default(cuid())
   email        String        @unique
@@ -45,6 +56,7 @@ model Business {
   audits          Audit[]
   googleConnection GoogleConnection?
   oauthStates     OAuthState[]
+  growthRecords   GrowthRecord[]
   @@index([ownerId, createdAt])
 }
 
@@ -59,7 +71,7 @@ model Evidence {
   verified    Boolean        @default(false)
   observedAt  DateTime       @default(now())
   expiresAt   DateTime?
-  createdAt   DateTime       @default(now())
+  createdAt   DateTime      @default(now())
   @@index([businessId, category, observedAt])
 }
 
@@ -100,4 +112,19 @@ model OAuthState {
   expiresAt     DateTime
   createdAt     DateTime @default(now())
   @@index([expiresAt])
+}
+
+model GrowthRecord {
+  id          String           @id @default(cuid())
+  businessId  String
+  business    Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  recordType  GrowthRecordType
+  externalId  String
+  payload     Json
+  source      String           @default("OWNER_ENTERED")
+  recordedAt  DateTime         @default(now())
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  @@unique([businessId, recordType, externalId])
+  @@index([businessId, recordType, recordedAt])
 }

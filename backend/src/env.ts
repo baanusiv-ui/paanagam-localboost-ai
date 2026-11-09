@@ -12,7 +12,13 @@ const schema = z.object({
   APP_BASE_URL: z.string().url().default("http://localhost:3000"),
   GOOGLE_CLIENT_ID: z.string().optional().default(""),
   GOOGLE_CLIENT_SECRET: z.string().optional().default(""),
-  GOOGLE_REDIRECT_URI: z.string().url().optional().default("http://localhost:4100/v1/google/callback")
+  GOOGLE_REDIRECT_URI: z.string().url().optional().default("http://localhost:4100/v1/google/callback"),
+  OLLAMA_BASE_URL: z.string().default("").refine(value => {
+    if (!value) return true;
+    try { const url = new URL(value); return ["http:", "https:"].includes(url.protocol) && ["localhost", "127.0.0.1", "::1", "host.docker.internal"].includes(url.hostname); }
+    catch { return false; }
+  }, "OLLAMA_BASE_URL must point to localhost or host.docker.internal"),
+  OLLAMA_MODEL: z.string().trim().min(1).default("qwen2.5:7b")
 });
 
 export const env = schema.parse(process.env);

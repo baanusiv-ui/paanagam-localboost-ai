@@ -9,6 +9,9 @@ import { prisma } from "./db.js";
 import { env, corsOrigins } from "./env.js";
 import { hashPassword, verifyPassword, issueAccessToken, verifyAccessToken, encryptSecret, randomUrlToken, decryptSecret } from "./security.js";
 import { buildAudit } from "./audit.js";
+import { buildBusinessIntelligence } from "./intelligence.js";
+import { generateLocalConsultant, getLocalAiStatus } from "./consultant.js";
+import { generateLocalKeywords } from "./local-seo.js";
 
 const app = Fastify({ logger: true, bodyLimit: 1024 * 1024 });
 await app.register(helmet);
@@ -80,6 +83,237 @@ async function googleGet<T>(url: string, accessToken: string): Promise<T> {
 async function ownedBusiness(userId: string, businessId: string) {
   return prisma.business.findFirst({ where: { id: businessId, ownerId: userId } });
 }
+
+app.get("/v1/businesses/:businessId/data-status", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+
+  const [evidence, growthRecords, googleConnection] = await Promise.all([
+    prisma.evidence.findMany({
+      where: { businessId: business.id },
+      select: { source: true, observedAt: true, expiresAt: true, verified: true },
+      orderBy: { observedAt: "desc" },
+      take: 500
+    }),
+    prisma.growthRecord.findMany({
+      where: { businessId: business.id },
+      select: { recordType: true, source: true, recordedAt: true },
+      orderBy: { recordedAt: "desc" },
+      take: 500
+    }),
+    prisma.googleConnection.findUnique({
+      where: { businessId: business.id },
+      select: { connectedAt: true, expiresAt: true, scope: true }
+    })
+  ]);
+
+  const countBy = (items: Array<{ source: string }>) => items.reduce<Record<string, number>>((counts, item) => {
+    counts[item.source] = (counts[item.source] || 0) + 1;
+    return counts;
+  }, {});
+  const growthByType = growthRecords.reduce<Record<string, number>>((counts, item) => {
+    counts[item.recordType] = (counts[item.recordType] || 0) + 1;
+    return counts;
+  }, {});
+  const now = new Date();
+  return {
+    business: { id: business.id, displayName: business.displayName },
+    generatedAt: now.toISOString(),
+    google: {
+      connectionSaved: Boolean(googleConnection),
+      connectedAt: googleConnection?.connectedAt ?? null,
+      accessTokenExpiresAt: googleConnection?.expiresAt ?? null,
+      hasBusinessManageScope: Boolean(googleConnection?.scope.split(" ").includes("https://www.googleapis.com/auth/business.manage"))
+    },
+    evidence: {
+      sampledCount: evidence.length,
+      sourceCounts: countBy(evidence),
+      verifiedCount: evidence.filter(item => item.verified).length,
+      expiredCount: evidence.filter(item => item.expiresAt && item.expiresAt <= now).length,
+      latestObservedAt: evidence[0]?.observedAt ?? null
+    },
+    growthRecords: {
+      sampledCount: growthRecords.length,
+      sourceCounts: countBy(growthRecords),
+      typeCounts: growthByType,
+      latestRecordedAt: growthRecords[0]?.recordedAt ?? null
+    },
+    limits: { sampledRecordsPerSection: 500, metricsAreNotExhaustiveWhenSampleLimitReached: evidence.length === 500 || growthRecords.length === 500 }
+  };
+});
+
+const growthRecordType = z.enum(["MENU_ITEM", "DAILY_SALES", "RETENTION_SNAPSHOT", "CAMPAIGN_DRAFT", "COMPETITOR", "LOCAL_KEYWORD", "REVIEW_ITEM", "GOOGLE_CONTENT"]);
+
+app.post("/v1/businesses/:businessId/local-seo/keywords", {
+  preHandler: requireUser,
+  config: { rateLimit: { max: 10, timeWindow: "1 minute" } }
+}, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const body = z.object({
+    locality: z.string().trim().min(1).max(120),
+    services: z.array(z.string().trim().min(1).max(120)).min(1).max(8),
+    language: z.enum(["Tamil", "English", "Tamil + English"]).default("Tamil + English")
+  }).safeParse(request.body);
+  if (!params.success || !body.success) return reply.code(400).send({ error: "Enter a locality and at least one product or service." });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+
+  const suggestions = generateLocalKeywords({
+    businessName: business.displayName,
+    category: business.category ?? undefined,
+    locality: body.data.locality,
+    services: body.data.services,
+    language: body.data.language
+  });
+  const generatedAt = new Date();
+  await Promise.all(suggestions.map(async (item) => {
+    const externalId = "local-seo:" + createHash("sha256").update(body.data.locality.toLowerCase() + "|" + item.keyword.toLowerCase()).digest("hex").slice(0, 40);
+    await prisma.growthRecord.upsert({
+      where: { businessId_recordType_externalId: { businessId: business.id, recordType: "LOCAL_KEYWORD", externalId } },
+      create: {
+        businessId: business.id,
+        recordType: "LOCAL_KEYWORD",
+        externalId,
+        source: "RULES_GENERATED",
+        payload: { ...item, locality: body.data.locality, generatedAt: generatedAt.toISOString() } as Prisma.InputJsonValue,
+        recordedAt: generatedAt
+      },
+      update: {
+        source: "RULES_GENERATED",
+        payload: { ...item, locality: body.data.locality, generatedAt: generatedAt.toISOString() } as Prisma.InputJsonValue,
+        recordedAt: generatedAt
+      }
+    });
+  }));
+  return {
+    business: { id: business.id, displayName: business.displayName },
+    generatedAt: generatedAt.toISOString(),
+    methodology: "Template-based suggestions from owner-entered products/services and locality. No search-volume, ranking, or competition data is claimed.",
+    suggestions
+  };
+});
+
+
+app.get("/v1/businesses/:businessId/growth-records", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const query = z.object({
+    type: growthRecordType.optional(),
+    limit: z.coerce.number().int().min(1).max(200).default(100)
+  }).safeParse(request.query);
+  if (!params.success || !query.success) return reply.code(400).send({ error: "Invalid growth record query" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const records = await prisma.growthRecord.findMany({
+    where: { businessId: business.id, ...(query.data.type ? { recordType: query.data.type } : {}) },
+    orderBy: [{ recordedAt: "desc" }, { createdAt: "desc" }],
+    take: query.data.limit
+  });
+  return { records, source: "OWNER_ENTERED", storage: "SERVER" };
+});
+
+app.post("/v1/businesses/:businessId/growth-records", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const body = z.object({
+    type: growthRecordType,
+    externalId: z.string().trim().min(1).max(100).regex(/^[A-Za-z0-9._:-]+$/),
+    payload: z.record(z.unknown()),
+    recordedAt: z.coerce.date().optional()
+  }).safeParse(request.body);
+  if (!params.success || !body.success) return reply.code(400).send({ error: "Invalid growth record", details: body.success ? undefined : body.error.flatten() });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  if (Buffer.byteLength(JSON.stringify(body.data.payload), "utf8") > 64 * 1024) {
+    return reply.code(413).send({ error: "Growth record payload exceeds 64 KB" });
+  }
+  const record = await prisma.growthRecord.upsert({
+    where: {
+      businessId_recordType_externalId: {
+        businessId: business.id,
+        recordType: body.data.type,
+        externalId: body.data.externalId
+      }
+    },
+    create: {
+      businessId: business.id,
+      recordType: body.data.type,
+      externalId: body.data.externalId,
+      payload: body.data.payload as Prisma.InputJsonValue,
+      recordedAt: body.data.recordedAt
+    },
+    update: {
+      payload: body.data.payload as Prisma.InputJsonValue,
+      recordedAt: body.data.recordedAt ?? new Date()
+    }
+  });
+  return reply.code(200).send({ record, source: "OWNER_ENTERED", storage: "SERVER" });
+});
+
+app.delete("/v1/businesses/:businessId/growth-records/:recordId", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1), recordId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid growth record identifier" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const result = await prisma.growthRecord.deleteMany({ where: { id: params.data.recordId, businessId: business.id } });
+  if (!result.count) return reply.code(404).send({ error: "Growth record not found" });
+  return reply.code(204).send();
+});
+
+
+
+app.get("/v1/businesses/:businessId/intelligence", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const records = await prisma.growthRecord.findMany({
+    where: { businessId: business.id, recordType: { in: ["MENU_ITEM", "DAILY_SALES", "RETENTION_SNAPSHOT"] } },
+    orderBy: [{ recordedAt: "asc" }, { createdAt: "asc" }],
+    take: 500
+  });
+  const report = buildBusinessIntelligence(records.map(record => ({
+    id: record.id,
+    recordType: record.recordType,
+    payload: record.payload as unknown as Record<string, unknown>,
+    recordedAt: record.recordedAt,
+    source: record.source
+  })));
+  return { business: { id: business.id, displayName: business.displayName }, ...report };
+});
+app.get("/v1/ai/status", { preHandler: requireUser }, async () => getLocalAiStatus());
+
+app.post("/v1/businesses/:businessId/consultant", {
+  preHandler: requireUser,
+  config: { rateLimit: { max: 5, timeWindow: "1 minute" } }
+}, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const body = z.object({ language: z.enum(["Tamil", "English", "Tamil + English"]).default("Tamil + English") }).safeParse(request.body ?? {});
+  if (!params.success || !body.success) return reply.code(400).send({ error: "Invalid consultant request" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const records = await prisma.growthRecord.findMany({
+    where: { businessId: business.id, recordType: { in: ["MENU_ITEM", "DAILY_SALES", "RETENTION_SNAPSHOT"] } },
+    orderBy: [{ recordedAt: "asc" }, { createdAt: "asc" }],
+    take: 500
+  });
+  const report = buildBusinessIntelligence(records.map(record => ({
+    id: record.id,
+    recordType: record.recordType,
+    payload: record.payload as unknown as Record<string, unknown>,
+    recordedAt: record.recordedAt,
+    source: record.source
+  })));
+  try {
+    const consultant = await generateLocalConsultant(report, body.data.language);
+    return { business: { id: business.id, displayName: business.displayName }, reportEngine: report.engine, ...consultant };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Local AI consultant is unavailable";
+    request.log.warn({ message }, "Local AI consultant request failed");
+    return reply.code(503).send({ error: message });
+  }
+});
+
 
 app.get("/health", async () => ({ ok: true, service: "localboost-api", version: "0.1.0" }));
 

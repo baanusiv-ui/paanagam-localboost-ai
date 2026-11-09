@@ -7,6 +7,7 @@
   <meta name="description" content="LocalBoost AI — local business growth intelligence">
   <title>LocalBoost AI · Paanagam Pilot</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="growth-intelligence.css">
 </head>
 <body>
   <div class="app-shell">
@@ -24,10 +25,11 @@
       <nav class="nav-list" aria-label="Main navigation">
         <button class="nav-item active" data-view="overview"><span>◫</span> Overview</button>
         <button class="nav-item" data-view="audit"><span>⌕</span> Local presence audit</button>
-        <button class="nav-item" data-view="competitors"><span>◎</span> Competitors</button>
+        <button class="nav-item" data-view="seo"><span>⌖</span> Local SEO keywords</button>
+        <button class="nav-item" data-view="menu"><span>▦</span> Menu intelligence</button><button class="nav-item" data-view="sales"><span>↗</span> Sales analytics</button><button class="nav-item" data-view="retention"><span>♡</span> Customer retention</button><button class="nav-item" data-view="competitors"><span>◎</span> Competitors</button>
         <button class="nav-item" data-view="reviews"><span>✳</span> Reviews</button>
         <button class="nav-item" data-view="content"><span>▤</span> Content studio</button>
-        <button class="nav-item" data-view="approvals"><span>✓</span> Approval centre <i class="count">2</i></button>
+        <button class="nav-item" data-view="consultant"><span>✦</span> Growth consultant</button><button class="nav-item" data-view="approvals"><span>✓</span> Approval centre <i class="count">2</i></button>
       </nav>
       <div class="sidebar-bottom">
         <div class="connection-card" id="sidebar-google-status">
@@ -122,18 +124,41 @@
         </div>
       </section>
 
-      <section class="view-panel hidden" id="competitors-view"><div class="empty-state"><div class="empty-icon">◎</div><h2>Competitor intelligence</h2><p>Add nearby competitors after the business location is verified. We will not invent competitor names, rankings or performance.</p><button class="secondary-button" data-go="audit">Complete business verification</button></div></section>
+
+      <section class="view-panel hidden" id="seo-view">
+        <div class="section-heading"><div><h2>Local SEO keyword planner</h2><p>Build Tamil and English keyword ideas around your products, services and service area.</p></div><span class="tag confirmed">Rules-generated</span></div>
+        <div class="panel">
+          <form id="local-seo-form" class="gi-form">
+            <label for="seo-locality">Target locality / town<input id="seo-locality" required maxlength="120" placeholder="e.g. Namakkal"></label>
+            <label for="seo-services">Products or services<input id="seo-services" required maxlength="500" placeholder="e.g. Filter coffee, tea, snacks"></label>
+            <label for="seo-language">Keyword language<select id="seo-language"><option value="Tamil + English">Tamil + English</option><option value="Tamil">Tamil</option><option value="English">English</option></select></label>
+            <button class="primary-button" id="seo-generate" type="submit">Generate keyword ideas</button>
+          </form>
+          <p class="footnote">These are planning suggestions generated from the business details you enter. They are not live Google search volumes, rankings, keyword difficulty, or competitor data.</p>
+          <p id="seo-message" class="form-message" role="status"></p>
+        </div>
+        <div class="panel hidden" id="seo-results" aria-live="polite">
+          <div class="panel-heading"><div><h3>Keyword opportunities</h3><p id="seo-methodology"></p></div><span class="tag confirmed" id="seo-count">0 ideas</span></div>
+          <div id="seo-keyword-list" class="gi-keyword-list"></div>
+        </div>
+      </section>
+\n      <section class="view-panel hidden" id="competitors-view"><div class="empty-state"><div class="empty-icon">◎</div><h2>Competitor intelligence</h2><p>Add nearby competitors after the business location is verified. We will not invent competitor names, rankings or performance.</p><button class="secondary-button" data-go="audit">Complete business verification</button></div></section>
       <section class="view-panel hidden" id="reviews-view"><div class="empty-state"><div class="empty-icon">✳</div><h2>Review intelligence</h2><p>No reviews have been imported or supplied yet. Connect an authorised source or provide review data to analyse real customer feedback.</p><span class="tag pending-tag">Waiting for verified source</span></div></section>
       <section class="view-panel hidden" id="content-view">
         <div class="section-heading"><div><h2>Content studio</h2><p>Create drafts for review. Nothing is published from this prototype.</p></div></div>
-        <div class="panel composer"><label for="content-topic">What would you like to promote?</label><input id="content-topic" type="text" placeholder="e.g. Filter coffee, evening snacks, new menu"><label for="content-tone">Tone</label><select id="content-tone"><option>Friendly and local</option><option>Warm and traditional</option><option>Offer-led and energetic</option></select><button class="primary-button" id="make-draft">Generate sample draft</button><div id="draft-output" class="draft-output hidden"></div></div>
+        <div class="panel composer"><label for="content-topic">What would you like to promote?</label><input id="content-topic" type="text" placeholder="e.g. Filter coffee, evening snacks, new menu"><label for="content-tone">Tone</label><select id="content-tone"><option>Friendly and local</option><option>Warm and traditional</option><option>Offer-led and energetic</option></select><label for="content-language">Language</label><select id="content-language"><option value="ta">Tamil</option><option value="en">English</option><option value="both">Tamil + English</option></select><button class="primary-button" id="make-draft" type="button">Create draft</button><div id="draft-output" class="draft-output hidden"></div><button class="secondary-button" id="save-draft" type="button" disabled>Save draft to approval centre</button></div>
       </section>
-      <section class="view-panel hidden" id="approvals-view"><div class="section-heading"><div><h2>Approval centre</h2><p>Approval-first workflow · demo items only</p></div></div><div class="panel"><div class="check-row"><span class="check-icon pending">✎</span><div><strong>Morning filter coffee post</strong><small>Demo draft · no publishing connection</small></div><span class="tag pending-tag">Needs review</span></div><div class="check-row"><span class="check-icon pending">✎</span><div><strong>Evening menu highlight</strong><small>Demo draft · no publishing connection</small></div><span class="tag pending-tag">Needs review</span></div><p class="footnote">Approval controls are illustrative in this prototype. No external action is available or triggered.</p></div></section>
+      <section class="view-panel hidden" id="approvals-view"><div class="section-heading"><div><h2>Approval centre</h2><p>Review exact draft content. No publishing or sending action is connected.</p></div></div><div class="panel"><div id="approval-list"><p class="empty-copy">No saved drafts. Create one in Campaign Studio.</p></div><p class="footnote">Marking a draft reviewed records a local decision only. It does not publish, schedule or send anything.</p></div></section>
 
+
+      <section class="view-panel hidden" id="menu-view"><div class="section-heading"><div><h2>Menu intelligence</h2><p>Owner-entered item data. Contribution requires verified cost.</p></div><span class="tag pending-tag">Browser-local data</span></div><div class="panel"><form id="menu-form" class="data-form"><label>Menu item<input id="menu-name" required placeholder="Filter coffee"></label><label>Selling price (₹)<input id="menu-price" type="number" min="0" step=".01" required></label><label>Unit cost (₹)<input id="menu-cost" type="number" min="0" step=".01" placeholder="Optional"></label><label>Units sold<input id="menu-qty" type="number" min="0" step=".01" value="0"></label><button class="primary-button">Add item</button></form><p class="footnote">Stored in this browser only. Do not mix cost and selling price with different tax bases.</p></div><div class="panel table-panel"><h3>Menu register</h3><div id="menu-table"><p class="empty-copy">No menu items entered.</p></div></div></section>
+      <section class="view-panel hidden" id="sales-view"><div class="section-heading"><div><h2>Sales analytics</h2><p>Manual owner-confirmed daily summaries until the read-only POS API is available.</p></div><span class="tag pending-tag">POS not connected</span></div><div class="panel"><form id="sales-form" class="data-form"><label>Business date<input id="sales-date" type="date" required></label><label>Net sales (₹)<input id="sales-net" type="number" min="0" step=".01" required></label><label>Orders<input id="sales-orders" type="number" min="0" step="1" required></label><label>Discounts (₹)<input id="sales-discounts" type="number" min="0" step=".01" value="0"></label><label>Refunds (₹)<input id="sales-refunds" type="number" min="0" step=".01" value="0"></label><button class="primary-button">Save daily summary</button></form><p class="footnote">Not synced to POS. Data remains in this browser.</p></div><div class="metric-grid"><article class="metric-card"><div class="metric-top">Recorded days</div><strong id="sales-days">0</strong><small>Owner-entered</small></article><article class="metric-card"><div class="metric-top">Net sales total</div><strong id="sales-total">₹0</strong><small>Saved records</small></article><article class="metric-card"><div class="metric-top">Orders</div><strong id="sales-order-total">0</strong><small>Saved records</small></article><article class="metric-card"><div class="metric-top">Average order value</div><strong id="sales-aov">₹0</strong><small>Net sales ÷ orders</small></article></div><div class="panel table-panel"><h3>Daily sales register</h3><div id="sales-table"><p class="empty-copy">No summaries entered.</p></div></div></section>
+      <section class="view-panel hidden" id="retention-view"><div class="section-heading"><div><h2>Customer retention</h2><p>Aggregate counts only. Do not enter customer identities.</p></div><span class="tag pending-tag">Browser-local data</span></div><div class="panel"><form id="retention-form" class="data-form"><label>Date<input id="retention-date" type="date" required></label><label>New members<input id="retention-new" type="number" min="0" required></label><label>Active members<input id="retention-active" type="number" min="0" required></label><label>Rewards issued<input id="retention-issued" type="number" min="0" value="0"></label><label>Rewards redeemed<input id="retention-redeemed" type="number" min="0" value="0"></label><button class="primary-button">Save aggregate</button></form><p class="footnote">No names, phone numbers, emails, OTPs or individual purchase histories.</p></div><div class="panel table-panel"><h3>Retention summary</h3><div id="retention-summary"><p class="empty-copy">No aggregates entered.</p></div></div></section>
+      <section class="view-panel hidden" id="consultant-view"><div class="section-heading"><div><h2>Growth consultant</h2><p>Evidence-first business analysis with an optional private AI explanation running on your Windows PC.</p></div><span class="tag pending-tag">Rules + Local AI</span></div><div class="panel"><p class="footnote" id="cloud-sync-status">Sign in and select a business to connect owner records to the cloud database.</p><p class="footnote" id="data-freshness-status">Data sources and freshness will appear after selecting a business.</p><button class="primary-button" id="generate-insights">Review recorded data</button><div id="insight-list"><p class="empty-copy">Enter menu and sales data, then run the review.</p></div><div class="divider"></div><div class="section-heading"><div><h3>Local AI consultant</h3><p>Uses Ollama on your own PC. Numeric calculations remain controlled by the rules engine.</p></div><span class="tag pending-tag" id="local-ai-status">Checking when requested</span></div><div class="gi-form"><label for="ai-consultant-language">Response language</label><select id="ai-consultant-language"><option>Tamil + English</option><option>Tamil</option><option>English</option></select><button class="secondary-button" id="generate-ai-consultant" type="button">Ask local AI consultant</button></div><div id="ai-consultant-output" class="gi-results"><p class="empty-copy">Connect Ollama on the Windows PC to generate evidence-grounded explanations and next steps.</p></div></div></section>
       <footer>LOCALBOOST AI <span>·</span> PAANAGAM PILOT <span>·</span> EVIDENCE BEFORE OPTIMISATION</footer>
     </main>
   </div>
   <script src="config.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js"></script><script src="growth.js"></script><script src="growth-intelligence.js"></script>
 </body>
 </html>
