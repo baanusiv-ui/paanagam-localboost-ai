@@ -85,10 +85,31 @@
     }).join('');
     return '<section class=gi-history><h3>Growth history</h3><p>Accepted '+(counts.accepted||0)+' · In progress '+(counts.inProgress||0)+' · Completed '+(counts.completed||0)+' · Dismissed '+(counts.dismissed||0)+'</p><div class=gi-history-filters><button type=button data-history-filter=ALL>All</button><button type=button data-history-filter=IN_PROGRESS>In progress</button><button type=button data-history-filter=COMPLETED>Completed</button><button type=button data-history-filter=DISMISSED>Dismissed</button></div>'+(rows||'<p>No saved actions yet.</p>')+'</section>';
   }
+  function renderGrowthGoals(result){
+    const root=$("gi-growth-goals");if(!root)return;
+    const labels={NET_SALES:"Monthly net sales (₹)",REVIEW_COUNT:"Monthly review count",AVERAGE_RATING:"Average review rating (1–5)"};
+    const goals=(result.goals||[]).map(goal=>{
+      const actual=goal.actualValue===null?"No data":goal.metric==="NET_SALES"?"₹"+Number(goal.actualValue).toLocaleString("en-IN"):goal.metric==="AVERAGE_RATING"?Number(goal.actualValue).toFixed(2)+" / 5":Number(goal.actualValue).toLocaleString("en-IN");
+      const target=goal.metric==="NET_SALES"?"₹"+Number(goal.targetValue).toLocaleString("en-IN"):goal.metric==="AVERAGE_RATING"?Number(goal.targetValue).toFixed(2)+" / 5":Number(goal.targetValue).toLocaleString("en-IN");
+      const percent=goal.progressPercent===null?"—":Number(goal.progressPercent).toFixed(1)+"%";
+      const status={ACHIEVED:"Achieved",IN_PROGRESS:"Recorded progress",BELOW_TARGET:"Below target",NO_DATA:"No data"}[goal.status]||goal.status;
+      return '<article class="gi-card"><div class="gi-card-head"><strong>'+esc(labels[goal.metric]||goal.metric)+'</strong><span class="tag">'+esc(status)+'</span></div><div class="gi-compare"><span>Actual: '+esc(actual)+'</span><span>Target: '+esc(target)+'</span><span>Progress: '+esc(percent)+'</span><span>Sample: '+goal.sampleSize+'</span></div>'+(goal.progressPercent===null?'':'<div class="gi-progress"><i style="width:'+Math.max(0,Math.min(100,goal.progressPercent))+'%"></i></div>')+'<small>'+esc(goal.note)+' Source: '+esc(goal.source)+'</small><button class="secondary-button" type="button" data-archive-goal="'+esc(goal.id)+'">Archive target</button></article>';
+    }).join("");
+    root.innerHTML='<div class="panel"><div class="panel-heading"><div><h3>Monthly goals & targets</h3><p>Set your own target. Actuals use saved business records only.</p></div><span class="tag">Owner-defined</span></div><form id="gi-goal-form" class="gi-form"><label>Month<input id="gi-goal-month" type="month" required value="'+esc(result.month)+'"></label><label>Metric<select id="gi-goal-metric"><option value="NET_SALES">Monthly net sales (₹)</option><option value="REVIEW_COUNT">Monthly review count</option><option value="AVERAGE_RATING">Average review rating (1–5)</option></select></label><label>Target value<input id="gi-goal-target" type="number" min="0.01" step="any" required placeholder="Enter your target"></label><button class="primary-button" type="submit">Save monthly target</button></form><div class="gi-goal-list">'+(goals||'<p class="empty-copy">No target set for this month. Targets are never generated automatically.</p>')+'</div><p class="footnote">No forecasts or “on track” predictions. Missing sales dates are not treated as zero. Retention targets are not enabled until reliable privacy-safe data is available.</p></div>';
+    const form=$("gi-goal-form");
+    form?.addEventListener("submit",async event=>{
+      event.preventDefault();const button=form.querySelector("button");button.disabled=true;
+      try{await api(base()+"/growth-goals",{method:"POST",body:JSON.stringify({month:$("gi-goal-month").value,metric:$("gi-goal-metric").value,targetValue:Number($("gi-goal-target").value)})});message("Monthly target saved.");await loadGrowthOverview();}
+      catch(error){message(error.message,true);}finally{button.disabled=false;}
+    });
+    root.querySelectorAll("[data-archive-goal]").forEach(button=>button.addEventListener("click",async()=>{
+      button.disabled=true;try{await api(base()+"/growth-goals/"+encodeURIComponent(button.dataset.archiveGoal),{method:"DELETE"});message("Target archived.");await loadGrowthOverview();}catch(error){message(error.message,true);}finally{button.disabled=false;}
+    }));
+  }
   async function loadGrowthOverview(){
     const root=$("gi-growth-overview");if(!root||!businessId)return;
     root.innerHTML='<p class="empty-copy">Preparing evidence-backed growth actions…</p>';
-    try{const [overview,history]=await Promise.all([api(base()+"/growth-overview"),api(base()+"/growth-history")]);renderGrowthOverview(overview);root.insertAdjacentHTML("beforeend",renderGrowthHistory(history));root.querySelectorAll("[data-history-filter]").forEach(button=>button.addEventListener("click",()=>{const filter=button.dataset.historyFilter;root.querySelectorAll("[data-history-status]").forEach(row=>{row.hidden=filter!=="ALL"&&row.dataset.historyStatus!==filter;});}));}catch(error){root.innerHTML='<p class="empty-copy">Growth overview unavailable: '+esc(error.message)+'</p>';}
+    try{const [overview,history,goals]=await Promise.all([api(base()+"/growth-overview"),api(base()+"/growth-history"),api(base()+"/growth-goals")]);renderGrowthOverview(overview);root.insertAdjacentHTML("beforeend",renderGrowthHistory(history));root.insertAdjacentHTML("beforeend",'<div id="gi-growth-goals"></div>');renderGrowthGoals(goals);root.querySelectorAll("[data-history-filter]").forEach(button=>button.addEventListener("click",()=>{const filter=button.dataset.historyFilter;root.querySelectorAll("[data-history-status]").forEach(row=>{row.hidden=filter!=="ALL"&&row.dataset.historyStatus!==filter;});}));}catch(error){root.innerHTML='<p class="empty-copy">Growth overview unavailable: '+esc(error.message)+'</p>';}
   }
   function renderAudit(audit) {
     const root=$("gi-audit-results"); if(!root)return;
