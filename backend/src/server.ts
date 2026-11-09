@@ -20,6 +20,7 @@ import { buildGrowthOverview } from "./growth-overview.js";
 import { mergeGrowthActionTracking } from "./growth-action-tracking.js";
 import { buildGrowthActionMeasurements } from "./growth-action-measurement.js";
 import { calculateGrowthGoal, buildGrowthGoalHistory } from "./growth-goals.js";
+import { buildGrowthPerformanceReport } from "./growth-performance-report.js";
 
 const app = Fastify({ logger: true, bodyLimit: 1024 * 1024 });
 await app.register(helmet);
@@ -696,6 +697,33 @@ app.post("/v1/businesses/:businessId/google/import", { preHandler: requireUser }
 
 import { calculateGrowthGoal } from "./growth-goals.js";
 
+
+app.get("/v1/businesses/:businessId/growth-performance-report", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const query = z.object({ month: z.string().regex(/^\\d{4}-(0[1-9]|1[0-2])$/).optional() }).safeParse(request.query);
+  if (!params.success || !query.success) return reply.code(400).send({ error: "Select a valid report month using YYYY-MM." });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const now = new Date();
+  const month = query.data.month ?? now.toISOString().slice(0, 7);
+  const monthStart = new Date(month + "-01T00:00:00.000Z");
+  const monthEnd = new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth() + 1, 1));
+  const [rows, goals, actions] = await Promise.all([
+    prisma.growthRecord.findMany({
+      where: { businessId: business.id, recordedAt: { gte: monthStart, lt: monthEnd }, recordType: { in: ["DAILY_SALES", "REVIEW_ITEM"] } },
+      orderBy: { recordedAt: "asc" }, take: 10000
+    }),
+    prisma.growthGoal.findMany({ where: { businessId: business.id, monthStart }, orderBy: { metric: "asc" } }),
+    prisma.growthAction.findMany({ where: { businessId: business.id }, orderBy: { updatedAt: "desc" }, take: 500 })
+  ]);
+  const records = rows.map(row => ({
+    id: row.id, recordType: row.recordType,
+    payload: row.payload as unknown as Record<string, unknown>,
+    recordedAt: row.recordedAt, source: row.source
+  }));
+  const report = buildGrowthPerformanceReport(month, records, goals, actions, now);
+  return { business: { id: business.id, displayName: business.displayName }, ...report };
+});
 
 app.get("/v1/businesses/:businessId/growth-goals/history", { preHandler: requireUser }, async (request, reply) => {
   const params=z.object({businessId:z.string().min(1)}).safeParse(request.params);
