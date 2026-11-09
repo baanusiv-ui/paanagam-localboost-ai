@@ -163,7 +163,7 @@ app.get("/v1/businesses/:businessId/intelligence", { preHandler: requireUser }, 
   const report = buildBusinessIntelligence(records.map(record => ({
     id: record.id,
     recordType: record.recordType,
-    payload: record.payload as Record<string, unknown>,
+    payload: record.payload as unknown as Record<string, unknown>,
     recordedAt: record.recordedAt,
     source: record.source
   })));
