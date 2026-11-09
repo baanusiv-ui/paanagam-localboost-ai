@@ -34,8 +34,28 @@
   function meta(item) { return '<small class="gi-meta">Source: '+esc(sourceLabel(item))+' · Recorded: '+esc(dateText(item._recordedAt || item.observedAt || item.createdAt))+'</small>'; }
   function renderGrowthOverview(result){
     const root=$("gi-growth-overview");if(!root)return;
-    const actions=(result.actions||[]).map(item=>'<article class="gi-row"><div><strong>'+esc(item.title)+'</strong><small>'+esc(item.why)+'</small><p>'+esc(item.action)+'</p><small>Evidence: '+esc(item.evidence.source)+' · '+esc(item.evidence.dateFrom||"No start date")+' to '+esc(item.evidence.dateTo||"No end date")+' · Confidence: '+esc(item.confidence)+' · Priority score: '+item.score+'</small><small>'+esc(item.evidence.calculation)+'</small></div><span class="tag">'+esc(item.priority)+'</span></article>').join("");
+    const statuses=["SUGGESTED","ACCEPTED","IN_PROGRESS","COMPLETED","DISMISSED"];
+    const labels={SUGGESTED:"Suggested",ACCEPTED:"Accepted",IN_PROGRESS:"In progress",COMPLETED:"Completed",DISMISSED:"Dismissed"};
+    const actions=(result.actions||[]).map(item=>{
+      const current=statuses.includes(item.status)?item.status:"SUGGESTED";
+      const options=statuses.map(value=>'<option value="'+value+'" '+(current===value?'selected':'')+'>'+labels[value]+'</option>').join("");
+      return '<article class="gi-card" data-growth-action="'+esc(item.id)+'"><div class="gi-card-head"><strong>'+esc(item.title)+'</strong><span class="tag">'+esc(item.priority)+' · '+esc(labels[current])+'</span></div><p>'+esc(item.why)+'</p><p>'+esc(item.action)+'</p><small>Evidence: '+esc(item.evidence.source)+' · '+esc(item.evidence.dateFrom||"No start date")+' to '+esc(item.evidence.dateTo||"No end date")+' · Confidence: '+esc(item.confidence)+' · Priority score: '+item.score+'</small><small>'+esc(item.evidence.calculation)+'</small><div class="gi-form gi-action-track"><label>Owner status<select data-action-status>'+options+'</select></label><label>Progress note (optional)<textarea data-action-note rows="2" maxlength="1000" placeholder="What did you verify or change?">'+esc(item.ownerNote||"")+'</textarea></label><button class="secondary-button" type="button" data-save-action>Save progress</button></div>'+(item.trackingUpdatedAt?'<small class="gi-meta">Last updated: '+esc(dateText(item.trackingUpdatedAt))+'</small>':"")+'</article>';
+    }).join("");
     root.innerHTML='<div class="gi-compare"><span>Saved records: '+result.businessData.savedRecords+'</span><span>Profile evidence: '+result.businessData.profileEvidence+'</span><span>Review sample: '+result.businessData.reviewSample+'</span></div>'+(actions||'<p class="empty-copy">No actionable signals yet. Add verified business records to build the overview.</p>')+'<details class="footnote"><summary>Scoring and safeguards</summary><p>'+esc(result.rankingPolicy)+'</p><ul>'+result.guardrails.map(x=>'<li>'+esc(x)+'</li>').join("")+'</ul></details>';
+    root.querySelectorAll("[data-save-action]").forEach(button=>button.addEventListener("click",async()=>{
+      if(!requireWorkspace())return;
+      const card=button.closest("[data-growth-action]");if(!card)return;
+      const actionId=card.dataset.growthAction;
+      const status=card.querySelector("[data-action-status]").value;
+      const ownerNote=card.querySelector("[data-action-note]").value.trim();
+      button.disabled=true;button.textContent="Saving…";
+      try{
+        await api(base()+"/growth-overview/"+encodeURIComponent(actionId),{method:"PATCH",body:JSON.stringify({status,ownerNote})});
+        await loadGrowthOverview();
+        message("Growth action progress saved for this business. No external action was executed.");
+      }catch(error){message(error.message,true);}
+      finally{button.disabled=false;button.textContent="Save progress";}
+    }));
   }
   async function loadGrowthOverview(){
     const root=$("gi-growth-overview");if(!root||!businessId)return;
