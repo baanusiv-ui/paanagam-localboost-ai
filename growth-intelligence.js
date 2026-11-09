@@ -87,7 +87,7 @@
   async function loadGrowthOverview(){
     const root=$("gi-growth-overview");if(!root||!businessId)return;
     root.innerHTML='<p class="empty-copy">Preparing evidence-backed growth actions…</p>';
-    try{renderGrowthOverview(await api(base()+"/growth-overview"));}catch(error){root.innerHTML='<p class="empty-copy">Growth overview unavailable: '+esc(error.message)+'</p>';}
+    try{const [overview,history]=await Promise.all([api(base()+"/growth-overview"),api(base()+"/growth-history")]);renderGrowthOverview(overview);root.insertAdjacentHTML("beforeend",renderGrowthHistory(history));}catch(error){root.innerHTML='<p class="empty-copy">Growth overview unavailable: '+esc(error.message)+'</p>';}
   }
   function renderAudit(audit) {
     const root=$("gi-audit-results"); if(!root)return;
