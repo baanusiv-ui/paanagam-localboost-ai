@@ -41,7 +41,7 @@ const requireUser = createRequireUser(async (token) => {
   const authUsers = await prisma.$queryRaw<Array<{ id: string; email: string; name: string | null; emailVerified: boolean }>>`
     SELECT "id", "email", "name", "emailVerified"
     FROM neon_auth."user"
-    WHERE "id" = ${identity.subject}
+    WHERE "id" = CAST(${identity.subject} AS uuid)
     LIMIT 1
   `;
   const authUser = authUsers[0];
