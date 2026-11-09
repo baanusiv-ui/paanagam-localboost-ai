@@ -1,6 +1,6 @@
 # LocalBoost API
 
-Fastify + TypeScript + Prisma + PostgreSQL API foundation.
+Fastify + TypeScript + Prisma + PostgreSQL API foundation. Neon Auth (Managed Better Auth) owns user sign-in; the API validates Neon-issued JWTs against the branch JWKS and maps the Neon subject to a LocalBoost owner record.
 
 ## Local setup
 
@@ -23,7 +23,7 @@ Health check: `GET http://localhost:4100/health`.
 
 ## API
 
-All routes except health, registration, login and the Google OAuth callback require `Authorization: Bearer <accessToken>`.
+All business API routes except health and the Google OAuth callback require `Authorization: Bearer <Neon Auth access token>`. The dashboard uses the official `@neondatabase/auth` browser SDK; the API verifies the token signature and issuer with the branch JWKS. LocalBoost never stores Neon Auth passwords or session tokens in PostgreSQL.
 
 - `POST /v1/auth/register` — create owner account. Password minimum: 12 characters.
 - `POST /v1/auth/login` — login; access tokens expire after 15 minutes.
@@ -56,7 +56,7 @@ Evidence source values: `OWNER_CONFIRMED`, `PUBLIC_OBSERVATION`, `DEMO`, and int
 
 Manual evidence submission must never be allowed to impersonate the Google API source. Demo evidence is never verified. Public observations are not independently verified. The audit completeness value measures checklist coverage only; it is not a ranking, visibility, traffic or performance score.
 
-## Google OAuth configuration
+## Neon Auth configuration\n\nNeon Auth is provisioned on the production branch using Managed Better Auth. The dashboard public configuration points to the branch Auth URL; this URL is an endpoint identifier, not a secret. Add every deployed dashboard origin to the Neon Auth trusted-domain allowlist. The API uses `NEON_AUTH_BASE_URL` and `NEON_AUTH_JWKS_URL` (defaults are set to this project's production branch) to validate short-lived access tokens with `jose`. Never accept the legacy LocalBoost HS256 token as an API credential.\n\nOn first authenticated API request, the verified Neon subject is linked to an existing LocalBoost owner by exact email match or creates a new owner record. Existing `Business` rows and their owner IDs are retained. If an email is already linked to a different Neon subject, the API rejects the request instead of reassigning ownership.\n\n## Google OAuth configuration
 
 Create a Google Cloud OAuth web application and configure the exact redirect URI from `GOOGLE_REDIRECT_URI`. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` only in the deployment secret manager or local ignored `.env`.
 
