@@ -98,3 +98,7 @@ LocalBoost AI should deliver these capabilities as a practical growth workspace 
 - No external post or review reply is published without explicit approval.
 - Tamil and English content can be generated and edited before approval.
 - Automated tests cover tenant boundaries, provenance, approval states, and unavailable integrations.
+
+
+## Growth Overview Intelligence
+The owner workspace presents up to three deterministic, evidence-linked growth actions. Each action includes source provenance, date range, calculation, confidence, and explicit owner approval. Scores are rule-based signal-strength indicators, not predicted revenue impact. Demo records are excluded; the system does not automatically execute recommendations or publish content.
