@@ -90,7 +90,7 @@ This is a target layout, not a mandate to move every file at once. Refactor incr
 4. Extract one feature module at a time, preserving route paths and behavior.
 5. Add integration tests for tenant isolation, authentication and read-only POS connector boundaries.
 6. Re-run Prisma validation, TypeScript build, full backend tests and dashboard syntax checks.
-7. Open a pull request for review. Do not merge or deploy without approval.
+7. Commit approved incremental changes directly to the main branch as requested. Run CI and review each change before proceeding. Do not deploy without separate explicit approval.
 
 ## Current risks / gaps to address before production
 
