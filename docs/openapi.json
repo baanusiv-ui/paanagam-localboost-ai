@@ -252,12 +252,37 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "googleConnection": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "connectedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "scope": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "connectedAt",
+                  "scope"
+                ],
+                "additionalProperties": false
+              }
+            ]
           }
         },
         "required": [
           "id",
           "displayName",
-          "createdAt"
+          "createdAt",
+          "googleConnection"
         ],
         "additionalProperties": false
       },
@@ -340,7 +365,8 @@
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "format": "date-time"
           }
         },
         "required": [
@@ -424,6 +450,64 @@
         },
         "required": [
           "error"
+        ],
+        "additionalProperties": false
+      },
+      "BusinessRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "ownerId": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "category": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "address": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "website": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "countryCode": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "ownerId",
+          "displayName",
+          "countryCode",
+          "createdAt",
+          "updatedAt"
         ],
         "additionalProperties": false
       }
@@ -672,7 +756,7 @@
                   "type": "object",
                   "properties": {
                     "business": {
-                      "$ref": "#/components/schemas/BusinessSummary"
+                      "$ref": "#/components/schemas/BusinessRecord"
                     }
                   },
                   "required": [
