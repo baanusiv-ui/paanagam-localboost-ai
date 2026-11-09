@@ -5,6 +5,7 @@
   const $ = id => document.getElementById(id);
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const dateText = value => value ? new Date(value).toLocaleString() : "Not recorded";
+  const safeUrl = value => { try { const url = new URL(value); return ["https:", "http:"].includes(url.protocol) ? url.href : ""; } catch { return ""; } };
   let businessId = null, businessName = "Selected business";
   let records = { COMPETITOR: [], LOCAL_KEYWORD: [], REVIEW_ITEM: [], GOOGLE_CONTENT: [] };
   const base = () => "/v1/businesses/" + encodeURIComponent(businessId || "");
@@ -54,7 +55,7 @@
   async function loadAudit(){const audits=await api(base()+"/audits");renderAudit(audits[0]||null);}
   function renderCompetitors(){
     const root=$("gi-competitor-list");if(!records.COMPETITOR.length){root.innerHTML='<p class="empty-copy">No competitors recorded. Add a competitor and cite a public profile or observation source.</p>';return;}
-    root.innerHTML=records.COMPETITOR.map(x=>'<article class="gi-card"><div class="gi-card-head"><strong>'+esc(x.name)+'</strong><span class="tag pending-tag">Observed · not independently verified</span></div><p>'+esc([x.category,x.area].filter(Boolean).join(" · "))+'</p><p>'+esc(x.notes||"No notes recorded.")+'</p><div class="gi-compare"><span>Rating: '+esc(x.rating||"Not recorded")+'</span><span>Reviews: '+esc(x.reviewCount||"Not recorded")+'</span><span>Offer: '+esc(x.offer||"Not recorded")+'</span></div>'+(x.url?'<a href="'+esc(x.url)+'" target="_blank" rel="noopener">Open public source ↗</a>':"")+meta(x)+'</article>').join("");
+    root.innerHTML=records.COMPETITOR.map(x=>'<article class="gi-card"><div class="gi-card-head"><strong>'+esc(x.name)+'</strong><span class="tag pending-tag">Observed · not independently verified</span></div><p>'+esc([x.category,x.area].filter(Boolean).join(" · "))+'</p><p>'+esc(x.notes||"No notes recorded.")+'</p><div class="gi-compare"><span>Rating: '+esc(x.rating||"Not recorded")+'</span><span>Reviews: '+esc(x.reviewCount||"Not recorded")+'</span><span>Offer: '+esc(x.offer||"Not recorded")+'</span></div>'+(safeUrl(x.url)?'<a href="'+esc(safeUrl(x.url))+'" target="_blank" rel="noopener">Open public source ↗</a>':"")+meta(x)+'</article>').join("");
   }
   function renderKeywords(){
     const root=$("gi-keyword-list");if(!records.LOCAL_KEYWORD.length){root.innerHTML='<p class="empty-copy">No keywords saved yet. Search volume and ranking are not inferred.</p>';return;}
