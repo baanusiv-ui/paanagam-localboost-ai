@@ -78,3 +78,10 @@ Approval is required separately for each profile edit, review reply, post, messa
 - Menu recommendations show input data and costing limitations.
 - Every external action has an approval record.
 - Dashboard remains useful when Google or POS integrations are disconnected.
+
+
+## Growth Overview Intelligence (implemented)
+- Authenticated, tenant-scoped `/v1/businesses/:businessId/growth-overview` endpoint returns up to three deterministic owner actions.
+- Signals include negative review themes, recorded seven-day sales movement, stale/unverified profile evidence, repeated owner-confirmed competitor observations, and missing sales/review baselines.
+- Each action includes priority score, evidence source, record IDs, date coverage, calculation, confidence, and owner-approval requirement.
+- Demo records are excluded. Scores are rule-based signal-strength indicators, not predicted revenue impact. No automatic execution or publishing.
