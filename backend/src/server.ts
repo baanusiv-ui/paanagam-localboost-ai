@@ -81,6 +81,73 @@ async function ownedBusiness(userId: string, businessId: string) {
   return prisma.business.findFirst({ where: { id: businessId, ownerId: userId } });
 }
 
+const growthRecordType = z.enum(["MENU_ITEM", "DAILY_SALES", "RETENTION_SNAPSHOT", "CAMPAIGN_DRAFT"]);
+
+app.get("/v1/businesses/:businessId/growth-records", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const query = z.object({
+    type: growthRecordType.optional(),
+    limit: z.coerce.number().int().min(1).max(200).default(100)
+  }).safeParse(request.query);
+  if (!params.success || !query.success) return reply.code(400).send({ error: "Invalid growth record query" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const records = await prisma.growthRecord.findMany({
+    where: { businessId: business.id, ...(query.data.type ? { recordType: query.data.type } : {}) },
+    orderBy: [{ recordedAt: "desc" }, { createdAt: "desc" }],
+    take: query.data.limit
+  });
+  return { records, source: "OWNER_ENTERED", storage: "SERVER" };
+});
+
+app.post("/v1/businesses/:businessId/growth-records", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const body = z.object({
+    type: growthRecordType,
+    externalId: z.string().trim().min(1).max(100).regex(/^[A-Za-z0-9._:-]+$/),
+    payload: z.record(z.unknown()),
+    recordedAt: z.coerce.date().optional()
+  }).safeParse(request.body);
+  if (!params.success || !body.success) return reply.code(400).send({ error: "Invalid growth record", details: body.success ? undefined : body.error.flatten() });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  if (Buffer.byteLength(JSON.stringify(body.data.payload), "utf8") > 64 * 1024) {
+    return reply.code(413).send({ error: "Growth record payload exceeds 64 KB" });
+  }
+  const record = await prisma.growthRecord.upsert({
+    where: {
+      businessId_recordType_externalId: {
+        businessId: business.id,
+        recordType: body.data.type,
+        externalId: body.data.externalId
+      }
+    },
+    create: {
+      businessId: business.id,
+      recordType: body.data.type,
+      externalId: body.data.externalId,
+      payload: body.data.payload as Prisma.InputJsonValue,
+      recordedAt: body.data.recordedAt
+    },
+    update: {
+      payload: body.data.payload as Prisma.InputJsonValue,
+      recordedAt: body.data.recordedAt ?? new Date()
+    }
+  });
+  return reply.code(200).send({ record, source: "OWNER_ENTERED", storage: "SERVER" });
+});
+
+app.delete("/v1/businesses/:businessId/growth-records/:recordId", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1), recordId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid growth record identifier" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const result = await prisma.growthRecord.deleteMany({ where: { id: params.data.recordId, businessId: business.id } });
+  if (!result.count) return reply.code(404).send({ error: "Growth record not found" });
+  return reply.code(204).send();
+});
+
+
 app.get("/health", async () => ({ ok: true, service: "localboost-api", version: "0.1.0" }));
 
 app.post("/v1/auth/register", async (request, reply) => {
