@@ -34,7 +34,8 @@ enum GrowthRecordType {
 model User {
   id           String        @id @default(cuid())
   email        String        @unique
-  passwordHash String
+  passwordHash String?
+  authSubject  String?       @unique
   name         String?
   createdAt    DateTime      @default(now())
   businesses   Business[]
