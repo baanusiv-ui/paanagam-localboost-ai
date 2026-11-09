@@ -170,6 +170,7 @@
     try {
       const path = businessPath();
       let cloud = await fetchAllGrowthRecords(path);
+      remoteReady = true;
       if (cloud.truncated) {
         setSyncStatus("Cloud workspace contains more than 10,000 records; older records remain in the database.", true);
       }
