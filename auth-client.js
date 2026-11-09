@@ -34,7 +34,11 @@ import { createAuthClient } from "https://esm.sh/@neondatabase/auth@0.7.0-beta?b
       sessionStorage.setItem(TOKEN_KEY, token);
       sessionStorage.removeItem("localboost_auth_recovering");
       window.location.reload();
-    } catch (error) { showMessage(error.message || "Could not sign in.", true); button.disabled = false; }
+    } catch (error) {
+      if (/verif|unverified/i.test(error.message || "")) document.getElementById("email-verification-panel").hidden = false;
+      showMessage(error.message || "Could not sign in.", true);
+      button.disabled = false;
+    }
   }
   async function register(event) {
     event.preventDefault(); event.stopImmediatePropagation();
