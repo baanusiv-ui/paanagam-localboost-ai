@@ -106,10 +106,25 @@
       button.disabled=true;try{await api(base()+"/growth-goals/"+encodeURIComponent(button.dataset.archiveGoal),{method:"DELETE"});message("Target archived.");await loadGrowthOverview();}catch(error){message(error.message,true);}finally{button.disabled=false;}
     }));
   }
+
+  async function renderGrowthGoalHistory(){
+    const root=$("gi-growth-goal-history");if(!root)return;
+    try{
+      const result=await api(base()+"/growth-goals/history?months=6");
+      const labels={NET_SALES:"Net sales",REVIEW_COUNT:"Review count",AVERAGE_RATING:"Average rating"};
+      const money=value=>"₹"+Number(value).toLocaleString("en-IN");
+      const rows=(result.history||[]).map(item=>{
+        const actual=item.actualValue===null?"No data":item.metric==="NET_SALES"?money(item.actualValue):item.metric==="AVERAGE_RATING"?Number(item.actualValue).toFixed(2)+" / 5":Number(item.actualValue).toLocaleString("en-IN");
+        const target=item.metric==="NET_SALES"?money(item.targetValue):item.metric==="AVERAGE_RATING"?Number(item.targetValue).toFixed(2)+" / 5":Number(item.targetValue).toLocaleString("en-IN");
+        return '<tr><td>'+esc(item.month)+'</td><td>'+esc(labels[item.metric]||item.metric)+(item.archived?' <small>(archived)</small>':'')+'</td><td>'+esc(actual)+'</td><td>'+esc(target)+'</td><td>'+(item.progressPercent===null?'—':Number(item.progressPercent).toFixed(1)+'%')+'</td><td>'+item.sampleSize+'</td></tr>';
+      }).join("");
+      root.innerHTML='<div class="panel"><div class="panel-heading"><div><h3>Monthly goal history</h3><p>Last '+result.months+' calendar months · saved targets compared with recorded actuals</p></div></div><div class="table-scroll"><table class="gi-history-table"><thead><tr><th>Month</th><th>Metric</th><th>Actual</th><th>Target</th><th>Progress</th><th>Sample</th></tr></thead><tbody>'+(rows||'<tr><td colspan="6">No monthly targets have been saved yet.</td></tr>')+'</tbody></table></div><p class="footnote">Months without a saved target are omitted, not treated as missed targets. Archived targets remain in this history. No trend forecast or causal claim is made.</p></div>';
+    }catch(error){root.innerHTML='<div class="panel"><h3>Monthly goal history</h3><p class="empty-copy">'+esc(error.message)+'</p></div>';}
+  }
   async function loadGrowthOverview(){
     const root=$("gi-growth-overview");if(!root||!businessId)return;
     root.innerHTML='<p class="empty-copy">Preparing evidence-backed growth actions…</p>';
-    try{const [overview,history,goals]=await Promise.all([api(base()+"/growth-overview"),api(base()+"/growth-history"),api(base()+"/growth-goals")]);renderGrowthOverview(overview);root.insertAdjacentHTML("beforeend",renderGrowthHistory(history));root.insertAdjacentHTML("beforeend",'<div id="gi-growth-goals"></div>');renderGrowthGoals(goals);root.querySelectorAll("[data-history-filter]").forEach(button=>button.addEventListener("click",()=>{const filter=button.dataset.historyFilter;root.querySelectorAll("[data-history-status]").forEach(row=>{row.hidden=filter!=="ALL"&&row.dataset.historyStatus!==filter;});}));}catch(error){root.innerHTML='<p class="empty-copy">Growth overview unavailable: '+esc(error.message)+'</p>';}
+    try{const [overview,history,goals]=await Promise.all([api(base()+"/growth-overview"),api(base()+"/growth-history"),api(base()+"/growth-goals")]);renderGrowthOverview(overview);root.insertAdjacentHTML("beforeend",renderGrowthHistory(history));root.insertAdjacentHTML("beforeend",'<div id="gi-growth-goals"></div><div id="gi-growth-goal-history"></div>');renderGrowthGoals(goals);await renderGrowthGoalHistory();root.querySelectorAll("[data-history-filter]").forEach(button=>button.addEventListener("click",()=>{const filter=button.dataset.historyFilter;root.querySelectorAll("[data-history-status]").forEach(row=>{row.hidden=filter!=="ALL"&&row.dataset.historyStatus!==filter;});}));}catch(error){root.innerHTML='<p class="empty-copy">Growth overview unavailable: '+esc(error.message)+'</p>';}
   }
   function renderAudit(audit) {
     const root=$("gi-audit-results"); if(!root)return;
