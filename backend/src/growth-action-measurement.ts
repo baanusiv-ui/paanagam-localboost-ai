@@ -33,16 +33,17 @@ function reviewWindow(records: GrowthRecordInput[], from: string, to: string): W
   const rows = records.filter(row => row.recordType === "REVIEW_ITEM" && row.source !== "DEMO")
     .filter(row => inRange(typeof row.payload.reviewDate === "string" ? row.payload.reviewDate.slice(0, 10) : dateKey(row.recordedAt), from, to));
   const ratings = rows.map(row => numberValue(row.payload.rating)).filter((value): value is number => value !== null && value >= 1 && value <= 5);
+  const negativeKeywords = ["bad", "poor", "slow", "rude", "dirty", "cold", "wrong", "late", "விலை அதிகம்", "மோசம்", "தாமதம்", "மோசமான", "சுத்தம் இல்லை"];
   const negativeThemeMatches = rows.reduce((count, row) => {
     const text = typeof row.payload.reviewText === "string" ? row.payload.reviewText.toLowerCase() : "";
-    return count + (/\b(bad|poor|slow|rude|dirty|cold|wrong|late|விலை அதிகம்|மோசம்|தாமதம்|மோசமான|சுத்தம் இல்லை)\b/.test(text) ? 1 : 0);
+    return count + (negativeKeywords.some(keyword => text.includes(keyword)) ? 1 : 0);
   }, 0);
   return { from, to, sampleSize: rows.length, reviewCount: rows.length, averageRating: ratings.length ? round(ratings.reduce((a,b)=>a+b,0)/ratings.length) : null, negativeThemeMatches };
 }
 
 /** Descriptive pre/post comparison only. It never attributes a change to the action. */
 export function buildGrowthActionMeasurements(
-  actions: Array<OverviewAction & { status?: string }>,
+  actions: Array<Omit<OverviewAction, "status"> & { status: string }>,
   tracking: TrackingInput[],
   records: GrowthRecordInput[],
   generatedAt = new Date()
