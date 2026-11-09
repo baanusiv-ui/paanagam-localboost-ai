@@ -112,6 +112,7 @@
     $("#connect-google").disabled = false;
     await refreshGoogleStatus();
     await loadAuditHistory();
+    window.dispatchEvent(new CustomEvent("localboost:business-ready", { detail: { businessId: activeBusiness.id } }));
   }
 
   async function loadGoogleAccounts() {
