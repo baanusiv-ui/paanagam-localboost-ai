@@ -120,7 +120,7 @@ app.get("/v1/businesses/:businessId/data-status", { preHandler: requireUser }, a
     business: { id: business.id, displayName: business.displayName },
     generatedAt: now.toISOString(),
     google: {
-      authorised: Boolean(googleConnection),
+      connectionSaved: Boolean(googleConnection),
       connectedAt: googleConnection?.connectedAt ?? null,
       accessTokenExpiresAt: googleConnection?.expiresAt ?? null,
       hasBusinessManageScope: Boolean(googleConnection?.scope.split(" ").includes("https://www.googleapis.com/auth/business.manage"))
