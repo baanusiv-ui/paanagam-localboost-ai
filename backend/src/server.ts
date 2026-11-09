@@ -16,6 +16,7 @@ import { generateLocalContentDraft } from "./content-drafts.js";
 import { generateLocalKeywords } from "./local-seo.js";
 import { normalizeGoogleReview, type GoogleReviewApiRecord } from "./google-reviews.js";
 import { analyzeReviewThemes } from "./review-themes.js";
+import { buildGrowthOverview } from "./growth-overview.js";
 
 const app = Fastify({ logger: true, bodyLimit: 1024 * 1024 });
 await app.register(helmet);
@@ -689,6 +690,21 @@ app.post("/v1/businesses/:businessId/google/import", { preHandler: requireUser }
   }
 });
 
+app.get("/v1/businesses/:businessId/growth-overview", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const [growthRows, evidenceRows] = await Promise.all([
+    prisma.growthRecord.findMany({ where: { businessId: business.id }, orderBy: { recordedAt: "desc" }, take: 1000 }),
+    prisma.evidence.findMany({ where: { businessId: business.id }, select: { id: true, category: true, source: true, verified: true, observedAt: true, expiresAt: true }, orderBy: { observedAt: "desc" }, take: 500 })
+  ]);
+  const overview = buildGrowthOverview({
+    records: growthRows.map(row => ({ id: row.id, recordType: row.recordType, payload: row.payload as Record<string, unknown>, recordedAt: row.recordedAt, source: row.source })),
+    evidence: evidenceRows
+  });
+  return { business: { id: business.id, displayName: business.displayName }, ...overview };
+});
 app.get("/v1/businesses/:businessId/reviews/themes", { preHandler: requireUser }, async (request, reply) => {
   const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
   if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
