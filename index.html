@@ -24,7 +24,7 @@
       </button>
       <nav class="nav-list" aria-label="Main navigation">
         <button class="nav-item active" data-view="overview"><span>◫</span> Overview</button>
-        <button class="nav-item" data-view="audit"><span>⌕</span> Local presence audit</button>
+        <button class="nav-item" data-view="audit"><span>⌕</span> Local presence audit</button>\n        <button class="nav-item" data-view="seo"><span>⌖</span> Local SEO keywords</button>
         <button class="nav-item" data-view="menu"><span>▦</span> Menu intelligence</button><button class="nav-item" data-view="sales"><span>↗</span> Sales analytics</button><button class="nav-item" data-view="retention"><span>♡</span> Customer retention</button><button class="nav-item" data-view="competitors"><span>◎</span> Competitors</button>
         <button class="nav-item" data-view="reviews"><span>✳</span> Reviews</button>
         <button class="nav-item" data-view="content"><span>▤</span> Content studio</button>
@@ -123,7 +123,25 @@
         </div>
       </section>
 
-      <section class="view-panel hidden" id="competitors-view"><div class="empty-state"><div class="empty-icon">◎</div><h2>Competitor intelligence</h2><p>Add nearby competitors after the business location is verified. We will not invent competitor names, rankings or performance.</p><button class="secondary-button" data-go="audit">Complete business verification</button></div></section>
+
+      <section class="view-panel hidden" id="seo-view">
+        <div class="section-heading"><div><h2>Local SEO keyword planner</h2><p>Build Tamil and English keyword ideas around your products, services and service area.</p></div><span class="tag confirmed">Rules-generated</span></div>
+        <div class="panel">
+          <form id="local-seo-form" class="gi-form">
+            <label for="seo-locality">Target locality / town<input id="seo-locality" required maxlength="120" placeholder="e.g. Namakkal"></label>
+            <label for="seo-services">Products or services<input id="seo-services" required maxlength="500" placeholder="e.g. Filter coffee, tea, snacks"></label>
+            <label for="seo-language">Keyword language<select id="seo-language"><option value="Tamil + English">Tamil + English</option><option value="Tamil">Tamil</option><option value="English">English</option></select></label>
+            <button class="primary-button" id="seo-generate" type="submit">Generate keyword ideas</button>
+          </form>
+          <p class="footnote">These are planning suggestions generated from the business details you enter. They are not live Google search volumes, rankings, keyword difficulty, or competitor data.</p>
+          <p id="seo-message" class="form-message" role="status"></p>
+        </div>
+        <div class="panel hidden" id="seo-results" aria-live="polite">
+          <div class="panel-heading"><div><h3>Keyword opportunities</h3><p id="seo-methodology"></p></div><span class="tag confirmed" id="seo-count">0 ideas</span></div>
+          <div id="seo-keyword-list" class="gi-keyword-list"></div>
+        </div>
+      </section>
+\n      <section class="view-panel hidden" id="competitors-view"><div class="empty-state"><div class="empty-icon">◎</div><h2>Competitor intelligence</h2><p>Add nearby competitors after the business location is verified. We will not invent competitor names, rankings or performance.</p><button class="secondary-button" data-go="audit">Complete business verification</button></div></section>
       <section class="view-panel hidden" id="reviews-view"><div class="empty-state"><div class="empty-icon">✳</div><h2>Review intelligence</h2><p>No reviews have been imported or supplied yet. Connect an authorised source or provide review data to analyse real customer feedback.</p><span class="tag pending-tag">Waiting for verified source</span></div></section>
       <section class="view-panel hidden" id="content-view">
         <div class="section-heading"><div><h2>Content studio</h2><p>Create drafts for review. Nothing is published from this prototype.</p></div></div>
