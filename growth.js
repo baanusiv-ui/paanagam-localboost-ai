@@ -153,6 +153,21 @@
     }
   }
 
+  async function fetchAllGrowthRecords(path) {
+    const records = [];
+    let cursor = null;
+    const maxPages = 50;
+    for (let page = 0; page < maxPages; page++) {
+      const query = new URLSearchParams({ limit: "200" });
+      if (cursor) query.set("cursor", cursor);
+      const result = await remoteApi(path + "/growth-records?" + query.toString());
+      records.push(...(result.records || []));
+      cursor = result.nextCursor || null;
+      if (!cursor) return { records, truncated: false };
+    }
+    return { records, truncated: Boolean(cursor) };
+  }
+
   async function hydrateCloudWorkspace(event) {
     const businessId = event?.detail?.businessId || sessionStorage.getItem(BUSINESS_KEY);
     if (!businessId || !sessionStorage.getItem(TOKEN_KEY)) return;
@@ -176,9 +191,9 @@
     setSyncStatus("Checking the selected business workspace…");
     try {
       const path = businessPath();
-      const initial = await remoteApi(path + "/growth-records?limit=200");
+      const initial = await fetchAllGrowthRecords(path);
       remoteReady = true;
-      const existing = new Set((initial.records || []).map(record => record.recordType + ":" + record.externalId));
+      const existing = new Set(initial.records.map(record => record.recordType + ":" + record.externalId));
       const groups = localGroups();
       let migrated = 0;
       for (const [type, items] of Object.entries(groups)) {
@@ -190,13 +205,13 @@
           }
         }
       }
-      const latest = await remoteApi(path + "/growth-records?limit=200");
+      const latest = await fetchAllGrowthRecords(path);
       const grouped = { MENU_ITEM: [], DAILY_SALES: [], RETENTION_SNAPSHOT: [], CAMPAIGN_DRAFT: [] };
-      for (const record of latest.records || []) {
+      for (const record of latest.records) {
         if (grouped[record.recordType]) grouped[record.recordType].push({ ...record.payload, _id: record.externalId, _recordId: record.id });
       }
       // The server is canonical for records already synced; local-only records remain available for retry.
-      const remoteIds = new Set((latest.records || []).map(record => record.recordType + ":" + record.externalId));
+      const remoteIds = new Set(latest.records.map(record => record.recordType + ":" + record.externalId));
       const localOnly = { MENU_ITEM: [], DAILY_SALES: [], RETENTION_SNAPSHOT: [], CAMPAIGN_DRAFT: [] };
       for (const [type, items] of Object.entries(groups)) {
         for (const [index, item] of items.entries()) {
@@ -214,7 +229,7 @@
       remoteReady = true;
       renderAll();
       const pendingCount = Object.values(localOnly).reduce((total, items) => total + items.length, 0);
-      setSyncStatus("Cloud database connected · " + (latest.records || []).length + " server record(s)" + (migrated ? " · " + migrated + " local record(s) migrated" : "") + (pendingCount ? " · retrying " + pendingCount + " device-only record(s)" : " · all records synced") + " · owner-entered data");
+      setSyncStatus("Cloud database connected · " + latest.records.length + " server record(s)" + (latest.truncated ? " · showing first 10,000 server records; older records remain on server" : "") + (migrated ? " · " + migrated + " local record(s) migrated" : "") + (pendingCount ? " · retrying " + pendingCount + " device-only record(s)" : " · all records synced") + " · owner-entered data");
       await loadServerIntelligence();
       await loadDataStatus();
       // Retry any device-only records after the server has become available.
@@ -222,7 +237,7 @@
       for (const [type, items] of Object.entries(localOnly)) {
         for (const [index, item] of items.entries()) if (!await syncRecord(type, item, index)) remaining++;
       }
-      setSyncStatus("Cloud database connected · " + (latest.records || []).length + " server record(s)" + (remaining ? " · " + remaining + " device-only record(s) still pending" : " · all local records synced") + " · owner-entered data", remaining > 0);
+      setSyncStatus("Cloud database connected · " + latest.records.length + " server record(s)" + (latest.truncated ? " · showing first 10,000 server records; older records remain on server" : "") + (remaining ? " · " + remaining + " device-only record(s) still pending" : " · all local records synced") + " · owner-entered data", remaining > 0);
     } catch (error) {
       remoteReady = false;
       setSyncStatus("Cloud sync unavailable · local data remains on this device (" + error.message + ")", true);
