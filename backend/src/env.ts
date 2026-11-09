@@ -7,6 +7,8 @@ const schema = z.object({
   HOST: z.string().default("0.0.0.0"),
   DATABASE_URL: z.string().min(1),
   JWT_SECRET: z.string().min(32),
+  NEON_AUTH_BASE_URL: z.string().url().default("https://ep-floral-paper-aotvi0zj.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth"),
+  NEON_AUTH_JWKS_URL: z.string().url().default("https://ep-floral-paper-aotvi0zj.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth/.well-known/jwks.json"),
   TOKEN_ENCRYPTION_KEY_BASE64: z.string().min(1),
   CORS_ORIGIN: z.string().default("http://localhost:3000"),
   APP_BASE_URL: z.string().url().default("http://localhost:3000"),
