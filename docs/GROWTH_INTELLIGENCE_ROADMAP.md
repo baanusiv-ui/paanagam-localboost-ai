@@ -130,3 +130,13 @@ Approval is required separately for each profile edit, review reply, post, messa
 - Saved monthly targets are compared with actuals, including archived targets. Completed actions are listed by their saved completion date; current tracked status counts are shown separately.
 - Demo records are excluded. Missing values remain null / No data, not zero. The report states its calculation methods, sample sizes, retrieval limits and non-causality limitations.
 - This is a read-only report using existing GrowthRecord, GrowthGoal and GrowthAction tables; no schema change or new migration is introduced. The endpoint is authenticated and tenant-scoped.
+
+ 
+## Menu & Sales Intelligence (implemented in code; POS feed pending)
+- Added tenant-scoped `GET /v1/businesses/:businessId/menu-sales-intelligence?from=YYYY-MM-DD&to=YYYY-MM-DD` with owner authentication and business ownership checks.
+- Menu mix groups saved dated menu quantity records by item and ranks recorded unit volumes. Indicative item sales are quantity multiplied by the supplied selling price; contribution is calculated only when both selling price and unit cost are supplied.
+- Sales intelligence shows saved daily summaries, weekly totals, net sales, order counts and average order value. Missing dates are not converted to zero.
+- Daypart analysis appears only when a daily-sales record explicitly contains daypart aggregates with net sales and order counts. No time-of-day values are inferred from dates or totals.
+- Dashboard panels are view-only. Existing owner-entry forms remain separate; analytics do not edit POS or owner records.
+- Demo records are excluded. The response documents that menu quantities are owner-entered snapshots, not POS line-item sales, and that indicative menu sales are not reconciled receipts.
+- The versioned read-only POS export API remains a separate integration dependency. No POS database access, POS write-back, publishing, or deployment was performed.
