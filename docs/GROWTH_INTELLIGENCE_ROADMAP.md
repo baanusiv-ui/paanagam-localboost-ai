@@ -39,11 +39,13 @@ Paanagam LocalBoost is a standalone, multi-business growth intelligence platform
 - Show item mix, sales trend, average order value and daypart analysis where source fields permit.
 - Add contribution analysis only when verified item costs are available.
 
-### Stage 3 — Local growth intelligence
-- Complete Google Business Profile evidence import where access is granted.
-- Build review themes and response drafts from actual review data.
-- Add competitor records with source URL, observation date and manual verification.
-- Add local SEO checklist and content recommendations grounded in verified business facts.
+### Stage 3 — Local growth intelligence (partially implemented)
+- Existing Google Business Profile evidence import remains read-only and dependent on granted API access.
+- Added the Growth Intelligence dashboard, checklist completeness display, source/freshness labels and recommendations using the existing audit engine.
+- Added owner-recorded competitor observations with public source URL and observation date; these are not independently verified rankings.
+- Added Tamil/English local keyword idea workspace; measured search volume and rank tracking remain pending an authorised data source.
+- Added owner-supplied review capture and private reply drafts; live Google review import and review-theme analysis remain pending API access and actual review data.
+- Added Google content calendar drafts and approve/reject workflow. Approval is for manual publishing only; no automatic scheduling or publishing is connected.
 
 ### Stage 4 — Retention and campaign execution
 - Add privacy-safe loyalty and repeat-visit cohort summaries.
