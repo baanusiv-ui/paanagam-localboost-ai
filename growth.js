@@ -194,6 +194,7 @@
       const initial = await fetchAllGrowthRecords(path);
       remoteReady = true;
       const existing = new Set(initial.records.map(record => record.recordType + ":" + record.externalId));
+      const paginationTruncated = initial.truncated;
       const groups = localGroups();
       let migrated = 0;
       for (const [type, items] of Object.entries(groups)) {
@@ -229,7 +230,7 @@
       remoteReady = true;
       renderAll();
       const pendingCount = Object.values(localOnly).reduce((total, items) => total + items.length, 0);
-      setSyncStatus("Cloud database connected · " + latest.records.length + " server record(s)" + (latest.truncated ? " · showing first 10,000 server records; older records remain on server" : "") + (migrated ? " · " + migrated + " local record(s) migrated" : "") + (pendingCount ? " · retrying " + pendingCount + " device-only record(s)" : " · all records synced") + " · owner-entered data");
+      setSyncStatus("Cloud database connected · " + latest.records.length + " server record(s)" + ((paginationTruncated || latest.truncated) ? " · showing first 10,000 server records; older records remain on server" : "") + (migrated ? " · " + migrated + " local record(s) migrated" : "") + (pendingCount ? " · retrying " + pendingCount + " device-only record(s)" : " · all records synced") + " · owner-entered data");
       await loadServerIntelligence();
       await loadDataStatus();
       // Retry any device-only records after the server has become available.
