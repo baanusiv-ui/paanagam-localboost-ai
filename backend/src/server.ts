@@ -254,6 +254,10 @@ app.post("/v1/businesses/:businessId/growth-records", { preHandler: requireUser 
   if (Buffer.byteLength(JSON.stringify(body.data.payload), "utf8") > 64 * 1024) {
     return reply.code(413).send({ error: "Growth record payload exceeds 64 KB" });
   }
+  const existingRecord = await prisma.growthRecord.findUnique({
+    where: { businessId_recordType_externalId: { businessId: business.id, recordType: body.data.type, externalId: body.data.externalId } },
+    select: { id: true }
+  });
   const record = await prisma.growthRecord.upsert({
     where: {
       businessId_recordType_externalId: {
@@ -274,6 +278,13 @@ app.post("/v1/businesses/:businessId/growth-records", { preHandler: requireUser 
       recordedAt: body.data.recordedAt ?? new Date()
     }
   });
+  await recordActivity({
+    businessId: business.id, actorUserId: request.userId!,
+    eventType: existingRecord ? "GROWTH_RECORD_UPDATED" : "GROWTH_RECORD_CREATED",
+    entityType: body.data.type, entityId: record.id,
+    summary: body.data.type.replaceAll("_", " ").toLowerCase() + (existingRecord ? " record updated" : " record added"),
+    metadata: { recordType: body.data.type, externalId: body.data.externalId, source: "OWNER_ENTERED" }
+  });
   return reply.code(200).send({ record, source: "OWNER_ENTERED", storage: "SERVER" });
 });
 
@@ -282,8 +293,15 @@ app.delete("/v1/businesses/:businessId/growth-records/:recordId", { preHandler: 
   if (!params.success) return reply.code(400).send({ error: "Invalid growth record identifier" });
   const business = await ownedBusiness(request.userId!, params.data.businessId);
   if (!business) return reply.code(404).send({ error: "Business not found" });
-  const result = await prisma.growthRecord.deleteMany({ where: { id: params.data.recordId, businessId: business.id } });
-  if (!result.count) return reply.code(404).send({ error: "Growth record not found" });
+  const existingRecord = await prisma.growthRecord.findFirst({ where: { id: params.data.recordId, businessId: business.id }, select: { id: true, recordType: true, externalId: true } });
+  if (!existingRecord) return reply.code(404).send({ error: "Growth record not found" });
+  await prisma.growthRecord.delete({ where: { id: existingRecord.id } });
+  await recordActivity({
+    businessId: business.id, actorUserId: request.userId!, eventType: "GROWTH_RECORD_DELETED",
+    entityType: existingRecord.recordType, entityId: existingRecord.id,
+    summary: existingRecord.recordType.replaceAll("_", " ").toLowerCase() + " record deleted",
+    metadata: { recordType: existingRecord.recordType, externalId: existingRecord.externalId }
+  });
   return reply.code(204).send();
 });
 
