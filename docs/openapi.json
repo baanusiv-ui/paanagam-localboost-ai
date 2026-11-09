@@ -1,0 +1,1798 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "LocalBoost API",
+    "version": "1.0.0",
+    "description": "Initial route inventory for the existing Fastify API. This document is intentionally marked route-index-only: it does not claim exact request or response schemas. Complete each operation from the implementation's Zod validation and response behavior before using this as a generated client contract."
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Relative to the configured API base URL"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Health"
+    },
+    {
+      "name": "Identity"
+    },
+    {
+      "name": "Businesses"
+    },
+    {
+      "name": "Evidence"
+    },
+    {
+      "name": "Audits"
+    },
+    {
+      "name": "Google Business Profile"
+    },
+    {
+      "name": "Growth"
+    },
+    {
+      "name": "AI"
+    },
+    {
+      "name": "Reviews"
+    },
+    {
+      "name": "Content"
+    },
+    {
+      "name": "Goals"
+    },
+    {
+      "name": "Activity"
+    },
+    {
+      "name": "Local SEO"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "Health"
+        ],
+        "summary": "Process health check",
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/auth/register": {
+      "post": {
+        "tags": [
+          "Identity"
+        ],
+        "summary": "Register an account",
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/auth/login": {
+      "post": {
+        "tags": [
+          "Identity"
+        ],
+        "summary": "Authenticate and issue an access token",
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/me": {
+      "get": {
+        "tags": [
+          "Identity"
+        ],
+        "summary": "Read the authenticated user profile",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses": {
+      "get": {
+        "tags": [
+          "Businesses"
+        ],
+        "summary": "List the authenticated user's businesses",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      },
+      "post": {
+        "tags": [
+          "Businesses"
+        ],
+        "summary": "Create a business workspace",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/data-status": {
+      "get": {
+        "tags": [
+          "Businesses"
+        ],
+        "summary": "Summarize business evidence and growth data",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/evidence": {
+      "post": {
+        "tags": [
+          "Evidence"
+        ],
+        "summary": "Add business evidence",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      },
+      "get": {
+        "tags": [
+          "Evidence"
+        ],
+        "summary": "List business evidence",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/audits": {
+      "post": {
+        "tags": [
+          "Audits"
+        ],
+        "summary": "Create an audit snapshot",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      },
+      "get": {
+        "tags": [
+          "Audits"
+        ],
+        "summary": "List audit snapshots",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/google": {
+      "get": {
+        "tags": [
+          "Google Business Profile"
+        ],
+        "summary": "Read Google connection status",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/google/connect/{businessId}/url": {
+      "post": {
+        "tags": [
+          "Google Business Profile"
+        ],
+        "summary": "Create a Google OAuth connection URL",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/google/accounts": {
+      "get": {
+        "tags": [
+          "Google Business Profile"
+        ],
+        "summary": "List Google accounts",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/google/locations": {
+      "get": {
+        "tags": [
+          "Google Business Profile"
+        ],
+        "summary": "List Google Business Profile locations",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/google/import": {
+      "post": {
+        "tags": [
+          "Google Business Profile"
+        ],
+        "summary": "Import selected Google Business Profile data",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/growth-records": {
+      "get": {
+        "tags": [
+          "Growth"
+        ],
+        "summary": "List growth records",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      },
+      "post": {
+        "tags": [
+          "Growth"
+        ],
+        "summary": "Create or update a growth record",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/growth-records/{recordId}": {
+      "delete": {
+        "tags": [
+          "Growth"
+        ],
+        "summary": "Delete a growth record",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "recordId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/intelligence": {
+      "get": {
+        "tags": [
+          "Growth"
+        ],
+        "summary": "Build business intelligence",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/menu-sales-intelligence": {
+      "get": {
+        "tags": [
+          "Growth"
+        ],
+        "summary": "Build menu and sales intelligence",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/ai/status": {
+      "get": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Read local AI provider status",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/consultant": {
+      "post": {
+        "tags": [
+          "AI"
+        ],
+        "summary": "Generate advisory business analysis",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/reviews/reply-draft": {
+      "post": {
+        "tags": [
+          "Reviews"
+        ],
+        "summary": "Generate a review reply draft without publishing",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/google-content/draft": {
+      "post": {
+        "tags": [
+          "Content"
+        ],
+        "summary": "Generate a Google content draft without publishing",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/growth-performance-report": {
+      "get": {
+        "tags": [
+          "Growth"
+        ],
+        "summary": "Read the growth performance report",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/growth-goals/history": {
+      "get": {
+        "tags": [
+          "Goals"
+        ],
+        "summary": "Read growth goal history",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/growth-baselines": {
+      "get": {
+        "tags": [
+          "Goals"
+        ],
+        "summary": "List growth baselines",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      },
+      "post": {
+        "tags": [
+          "Goals"
+        ],
+        "summary": "Create a growth baseline",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/growth-baselines/{baselineId}": {
+      "delete": {
+        "tags": [
+          "Goals"
+        ],
+        "summary": "Delete a growth baseline",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "baselineId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/growth-goals": {
+      "get": {
+        "tags": [
+          "Goals"
+        ],
+        "summary": "List growth goals",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      },
+      "post": {
+        "tags": [
+          "Goals"
+        ],
+        "summary": "Create a growth goal",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/growth-goals/{goalId}": {
+      "delete": {
+        "tags": [
+          "Goals"
+        ],
+        "summary": "Delete a growth goal",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "goalId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/activity-history": {
+      "get": {
+        "tags": [
+          "Activity"
+        ],
+        "summary": "Read activity history",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/growth-history": {
+      "get": {
+        "tags": [
+          "Growth"
+        ],
+        "summary": "Read growth history",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/growth-overview": {
+      "get": {
+        "tags": [
+          "Growth"
+        ],
+        "summary": "Build the growth overview",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/growth-overview/{actionId}": {
+      "patch": {
+        "tags": [
+          "Growth"
+        ],
+        "summary": "Update tracking status for a suggested action",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/reviews/themes": {
+      "get": {
+        "tags": [
+          "Reviews"
+        ],
+        "summary": "Analyze stored review themes",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/google/reviews/import": {
+      "post": {
+        "tags": [
+          "Google Business Profile"
+        ],
+        "summary": "Import Google reviews read-only",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/google/connect/{businessId}": {
+      "get": {
+        "tags": [
+          "Google Business Profile"
+        ],
+        "summary": "Start Google OAuth redirect flow",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/google/callback": {
+      "get": {
+        "tags": [
+          "Google Business Profile"
+        ],
+        "summary": "Complete the Google OAuth callback",
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    },
+    "/v1/businesses/{businessId}/local-seo/keywords": {
+      "post": {
+        "tags": [
+          "Local SEO"
+        ],
+        "summary": "Generate locality keyword suggestions",
+        "parameters": [
+          {
+            "name": "businessId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response. Exact response schema is pending source-derived contract completion."
+          },
+          "400": {
+            "description": "Invalid request or parameters."
+          },
+          "401": {
+            "description": "Missing, invalid or expired access token."
+          },
+          "404": {
+            "description": "Business or requested resource not found, including resources outside the user's ownership."
+          },
+          "429": {
+            "description": "Rate limit exceeded."
+          },
+          "500": {
+            "description": "Unexpected server error."
+          }
+        },
+        "x-contract-status": "route-index-only; request and response schemas must be derived from the matching Zod route implementation"
+      }
+    }
+  }
+}
