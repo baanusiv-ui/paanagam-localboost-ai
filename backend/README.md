@@ -34,7 +34,7 @@ All routes except health, registration, login and the Google OAuth callback requ
 - `GET /v1/businesses/:businessId/evidence` — list evidence.
 - `POST /v1/businesses/:businessId/audits` — create an evidence-based audit snapshot.
 - `GET /v1/businesses/:businessId/audits` — list audit snapshots.
-- `GET /v1/businesses/:businessId/growth-records?type=MENU_ITEM&limit=100` — list owner-entered growth records for the selected business. Supported types: `MENU_ITEM`, `DAILY_SALES`, `RETENTION_SNAPSHOT`, `CAMPAIGN_DRAFT`.
+- `GET /v1/businesses/:businessId/intelligence` — generate a tenant-scoped, evidence-linked report from owner-entered menu, sales and retention records.\n- `GET /v1/businesses/:businessId/growth-records?type=MENU_ITEM&limit=100` — list owner-entered growth records for the selected business. Supported types: `MENU_ITEM`, `DAILY_SALES`, `RETENTION_SNAPSHOT`, `CAMPAIGN_DRAFT`.
 - `POST /v1/businesses/:businessId/growth-records` — create or idempotently upsert a record using `type`, client-generated `externalId`, JSON `payload`, and optional `recordedAt`.
 - `DELETE /v1/businesses/:businessId/growth-records/:recordId` — delete one record belonging to the selected business.
 - `GET /v1/businesses/:businessId/google` — safe connection status; never returns tokens.
@@ -79,4 +79,4 @@ The Google Business Profile APIs may require separate API enablement and access 
 
 ## Growth record storage
 
-Growth records are stored in LocalBoost's own PostgreSQL database and are scoped to a business owned by the authenticated account. The unique key `(businessId, recordType, externalId)` makes client retries idempotent. Each record is marked `OWNER_ENTERED`; this is not a POS import. Payloads are limited to 64 KB and must not contain customer personal data, payment credentials, or secrets. Menu, sales, retention and campaign data remain manually entered until a separately approved, documented read-only POS export is available. These endpoints do not write to Paanagam POS and do not publish campaign drafts.
+Growth records are stored in LocalBoost's own PostgreSQL database and are scoped to a business owned by the authenticated account. The unique key `(businessId, recordType, externalId)` makes client retries idempotent. Each record is marked `OWNER_ENTERED`; this is not a POS import. Payloads are limited to 64 KB and must not contain customer personal data, payment credentials, or secrets. Menu, sales, retention and campaign data remain manually entered until a separately approved, documented read-only POS export is available. These endpoints do not write to Paanagam POS and do not publish campaign drafts. The intelligence report is deterministic rules-based arithmetic, not an AI-generated forecast; it includes evidence IDs, calculations, confidence and owner-approval requirements.
