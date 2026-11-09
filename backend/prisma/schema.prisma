@@ -58,6 +58,7 @@ model Business {
   oauthStates     OAuthState[]
   growthRecords   GrowthRecord[]
   growthActions   GrowthAction[]
+  growthGoals     GrowthGoal[]
   @@index([ownerId, createdAt])
 }
 
@@ -156,4 +157,25 @@ model GrowthAction {
   updatedAt   DateTime           @updatedAt
   @@unique([businessId, actionId])
   @@index([businessId, status, updatedAt])
+}
+
+ 
+enum GrowthGoalMetric {
+  NET_SALES
+  REVIEW_COUNT
+  AVERAGE_RATING
+}
+
+model GrowthGoal {
+  id          String           @id @default(cuid())
+  businessId  String
+  business    Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  metric      GrowthGoalMetric
+  targetValue Float
+  monthStart  DateTime
+  archivedAt  DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  @@unique([businessId, metric, monthStart])
+  @@index([businessId, monthStart, archivedAt])
 }
