@@ -813,8 +813,8 @@ app.post("/v1/businesses/:businessId/growth-baselines", { preHandler: requireUse
   const body = z.object({
     metric: z.enum(["NET_SALES", "REVIEW_COUNT", "AVERAGE_RATING"]),
     baselineValue: z.number().finite().nonnegative().max(1000000000),
-    periodStart: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/),
-    periodEnd: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/),
+    periodStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    periodEnd: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     sourceLabel: z.string().trim().min(2).max(120),
     ownerNote: z.string().trim().max(1000).optional()
   }).safeParse(request.body);
