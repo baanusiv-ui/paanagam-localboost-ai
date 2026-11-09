@@ -82,6 +82,66 @@ async function ownedBusiness(userId: string, businessId: string) {
   return prisma.business.findFirst({ where: { id: businessId, ownerId: userId } });
 }
 
+app.get("/v1/businesses/:businessId/data-status", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+
+  const [evidence, growthRecords, googleConnection] = await Promise.all([
+    prisma.evidence.findMany({
+      where: { businessId: business.id },
+      select: { source: true, observedAt: true, expiresAt: true, verified: true },
+      orderBy: { observedAt: "desc" },
+      take: 500
+    }),
+    prisma.growthRecord.findMany({
+      where: { businessId: business.id },
+      select: { recordType: true, source: true, recordedAt: true },
+      orderBy: { recordedAt: "desc" },
+      take: 500
+    }),
+    prisma.googleConnection.findUnique({
+      where: { businessId: business.id },
+      select: { connectedAt: true, expiresAt: true, scope: true }
+    })
+  ]);
+
+  const countBy = (items: Array<{ source: string }>) => items.reduce<Record<string, number>>((counts, item) => {
+    counts[item.source] = (counts[item.source] || 0) + 1;
+    return counts;
+  }, {});
+  const growthByType = growthRecords.reduce<Record<string, number>>((counts, item) => {
+    counts[item.recordType] = (counts[item.recordType] || 0) + 1;
+    return counts;
+  }, {});
+  const now = new Date();
+  return {
+    business: { id: business.id, displayName: business.displayName },
+    generatedAt: now.toISOString(),
+    google: {
+      authorised: Boolean(googleConnection),
+      connectedAt: googleConnection?.connectedAt ?? null,
+      accessTokenExpiresAt: googleConnection?.expiresAt ?? null,
+      hasBusinessManageScope: Boolean(googleConnection?.scope.split(" ").includes("https://www.googleapis.com/auth/business.manage"))
+    },
+    evidence: {
+      sampledCount: evidence.length,
+      sourceCounts: countBy(evidence),
+      verifiedCount: evidence.filter(item => item.verified).length,
+      expiredCount: evidence.filter(item => item.expiresAt && item.expiresAt <= now).length,
+      latestObservedAt: evidence[0]?.observedAt ?? null
+    },
+    growthRecords: {
+      sampledCount: growthRecords.length,
+      sourceCounts: countBy(growthRecords),
+      typeCounts: growthByType,
+      latestRecordedAt: growthRecords[0]?.recordedAt ?? null
+    },
+    limits: { sampledRecordsPerSection: 500, metricsAreNotExhaustiveWhenSampleLimitReached: evidence.length === 500 || growthRecords.length === 500 }
+  };
+});
+
 const growthRecordType = z.enum(["MENU_ITEM", "DAILY_SALES", "RETENTION_SNAPSHOT", "CAMPAIGN_DRAFT"]);
 
 app.get("/v1/businesses/:businessId/growth-records", { preHandler: requireUser }, async (request, reply) => {
