@@ -141,10 +141,33 @@
       root.querySelector("#gi-performance-month")?.addEventListener("change",renderGrowthPerformanceReport);
     }catch(error){root.innerHTML='<div class="panel"><h3>Growth performance report</h3><p class="empty-copy">Report unavailable: '+esc(error.message)+'</p></div>';}
   }
+  async function renderActivityHistory(){
+    const root=$("gi-activity-history");if(!root||!businessId)return;
+    root.innerHTML='<section class="gi-history"><h3>Business activity history</h3><p class="empty-copy">Loading recorded owner activity…</p></section>';
+    let cursor=null,loading=false;
+    const appendPage=async()=>{
+      if(loading)return;loading=true;
+      try{
+        const query=new URLSearchParams({limit:"50"});if(cursor)query.set("cursor",cursor);
+        const result=await api(base()+"/activity-history?"+query.toString());
+        const events=Array.isArray(result.events)?result.events:[];
+        const rows=events.map(event=>'<article class="gi-history-item"><strong>'+esc(event.summary)+'</strong><small>'+esc(dateText(event.createdAt))+' · '+esc(event.entityType)+' · '+esc(event.eventType.replaceAll("_"," ").toLowerCase())+'</small></article>').join("");
+        if(!cursor)root.innerHTML='<section class="gi-history"><h3>Business activity history</h3><p>Owner actions and workspace changes recorded by LocalBoost. This is an audit timeline, not a POS activity feed.</p><div id="gi-activity-events">'+(rows||'<p class="empty-copy">No activity has been recorded yet.</p>')+'</div><div id="gi-activity-more"></div></section>';
+        else $("gi-activity-events")?.insertAdjacentHTML("beforeend",rows);
+        cursor=result.nextCursor||null;
+        const more=$("gi-activity-more");
+        if(more)more.innerHTML=cursor?'<button type="button" id="gi-activity-load-more">Load older activity</button>':'<p class="empty-copy">You are viewing all available activity.</p>';
+        $("gi-activity-load-more")?.addEventListener("click",appendPage,{once:true});
+      }catch(error){if(!cursor)root.innerHTML='<section class="gi-history"><h3>Business activity history</h3><p class="empty-copy">Activity history unavailable: '+esc(error.message)+'</p></section>';else $("gi-activity-more").textContent="Could not load older activity: "+error.message;}
+      finally{loading=false;}
+    };
+    await appendPage();
+  }
+
   async function loadGrowthOverview(){
     const root=$("gi-growth-overview");if(!root||!businessId)return;
     root.innerHTML='<p class="empty-copy">Preparing evidence-backed growth actions…</p>';
-    try{const [overview,history,goals]=await Promise.all([api(base()+"/growth-overview"),api(base()+"/growth-history"),api(base()+"/growth-goals")]);renderGrowthOverview(overview);root.insertAdjacentHTML("beforeend",renderGrowthHistory(history));root.insertAdjacentHTML("beforeend",'<div id="gi-growth-goals"></div><div id="gi-growth-goal-history"></div><div id="gi-growth-performance-report"></div>');renderGrowthGoals(goals);await renderGrowthGoalHistory();await renderGrowthPerformanceReport();root.querySelectorAll("[data-history-filter]").forEach(button=>button.addEventListener("click",()=>{const filter=button.dataset.historyFilter;root.querySelectorAll("[data-history-status]").forEach(row=>{row.hidden=filter!=="ALL"&&row.dataset.historyStatus!==filter;});}));}catch(error){root.innerHTML='<p class="empty-copy">Growth overview unavailable: '+esc(error.message)+'</p>';}
+    try{const [overview,history,goals]=await Promise.all([api(base()+"/growth-overview"),api(base()+"/growth-history"),api(base()+"/growth-goals")]);renderGrowthOverview(overview);root.insertAdjacentHTML("beforeend",renderGrowthHistory(history));root.insertAdjacentHTML("beforeend",'<div id="gi-activity-history"></div><div id="gi-growth-goals"></div><div id="gi-growth-goal-history"></div><div id="gi-growth-performance-report"></div>');await renderActivityHistory();renderGrowthGoals(goals);await renderGrowthGoalHistory();await renderGrowthPerformanceReport();root.querySelectorAll("[data-history-filter]").forEach(button=>button.addEventListener("click",()=>{const filter=button.dataset.historyFilter;root.querySelectorAll("[data-history-status]").forEach(row=>{row.hidden=filter!=="ALL"&&row.dataset.historyStatus!==filter;});}));}catch(error){root.innerHTML='<p class="empty-copy">Growth overview unavailable: '+esc(error.message)+'</p>';}
   }
   function renderAudit(audit) {
     const root=$("gi-audit-results"); if(!root)return;
