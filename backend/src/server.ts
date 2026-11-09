@@ -19,7 +19,7 @@ import { analyzeReviewThemes } from "./review-themes.js";
 import { buildGrowthOverview } from "./growth-overview.js";
 import { mergeGrowthActionTracking } from "./growth-action-tracking.js";
 import { buildGrowthActionMeasurements } from "./growth-action-measurement.js";
-import { buildGrowthGoalHistory } from "./growth-goals.js";
+import { calculateGrowthGoal, buildGrowthGoalHistory } from "./growth-goals.js";
 
 const app = Fastify({ logger: true, bodyLimit: 1024 * 1024 });
 await app.register(helmet);
