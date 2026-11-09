@@ -413,7 +413,8 @@
 
   document.querySelectorAll("[data-view]").forEach(button => button.addEventListener("click", () => showView(button.dataset.view)));
   document.querySelectorAll("[data-go]").forEach(button => button.addEventListener("click", () => showView(button.dataset.go)));
-  $("#run-audit").addEventListener("click", runAudit);\n  $("#local-seo-form").addEventListener("submit", generateLocalSeo);
+  $("#run-audit").addEventListener("click", runAudit);
+  $("#local-seo-form").addEventListener("submit", generateLocalSeo);
   $("#connect-google").addEventListener("click", connectGoogle);
   $("#load-google-locations").addEventListener("click", loadGoogleLocations);
   $("#google-location-select").addEventListener("change", () => { $("#import-google-location").disabled = !$("#google-location-select").value; });
