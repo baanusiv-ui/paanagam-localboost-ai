@@ -176,13 +176,15 @@
       remoteReady = true;
       renderAll();
       const pendingCount = Object.values(localOnly).reduce((total, items) => total + items.length, 0);
-      setSyncStatus("Cloud database connected · " + (latest.records || []).length + " server record(s)" + (migrated ? " · " + migrated + " local record(s) migrated" : "") + (pendingCount ? " · " + pendingCount + " device-only record(s) awaiting sync" : " · all records synced") + " · owner-entered data");
+      setSyncStatus("Cloud database connected · " + (latest.records || []).length + " server record(s)" + (migrated ? " · " + migrated + " local record(s) migrated" : "") + (pendingCount ? " · retrying " + pendingCount + " device-only record(s)" : " · all records synced") + " · owner-entered data");
       await loadServerIntelligence();
       await loadDataStatus();
       // Retry any device-only records after the server has become available.
+      let remaining = 0;
       for (const [type, items] of Object.entries(localOnly)) {
-        for (const [index, item] of items.entries()) await syncRecord(type, item, index);
+        for (const [index, item] of items.entries()) if (!await syncRecord(type, item, index)) remaining++;
       }
+      setSyncStatus("Cloud database connected · " + (latest.records || []).length + " server record(s)" + (remaining ? " · " + remaining + " device-only record(s) still pending" : " · all local records synced") + " · owner-entered data", remaining > 0);
     } catch (error) {
       remoteReady = false;
       setSyncStatus("Cloud sync unavailable · local data remains on this device (" + error.message + ")", true);
