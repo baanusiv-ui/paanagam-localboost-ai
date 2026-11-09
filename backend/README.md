@@ -23,7 +23,7 @@ Health check: `GET http://localhost:4100/health`.
 
 ## API
 
-All business API routes except health and the Google OAuth callback require `Authorization: Bearer <Neon Auth access token>`. The dashboard uses the official `@neondatabase/auth` browser SDK; the API verifies the token signature and issuer with the branch JWKS. LocalBoost never stores Neon Auth passwords or session tokens in PostgreSQL.
+All business API routes except health and the Google OAuth callback require `Authorization: Bearer <Neon Auth access token>`. The dashboard uses the official `@neondatabase/auth` browser SDK and email verification OTP; the API verifies the token signature and issuer with the branch JWKS and also checks the corresponding `neon_auth.user.emailVerified` record. LocalBoost never stores Neon Auth passwords or session tokens in PostgreSQL.
 
 - `POST /v1/auth/register` — create owner account. Password minimum: 12 characters.
 - `POST /v1/auth/login` — login; access tokens expire after 15 minutes.
