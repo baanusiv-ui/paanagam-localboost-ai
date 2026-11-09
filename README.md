@@ -51,3 +51,7 @@ The Growth consultant can use a local Ollama model for Tamil/English explanation
 
 ### Growth Overview Intelligence
 The authenticated business dashboard surfaces up to three evidence-backed growth priorities from saved reviews, daily sales, profile evidence and confirmed competitor observations. Each recommendation includes provenance, dates, calculation, confidence and owner-approval safeguards. Scores are not revenue forecasts; no external action is automatic.
+
+
+### Growth Action Tracking
+Owners can track each growth suggestion as suggested, accepted, in progress, completed or dismissed, with an optional progress note. State is persisted per business and restored when the overview refreshes. The `20261109110000_growth_action_tracking` migration must be applied before enabling the feature in a deployed environment. Status tracking does not perform external actions.
