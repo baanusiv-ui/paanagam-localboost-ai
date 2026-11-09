@@ -15,7 +15,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "test": "tsx --test src/audit.test.ts src/intelligence.test.ts src/consultant.test.ts src/local-seo.test.ts src/review-replies.test.ts src/content-drafts.test.ts src/google-reviews.test.ts src/review-themes.test.ts src/growth-overview.test.ts src/growth-action-tracking.test.ts src/growth-action-measurement.test.ts src/growth-goals.test.ts src/growth-performance-report.test.ts src/menu-sales-intelligence.test.ts src/modules/businesses/access.test.ts src/modules/activity/record.test.ts src/modules/identity/auth.test.ts",
-    "api:check": "node scripts/validate-openapi.mjs"
+    "api:check": "node scripts/validate-openapi.mjs",
+    "security:check": "node scripts/check-tenant-route-guards.mjs"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.2",
