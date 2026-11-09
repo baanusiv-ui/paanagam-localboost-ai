@@ -115,6 +115,44 @@
       root.textContent = "Could not load server intelligence: " + error.message;
     }
   }
+  async function loadLocalAiConsultant() {
+    const root = $("ai-consultant-output");
+    const statusNode = $("local-ai-status");
+    const button = $("generate-ai-consultant");
+    if (!root || !activeBusinessId) {
+      if (root) root.textContent = "Sign in and select a business before asking the local AI consultant.";
+      return;
+    }
+    button.disabled = true;
+    button.textContent = "Checking local AI…";
+    root.textContent = "Checking the private Ollama service on this PC…";
+    try {
+      const status = await remoteApi("/v1/ai/status");
+      statusNode.textContent = status.reachable && status.modelInstalled ? "Local model ready" : "Local model not ready";
+      statusNode.className = "tag " + (status.reachable && status.modelInstalled ? "confirmed" : "pending-tag");
+      if (!status.configured || !status.reachable || !status.modelInstalled) {
+        root.textContent = status.message || "Install and start Ollama, then check OLLAMA_BASE_URL and OLLAMA_MODEL in backend/.env.";
+        return;
+      }
+      button.textContent = "Generating…";
+      const result = await remoteApi(businessPath() + "/consultant", {
+        method: "POST",
+        body: JSON.stringify({ language: $("ai-consultant-language")?.value || "Tamil + English" })
+      });
+      const recommendations = Array.isArray(result.recommendations) ? result.recommendations : [];
+      root.innerHTML = '<article class="draft-card"><div class="draft-card-head"><strong>AI business summary</strong><span class="tag confirmed">' + safe(result.provider) + '</span></div><p>' + safe(result.executiveSummary) + '</p></article>' +
+        recommendations.map(item => '<article class="draft-card"><div class="draft-card-head"><strong>' + safe(item.title) + '</strong><span class="tag ' + (item.priority === "HIGH" ? "pending-tag" : "confirmed") + '">' + safe(item.priority) + '</span></div><p>' + safe(item.action) + '</p><small>Why: ' + safe(item.reason) + ' · Confidence: ' + safe(item.confidence) + '</small><small>Evidence record IDs: ' + safe((item.evidenceIds || []).join(", ") || "No direct record cited") + '</small><p class="footnote">Suggestion only · owner approval required · no external action performed.</p></article>').join("") +
+        '<p class="footnote">' + safe(result.disclaimer) + ' · Model: ' + safe(result.model) + ' · ' + safe(new Date(result.generatedAt).toLocaleString()) + '</p>';
+    } catch (error) {
+      statusNode.textContent = "Local AI unavailable";
+      statusNode.className = "tag pending-tag";
+      root.textContent = error.message;
+    } finally {
+      button.disabled = false;
+      button.textContent = "Ask local AI consultant";
+    }
+  }
+
   async function hydrateCloudWorkspace(event) {
     const businessId = event?.detail?.businessId || sessionStorage.getItem(BUSINESS_KEY);
     if (!businessId || !sessionStorage.getItem(TOKEN_KEY)) return;
@@ -278,5 +316,6 @@
     if (button) { button.disabled = false; button.textContent = "Save draft to approval centre"; }
   });
   $("generate-insights")?.addEventListener("click", loadServerIntelligence);
+  $("generate-ai-consultant")?.addEventListener("click", loadLocalAiConsultant);
   renderAll();
 })();

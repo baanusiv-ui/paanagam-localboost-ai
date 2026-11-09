@@ -42,3 +42,8 @@ render.yaml is a deployment blueprint only. No hosting resources are provisioned
 
 ## Security
 Never commit API keys, OAuth client secrets, access tokens, customer personal data or production credentials. See the roadmap for production-readiness gates.
+
+
+## Optional private AI consultant on Windows
+
+The Growth consultant can use a local Ollama model for Tamil/English explanations of the deterministic intelligence report. The local model does not replace evidence calculations or perform external actions. See [backend/README.md](backend/README.md) for Windows setup. This feature remains optional; the rules-based report works without Ollama.

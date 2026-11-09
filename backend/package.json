@@ -14,7 +14,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
-    "test": "tsx --test src/audit.test.ts src/intelligence.test.ts"
+    "test": "tsx --test src/audit.test.ts src/intelligence.test.ts src/consultant.test.ts"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.2",

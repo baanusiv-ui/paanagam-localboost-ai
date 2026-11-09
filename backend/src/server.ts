@@ -10,6 +10,7 @@ import { env, corsOrigins } from "./env.js";
 import { hashPassword, verifyPassword, issueAccessToken, verifyAccessToken, encryptSecret, randomUrlToken, decryptSecret } from "./security.js";
 import { buildAudit } from "./audit.js";
 import { buildBusinessIntelligence } from "./intelligence.js";
+import { generateLocalConsultant, getLocalAiStatus } from "./consultant.js";
 
 const app = Fastify({ logger: true, bodyLimit: 1024 * 1024 });
 await app.register(helmet);
@@ -229,6 +230,39 @@ app.get("/v1/businesses/:businessId/intelligence", { preHandler: requireUser }, 
   })));
   return { business: { id: business.id, displayName: business.displayName }, ...report };
 });
+app.get("/v1/ai/status", { preHandler: requireUser }, async () => getLocalAiStatus());
+
+app.post("/v1/businesses/:businessId/consultant", {
+  preHandler: requireUser,
+  config: { rateLimit: { max: 5, timeWindow: "1 minute" } }
+}, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const body = z.object({ language: z.enum(["Tamil", "English", "Tamil + English"]).default("Tamil + English") }).safeParse(request.body ?? {});
+  if (!params.success || !body.success) return reply.code(400).send({ error: "Invalid consultant request" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const records = await prisma.growthRecord.findMany({
+    where: { businessId: business.id, recordType: { in: ["MENU_ITEM", "DAILY_SALES", "RETENTION_SNAPSHOT"] } },
+    orderBy: [{ recordedAt: "asc" }, { createdAt: "asc" }],
+    take: 500
+  });
+  const report = buildBusinessIntelligence(records.map(record => ({
+    id: record.id,
+    recordType: record.recordType,
+    payload: record.payload as unknown as Record<string, unknown>,
+    recordedAt: record.recordedAt,
+    source: record.source
+  })));
+  try {
+    const consultant = await generateLocalConsultant(report, body.data.language);
+    return { business: { id: business.id, displayName: business.displayName }, reportEngine: report.engine, ...consultant };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Local AI consultant is unavailable";
+    request.log.warn({ message }, "Local AI consultant request failed");
+    return reply.code(503).send({ error: message });
+  }
+});
+
 
 app.get("/health", async () => ({ ok: true, service: "localboost-api", version: "0.1.0" }));
 

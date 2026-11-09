@@ -33,3 +33,8 @@ Provide deterministic, explainable business intelligence from records the owner 
 - Optional read-only POS import after the POS team confirms and implements the documented contract.
 - Owner-approved action lifecycle with immutable action scope and audit history.
 - Replaceable AI explanation provider, disabled until credentials and usage limits are deliberately configured.
+
+
+## Optional local AI explanation layer
+
+The deterministic report remains the source of truth for arithmetic and evidence. An optional Ollama adapter on the owner's Windows PC can explain that report in Tamil, English or both. The adapter receives only report findings, calculations and evidence record IDs, validates the model's JSON response, and removes any evidence IDs not present in the report. It cannot change numeric results or execute actions. Configure `OLLAMA_BASE_URL` and `OLLAMA_MODEL` in the ignored backend environment file; if the model is unavailable, the deterministic report remains available.
