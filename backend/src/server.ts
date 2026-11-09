@@ -11,6 +11,7 @@ import { hashPassword, verifyPassword, issueAccessToken, verifyAccessToken, encr
 import { buildAudit } from "./audit.js";
 import { buildBusinessIntelligence } from "./intelligence.js";
 import { generateLocalConsultant, getLocalAiStatus } from "./consultant.js";
+import { generateLocalKeywords } from "./local-seo.js";
 
 const app = Fastify({ logger: true, bodyLimit: 1024 * 1024 });
 await app.register(helmet);
@@ -144,6 +145,56 @@ app.get("/v1/businesses/:businessId/data-status", { preHandler: requireUser }, a
 });
 
 const growthRecordType = z.enum(["MENU_ITEM", "DAILY_SALES", "RETENTION_SNAPSHOT", "CAMPAIGN_DRAFT", "COMPETITOR", "LOCAL_KEYWORD", "REVIEW_ITEM", "GOOGLE_CONTENT"]);
+
+app.post("/v1/businesses/:businessId/local-seo/keywords", {
+  preHandler: requireUser,
+  config: { rateLimit: { max: 10, timeWindow: "1 minute" } }
+}, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const body = z.object({
+    locality: z.string().trim().min(1).max(120),
+    services: z.array(z.string().trim().min(1).max(120)).min(1).max(8),
+    language: z.enum(["Tamil", "English", "Tamil + English"]).default("Tamil + English")
+  }).safeParse(request.body);
+  if (!params.success || !body.success) return reply.code(400).send({ error: "Enter a locality and at least one product or service." });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+
+  const suggestions = generateLocalKeywords({
+    businessName: business.displayName,
+    category: business.category ?? undefined,
+    locality: body.data.locality,
+    services: body.data.services,
+    language: body.data.language
+  });
+  const generatedAt = new Date();
+  await Promise.all(suggestions.map(async (item) => {
+    const externalId = "local-seo:" + createHash("sha256").update(body.data.locality.toLowerCase() + "|" + item.keyword.toLowerCase()).digest("hex").slice(0, 40);
+    await prisma.growthRecord.upsert({
+      where: { businessId_recordType_externalId: { businessId: business.id, recordType: "LOCAL_KEYWORD", externalId } },
+      create: {
+        businessId: business.id,
+        recordType: "LOCAL_KEYWORD",
+        externalId,
+        source: "RULES_GENERATED",
+        payload: { ...item, locality: body.data.locality, generatedAt: generatedAt.toISOString() } as Prisma.InputJsonValue,
+        recordedAt: generatedAt
+      },
+      update: {
+        source: "RULES_GENERATED",
+        payload: { ...item, locality: body.data.locality, generatedAt: generatedAt.toISOString() } as Prisma.InputJsonValue,
+        recordedAt: generatedAt
+      }
+    });
+  }));
+  return {
+    business: { id: business.id, displayName: business.displayName },
+    generatedAt: generatedAt.toISOString(),
+    methodology: "Template-based suggestions from owner-entered products/services and locality. No search-volume, ranking, or competition data is claimed.",
+    suggestions
+  };
+});
+
 
 app.get("/v1/businesses/:businessId/growth-records", { preHandler: requireUser }, async (request, reply) => {
   const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
