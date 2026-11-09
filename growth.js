@@ -77,6 +77,32 @@
       return false;
     }
   }
+  async function loadDataStatus() {
+    const root = $("data-freshness-status");
+    if (!root || !activeBusinessId) return;
+    try {
+      const status = await remoteApi(businessPath() + "/data-status");
+      const sourceCounts = status.evidence?.sourceCounts || {};
+      const growthCounts = status.growthRecords?.sourceCounts || {};
+      const googleText = status.google?.authorised
+        ? "Google Business Profile: authorised" + (status.google.hasBusinessManageScope ? " · business.manage scope present" : " · required scope not confirmed")
+        : "Google Business Profile: not connected";
+      const evidenceText = "Evidence: " + (status.evidence?.sampledCount || 0) + " records · " +
+        (sourceCounts.GOOGLE_API || 0) + " Google API · " + (sourceCounts.OWNER_CONFIRMED || 0) + " owner-confirmed · " +
+        (sourceCounts.PUBLIC_OBSERVATION || 0) + " public observations · " + (sourceCounts.DEMO || 0) + " demo";
+      const growthText = "Growth workspace: " + (status.growthRecords?.sampledCount || 0) + " records · " +
+        (growthCounts.OWNER_ENTERED || 0) + " owner-entered";
+      const freshness = status.evidence?.latestObservedAt
+        ? "Latest evidence: " + new Date(status.evidence.latestObservedAt).toLocaleString()
+        : "No evidence has been recorded yet";
+      root.textContent = [googleText, evidenceText, growthText, freshness,
+        status.evidence?.expiredCount ? status.evidence.expiredCount + " expired evidence record(s) need review" : "",
+        status.limits?.metricsAreNotExhaustiveWhenSampleLimitReached ? "Showing a capped sample; totals may be higher." : ""
+      ].filter(Boolean).join(" · ");
+    } catch (error) {
+      root.textContent = "Data freshness status unavailable: " + error.message;
+    }
+  }
   async function loadServerIntelligence() {
     const root = $("insight-list");
     if (!root || !activeBusinessId) return;
@@ -149,8 +175,10 @@
       save();
       remoteReady = true;
       renderAll();
-      setSyncStatus("Cloud database connected · " + (latest.records || []).length + " server record(s)" + (migrated ? " · " + migrated + " local record(s) migrated" : "") + " · owner-entered data");
+      const pendingCount = Object.values(localOnly).reduce((total, items) => total + items.length, 0);
+      setSyncStatus("Cloud database connected · " + (latest.records || []).length + " server record(s)" + (migrated ? " · " + migrated + " local record(s) migrated" : "") + (pendingCount ? " · " + pendingCount + " device-only record(s) awaiting sync" : " · all records synced") + " · owner-entered data");
       await loadServerIntelligence();
+      await loadDataStatus();
       // Retry any device-only records after the server has become available.
       for (const [type, items] of Object.entries(localOnly)) {
         for (const [index, item] of items.entries()) await syncRecord(type, item, index);
