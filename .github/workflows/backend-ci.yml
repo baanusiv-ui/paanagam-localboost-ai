@@ -6,6 +6,7 @@ on:
       - "backend/**"
       - "docs/**"
       - "app.js"
+      - "auth-client.js"
       - "config.js"
       - "index.html"
       - "styles.css"
@@ -55,5 +56,5 @@ jobs:
         working-directory: .
         run: |
           grep -q 'cp index.html styles.css growth-intelligence.css app.js growth.js growth-intelligence.js config.js public-dist/' render.yaml
-          for asset in index.html styles.css growth-intelligence.css app.js growth.js growth-intelligence.js config.js; do test -f "$asset"; done
+          for asset in index.html styles.css growth-intelligence.css app.js auth-client.js growth.js growth-intelligence.js config.js; do test -f "$asset"; done
           test "$(grep -c 'autoDeployTrigger: off' render.yaml)" -eq 2
