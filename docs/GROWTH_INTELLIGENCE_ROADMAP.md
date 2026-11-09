@@ -122,3 +122,11 @@ Approval is required separately for each profile edit, review reply, post, messa
 - A tenant-scoped history endpoint returns up to 24 calendar months of saved goals with recorded monthly actuals, including archived targets.
 - Dashboard comparison shows month, metric, actual, owner target, achieved percentage and sample size. Months without a saved target are omitted rather than represented as missed goals.
 - The history is descriptive only: no forecast, no inferred target, and no causal claim. It uses recorded evidence and preserves archived target visibility.
+
+
+## Growth Performance Report (implemented in code)
+- A tenant-scoped `GET /v1/businesses/:businessId/growth-performance-report?month=YYYY-MM` endpoint builds a selectable calendar-month report from saved daily sales, reviews, owner targets and tracked actions.
+- Sales include net sales, valid daily-record count, distinct coverage dates, recorded orders and average order value only when the required inputs exist. Reviews include count, valid rating average, rating sample size and source counts.
+- Saved monthly targets are compared with actuals, including archived targets. Completed actions are listed by their saved completion date; current tracked status counts are shown separately.
+- Demo records are excluded. Missing values remain null / No data, not zero. The report states its calculation methods, sample sizes, retrieval limits and non-causality limitations.
+- This is a read-only report using existing GrowthRecord, GrowthGoal and GrowthAction tables; no schema change or new migration is introduced. The endpoint is authenticated and tenant-scoped.
