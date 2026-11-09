@@ -37,3 +37,13 @@ export function calculateGrowthGoal(goal:GoalInput, records:GoalRecord[], now=ne
     updatedAt:goal.updatedAt??goal.createdAt??null
   };
 }
+
+/** Returns saved goal snapshots for the latest calendar months; archived targets remain visible as history. */
+export function buildGrowthGoalHistory(goals:GoalInput[],records:GoalRecord[],now=new Date(),months=6) {
+  const current=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),1));
+  const start=new Date(Date.UTC(current.getUTCFullYear(),current.getUTCMonth()-(months-1),1));
+  return goals
+    .filter(goal=>new Date(goal.monthStart)>=start && new Date(goal.monthStart)<new Date(Date.UTC(current.getUTCFullYear(),current.getUTCMonth()+1,1)))
+    .map(goal=>({...calculateGrowthGoal(goal,records,now),archived:Boolean(goal.archivedAt),createdAt:goal.createdAt??null}))
+    .sort((a,b)=>b.month.localeCompare(a.month)||a.metric.localeCompare(b.metric));
+}
