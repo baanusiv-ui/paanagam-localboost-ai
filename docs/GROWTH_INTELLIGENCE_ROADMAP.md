@@ -18,19 +18,21 @@ Paanagam LocalBoost is a standalone, multi-business growth intelligence platform
 
 ## Delivery sequence
 
-### Stage 0 — Safe foundation (this update)
+### Stage 0 — Safe foundation (completed on feature branch)
 - Confirm standalone product boundary and Paanagam pilot.
 - Document POS read-only integration and data provenance.
 - Define growth modules, source labels, approval requirements and delivery gates.
 - Keep existing authenticated workspace and Google read-only connection intact.
 
-### Stage 1 — Usable owner workspace
-- Replace placeholder navigation with real module states and clear empty states.
-- Add business settings, source registry, data freshness and activity history.
-- Add owner-entered baseline: business goals, service area, opening hours, menu categories and approved brand facts.
-- Add Tamil/English content preferences without assuming a language for every output.
+### Stage 1 — Usable owner workspace (partially implemented)
+- Added Menu Intelligence with browser-local item price, optional unit cost and quantity records.
+- Added Sales Analytics with dated owner-entered daily summaries, totals and average order value.
+- Added privacy-safe Customer Retention aggregate entry; no customer identities are collected.
+- Added Campaign Studio with Tamil/English draft templates and a local approval/review queue.
+- Added a transparent rules-based Growth Consultant summary; no AI model is connected.
+- Remaining: persistent backend storage, business settings, source registry, data freshness, activity history and owner baseline management.
 
-### Stage 2 — Menu and sales intelligence
+### Stage 2 — Menu and sales intelligence (next)
 - Implement POS connection only after the POS team confirms and ships the versioned read-only export API.
 - Add daily sales and menu item aggregate ingestion, reconciliation and retry-safe sync.
 - Show item mix, sales trend, average order value and daypart analysis where source fields permit.
