@@ -21,3 +21,22 @@ test("does not forecast or label future months as on track",()=>{
  const result=calculateGrowthGoal({...goal("NET_SALES",100),monthStart:"2026-12-01T00:00:00.000Z"},[],new Date("2026-11-10T00:00:00.000Z"));
  assert.equal(result.status,"NO_DATA");assert.equal(result.progressPercent,null);
 });
+
+import { buildGrowthGoalHistory } from "./growth-goals.js";
+test("goal history includes prior months, excludes future months and retains archived goals",()=>{
+ const goals=[
+  {...goal("NET_SALES",1000),id:"nov",monthStart:"2026-11-01T00:00:00.000Z"},
+  {...goal("NET_SALES",900),id:"oct",monthStart:"2026-10-01T00:00:00.000Z",archivedAt:"2026-10-20T00:00:00.000Z"},
+  {...goal("NET_SALES",800),id:"dec",monthStart:"2026-12-01T00:00:00.000Z"}
+ ];
+ const history=buildGrowthGoalHistory(goals,[row("1","DAILY_SALES",{netSales:500},"2026-10-04T10:00:00.000Z")],new Date("2026-11-10T00:00:00.000Z"),2);
+ assert.deepEqual(history.map(x=>x.id),["nov","oct"]);
+ assert.equal(history[1].archived,true);
+ assert.equal(history[1].actualValue,500);
+});
+test("goal history sorts metric entries within month and does not invent absent goals",()=>{
+ const goals=[{...goal("REVIEW_COUNT",10),id:"reviews"},{...goal("NET_SALES",500),id:"sales"}];
+ const history=buildGrowthGoalHistory(goals,[],new Date("2026-11-10T00:00:00.000Z"),1);
+ assert.deepEqual(history.map(x=>x.id),["sales","reviews"]);
+ assert.equal(history[0].actualValue,null);
+});
