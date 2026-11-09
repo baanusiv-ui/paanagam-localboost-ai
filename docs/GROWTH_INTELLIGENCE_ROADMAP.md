@@ -157,3 +157,13 @@ Approval is required separately for each profile edit, review reply, post, messa
 - The Growth Intelligence dashboard shows a read-only activity timeline, loads 50 events initially and supports loading older events. It clearly distinguishes this owner-workspace audit timeline from POS activity.
 - The migration `20261109150000_activity_history` must be applied and Prisma Client regenerated before the endpoint and event writes can run in a deployed environment. Existing historical actions are not backfilled; the timeline begins recording after migration.
 - No external action, POS write-back, or deployment is performed.
+
+
+## Owner Baseline Management (implemented in code; migration pending deployment)
+- Added `GrowthBaseline` storage for owner-defined starting values for monthly net sales, review count and average rating.
+- Every baseline records a date range, required source/reference label, optional owner note, creator/timestamps and archive state. Baselines are immutable snapshots in the UI: owners can add a new starting point and archive older ones.
+- Added authenticated tenant-scoped list, create and archive APIs. Input validation enforces non-negative sales, whole-number review counts, 1–5 star ratings, valid date ranges and a required source label.
+- The dashboard includes a baseline form and active/archived baseline list. Baselines are explicitly labeled owner-entered; they do not rewrite sales/review records or monthly goals.
+- Activity history records baseline creation and archival.
+- Migration `20261109160000_growth_baselines` must be applied and Prisma Client regenerated before the feature is available in a deployed environment.
+- This stage stores reference points only. Automated comparison against subsequent periods, independent verification and POS-sourced baseline capture remain future work; no comparison or outcome is inferred from a baseline alone.
