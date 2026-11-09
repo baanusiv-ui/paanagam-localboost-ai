@@ -71,6 +71,19 @@
       finally{button.disabled=false;button.textContent="Save progress";}
     }));
   }
+  function renderGrowthHistory(history){
+    const items=Array.isArray(history?.items)?history.items:[];
+    const counts=history?.counts||{};
+    const names={SUGGESTED:'Suggested',ACCEPTED:'Accepted',IN_PROGRESS:'In progress',COMPLETED:'Completed',DISMISSED:'Dismissed'};
+    const rows=items.map(item=>{
+      const m=item.measurement||{}; let result=m.note||'No measured result available.';
+      if(m.status==='READY'&&m.metric==='NET_SALES')result='Sales ₹'+Number(m.before.netSales).toLocaleString('en-IN')+' → ₹'+Number(m.after.netSales).toLocaleString('en-IN')+' · observed '+(m.observedChangePercent===null?'unavailable':Number(m.observedChangePercent).toFixed(2)+'%');
+      if(m.status==='READY'&&m.metric==='REVIEW_FEEDBACK')result='Reviews '+m.before.reviewCount+' → '+m.after.reviewCount+' · rating '+(m.before.averageRating??'—')+' → '+(m.after.averageRating??'—')+' · negative matches '+m.before.negativeThemeMatches+' → '+m.after.negativeThemeMatches;
+      const status=item.status||'SUGGESTED';
+      return '<article class=gi-history-item data-history-status='+esc(status)+'><strong>'+esc(item.title)+'</strong><span class=tag>'+esc(names[status]||status)+'</span><small>Updated: '+esc(dateText(item.updatedAt))+' · Completed: '+esc(dateText(item.completedAt))+'</small>'+(item.ownerNote?'<p><b>Owner note:</b> '+esc(item.ownerNote)+'</p>':'')+'<p><b>Measurement:</b> '+esc(result)+'</p></article>';
+    }).join('');
+    return '<section class=gi-history><h3>Growth history</h3><p>Accepted '+(counts.accepted||0)+' · In progress '+(counts.inProgress||0)+' · Completed '+(counts.completed||0)+' · Dismissed '+(counts.dismissed||0)+'</p>'+(rows||'<p>No saved actions yet.</p>')+'</section>';
+  }
   async function loadGrowthOverview(){
     const root=$("gi-growth-overview");if(!root||!businessId)return;
     root.innerHTML='<p class="empty-copy">Preparing evidence-backed growth actions…</p>';
