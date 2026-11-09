@@ -94,3 +94,11 @@ Approval is required separately for each profile edit, review reply, post, messa
 - API routes are authenticated and tenant-scoped. Stale action IDs are rejected rather than attaching notes to a different recommendation.
 - The database migration `20261109110000_growth_action_tracking` must be applied in the target environment before using the feature.
 - Status changes are internal workflow records only; they do not execute recommendations or publish content.
+
+
+## Growth Impact Measurement (implemented in code; tracking migration required before use)
+- Completed sales-related actions receive a descriptive comparison of the seven complete dates before completion against the seven complete dates after completion. Both windows require one valid daily sales record for every date.
+- Completed review-related actions compare review volume, average rating and directional negative-keyword matches across the same seven-day windows; each side requires at least three reviews.
+- Follow-up windows remain collecting until all seven post-completion dates have elapsed. Missing samples are reported as insufficient; missing dates are never treated as zero.
+- Other action types explicitly report that a comparable metric is not yet supported. No synthetic impact score, causal attribution, forecast or automatic action is produced.
+- The feature uses existing tenant-scoped GrowthAction completion timestamps and saved growth records; no new database migration is required.
