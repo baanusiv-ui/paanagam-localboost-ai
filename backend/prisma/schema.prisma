@@ -24,6 +24,10 @@ enum GrowthRecordType {
   DAILY_SALES
   RETENTION_SNAPSHOT
   CAMPAIGN_DRAFT
+  COMPETITOR
+  LOCAL_KEYWORD
+  REVIEW_ITEM
+  GOOGLE_CONTENT
 }
 
 model User {
@@ -67,7 +71,7 @@ model Evidence {
   verified    Boolean        @default(false)
   observedAt  DateTime       @default(now())
   expiresAt   DateTime?
-  createdAt   DateTime       @default(now())
+  createdAt   DateTime      @default(now())
   @@index([businessId, category, observedAt])
 }
 
