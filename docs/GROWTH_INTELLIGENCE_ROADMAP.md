@@ -31,7 +31,7 @@ Paanagam LocalBoost is a standalone, multi-business growth intelligence platform
 - Added Campaign Studio with Tamil/English draft templates and a local approval/review queue.
 - Added a transparent rules-based Growth Consultant summary; no AI model is connected.
 - Added tenant-scoped PostgreSQL growth-record model and migration, plus authenticated list/upsert/delete API endpoints for menu, daily sales, retention snapshots and campaign drafts. Client retries are idempotent by business, record type and external ID; payloads are capped at 64 KB.
-- Completed follow-up: the browser workspace now syncs to the authenticated business-scoped API, keeps an offline local cache per business, performs a one-time migration from the old unscoped local store, and reconciles local-only records against server records. Added an owner-scoped data-status endpoint and dashboard provenance/freshness summary. Remaining: activity history, owner baseline management, sync pagination beyond the 200-record UI window, and stronger conflict-resolution/versioning for simultaneous edits.
+- Completed follow-up: the browser workspace now syncs to the authenticated business-scoped API, keeps an offline local cache per business, performs a one-time migration from the old unscoped local store, and reconciles local-only records against server records. Added an owner-scoped data-status endpoint and dashboard provenance/freshness summary. Remaining: activity history, owner baseline management, and stronger conflict-resolution/versioning for simultaneous edits. Growth-record pagination is now implemented.
 
 ### Stage 2 — Menu and sales intelligence (next)
 - Implement POS connection only after the POS team confirms and ships the versioned read-only export API.
@@ -140,3 +140,11 @@ Approval is required separately for each profile edit, review reply, post, messa
 - Dashboard panels are view-only. Existing owner-entry forms remain separate; analytics do not edit POS or owner records.
 - Demo records are excluded. The response documents that menu quantities are owner-entered snapshots, not POS line-item sales, and that indicative menu sales are not reconciled receipts.
 - The versioned read-only POS export API remains a separate integration dependency. No POS database access, POS write-back, publishing, or deployment was performed.
+
+ 
+## Growth record pagination & workspace hydration (implemented in code)
+- The authenticated, tenant-scoped growth-record list accepts an optional opaque record cursor and a page size of up to 200. It returns a next cursor when another page may exist.
+- Ordering is stable across recorded date, creation date and record ID. A cursor is checked against the selected business before it is used.
+- Workspace hydration now fetches pages of 200 and reconciles against the full retrieved set instead of assuming the first 200 records are the entire server history.
+- Client hydration is capped at 10,000 records per pass (50 pages); when that cap is reached, the dashboard explicitly warns that older records remain on the server. The server remains the canonical source for already-synced records.
+- This improves completeness but does not yet resolve simultaneous edit conflicts or provide a full audit trail. No POS integration or deployment was performed.
