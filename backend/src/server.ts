@@ -38,26 +38,36 @@ await app.register(rateLimit, { max: 100, timeWindow: "1 minute" });
 
 const requireUser = createRequireUser(async (token) => {
   const identity = await verifyAccessToken(token);
+  const authUsers = await prisma.$queryRaw<Array<{ id: string; email: string; name: string | null; emailVerified: boolean }>>`
+    SELECT "id", "email", "name", "emailVerified"
+    FROM neon_auth."user"
+    WHERE "id" = ${identity.subject}
+    LIMIT 1
+  `;
+  const authUser = authUsers[0];
+  if (!authUser || !authUser.emailVerified || authUser.email.trim().toLowerCase() !== identity.email) {
+    throw new Error("A verified Neon Auth account is required");
+  }
   const bySubject = await prisma.user.findUnique({ where: { authSubject: identity.subject } });
   if (bySubject) return bySubject.id;
 
-  const byEmail = await prisma.user.findUnique({ where: { email: identity.email } });
+  const byEmail = await prisma.user.findUnique({ where: { email: authUser.email.trim().toLowerCase() } });
   if (byEmail) {
     if (byEmail.authSubject && byEmail.authSubject !== identity.subject) {
       throw new Error("This email is already linked to a different identity");
     }
     const linked = await prisma.user.update({
       where: { id: byEmail.id },
-      data: { authSubject: identity.subject, ...(identity.name ? { name: identity.name } : {}) }
+      data: { authSubject: identity.subject, ...(authUser.name ? { name: authUser.name } : {}) }
     });
     return linked.id;
   }
 
   const created = await prisma.user.create({
     data: {
-      email: identity.email,
+      email: authUser.email.trim().toLowerCase(),
       authSubject: identity.subject,
-      name: identity.name,
+      name: authUser.name,
       passwordHash: null
     }
   });
