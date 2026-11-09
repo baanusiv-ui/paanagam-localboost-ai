@@ -8,3 +8,32 @@
 @media(max-width:800px){.setup-columns{grid-template-columns:1fr}.setup-info{border-left:0;border-top:1px solid var(--line);padding:15px 0 0}.setup-intro{display:block}.api-status{display:inline-block;margin-top:10px}.heading-actions{flex-wrap:wrap}.heading-actions button{font-size:10px;padding:9px 11px}}
 
 .google-picker{margin-top:15px;display:grid;gap:10px}.google-picker label{font-size:10px;font-weight:700;color:#657268;margin-top:4px}.google-picker select{width:100%;max-width:560px;border:1px solid #dfe6df;border-radius:7px;padding:10px 11px;font:11px 'DM Sans';background:#fff;color:var(--ink)}.google-picker .secondary-button,.google-picker .primary-button{justify-self:start}.google-picker .form-message{min-height:14px}
+
+
+/* Growth intelligence workspace modules */
+.data-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px;align-items:end}
+.data-form label{display:grid;gap:6px;font-size:10px;font-weight:700;color:#657268}
+.data-form input,.data-form select{width:100%;min-width:0;border:1px solid #dfe6df;border-radius:7px;padding:10px 11px;font:11px 'DM Sans';color:var(--ink);background:#fff}
+.data-form button{justify-self:start}
+.table-panel{margin-top:15px;overflow:hidden}
+.table-panel h3{font:700 13px Manrope;margin:0 0 13px}
+.table-scroll{width:100%;overflow-x:auto}
+.table-scroll table{width:100%;border-collapse:collapse;font-size:10px;min-width:520px}
+.table-scroll th,.table-scroll td{text-align:left;padding:10px 12px;border-bottom:1px solid #edf0ed;white-space:nowrap}
+.table-scroll th{font-size:9px;letter-spacing:.5px;text-transform:uppercase;color:#89958c;background:#f8faf8}
+.table-scroll td{color:#536158}
+.empty-copy{font-size:11px;color:#929c94;line-height:1.6}
+.retention-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.retention-grid>div{background:#f7f9f7;border:1px solid #edf0ed;border-radius:8px;padding:13px}
+.retention-grid strong,.retention-grid small{display:block}
+.retention-grid strong{font:700 20px Manrope}
+.retention-grid small{font-size:9px;color:#89958c;margin-top:4px}
+.draft-card{padding:14px 0;border-top:1px solid #edf0ed}
+.draft-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.draft-card-head strong{font-size:12px}
+.draft-card>small{display:block;color:#929c94;font-size:9px;margin-top:5px}
+.draft-card p{font-size:11px;line-height:1.7;white-space:pre-wrap;color:#536158}
+.insight-list-items{padding-left:19px}
+.insight-list-items li{padding:8px 0;font-size:11px;line-height:1.7;color:#536158}
+#save-draft{justify-self:start}
+@media(max-width:720px){.retention-grid{grid-template-columns:repeat(2,1fr)}.data-form{grid-template-columns:1fr 1fr}}
