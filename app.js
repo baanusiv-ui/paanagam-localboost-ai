@@ -6,8 +6,8 @@
   const BUSINESS_KEY = "localboost_business_id";
   const views = ["overview", "audit", "menu", "sales", "retention", "competitors", "reviews", "content", "approvals", "consultant"];
   const titles = {
-    overview: "Overview", audit: "Local presence audit", competitors: "Competitors",
-    reviews: "Reviews", content: "Content studio", approvals: "Approval centre"
+    overview: "Overview", audit: "Local presence audit", menu: "Menu intelligence", sales: "Sales analytics", retention: "Customer retention", competitors: "Competitors",
+    reviews: "Reviews", content: "Campaign studio", approvals: "Approval centre", consultant: "Growth consultant"
   };
   let activeBusiness = null;
   let googleConnected = false;
@@ -378,9 +378,13 @@
   $("#make-draft").addEventListener("click", () => {
     const topic = $("#content-topic").value.trim();
     const tone = $("#content-tone").value;
+    const language = $("#content-language")?.value || "ta";
     const output = $("#draft-output");
     if (!topic) { $("#content-topic").focus(); return; }
-    output.textContent = "SAMPLE DRAFT — REVIEW BEFORE USE\n\nஒரு நல்ல நாளை ஒரு நல்ல காபியுடன் தொடங்குங்கள்! ☕\n\nபானகத்தில் " + topic + " — உங்கள் நாளில் ஒரு சின்ன மகிழ்ச்சி. நண்பர்களுடன் பகிர்ந்து கொள்ளுங்கள்!\n\nTone: " + tone + "\n\nNote: This is a locally generated template, not verified AI research or a published post. Verify every claim before approval.";
+    const tamil = "ஒரு நல்ல நாளை ஒரு நல்ல காபியுடன் தொடங்குங்கள்! ☕\n\nபானகத்தில் " + topic + " — உங்கள் நாளில் ஒரு சின்ன மகிழ்ச்சி. நண்பர்களுடன் பகிர்ந்து கொள்ளுங்கள்!";
+    const english = "Make your day a little brighter with Paanagam. ☕\n\nDiscover " + topic + " at Paanagam — a little moment worth sharing with friends.";
+    const copy = language === "en" ? english : language === "both" ? tamil + "\n\n" + english : tamil;
+    output.textContent = "DRAFT — OWNER REVIEW REQUIRED\n\n" + copy + "\n\nTone: " + tone + "\nLanguage: " + language + "\n\nThis is a locally generated template, not AI research. Verify all product, price and offer claims before approval. Nothing is published.";
     output.classList.remove("hidden");
   });
 
