@@ -17,8 +17,18 @@ Render is an optional hosting provider, not an architectural dependency. The app
 - Security middleware: Helmet, CORS allowlist, rate limiting
 - Optional private AI: Ollama adapter restricted to local/host-gateway URLs
 - Container support: Dockerfile and local PostgreSQL compose file
-- CI: Prisma validation/client generation, TypeScript build, backend tests, dashboard syntax checks
+- CI: Prisma validation/client generation, TypeScript build, backend tests, OpenAPI structural checks, tenant-route guard checks and dashboard syntax checks
 - Inspected API route inventory: 42 routes under /health and /v1
+
+## Implementation progress on main
+
+The first incremental module extractions are present:
+
+- `modules/identity/auth.ts`: bearer authentication pre-handler with an injected token verifier.
+- `modules/businesses/access.ts`: owner-scoped business lookup.
+- `modules/activity/record.ts`: shared business activity event writer.
+
+The existing server delegates to these modules. Route handlers remain in `server.ts` for now; they will be moved in small domain-by-domain changes only after tests protect existing behavior. CI includes the backend test suite, OpenAPI structural validation and a static guard requiring authentication on discovered business-scoped route registrations.
 
 ## Target module boundaries
 
@@ -95,7 +105,7 @@ This is a target layout, not a mandate to move every file at once. Refactor incr
 ## Current risks / gaps to address before production
 
 - backend/src/server.ts currently contains approximately 1,274 lines and 42 route registrations; route handlers and infrastructure are too concentrated.
-- API documentation currently lives mainly in backend/README.md; a dedicated OpenAPI contract is not present in the inspected repository tree.
+- The OpenAPI route inventory now exists, but detailed request/response schemas are complete only for core identity, business workspace, evidence and growth-record routes. Complete the remaining route contracts.
 - The backend README explicitly identifies missing email verification, password reset, refresh-token rotation, MFA and a formal security audit.
 - Production operations still need HTTPS enforcement, managed database backups, secret rotation, monitoring/alerting and a deployment-specific CORS allowlist.
 - Verify tenant isolation and authorization for every business-scoped route with negative tests before production.
@@ -109,4 +119,4 @@ Inspected branch: main
 
 Inspected commit: bd7dc094fccafdae889c37cb576527a0ac04e04e
 
-This document records source inspection only. It does not claim a new deployment or a fresh CI run.
+This document records architecture and incremental implementation progress. It does not claim a production deployment.
