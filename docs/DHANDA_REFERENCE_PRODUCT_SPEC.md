@@ -82,7 +82,7 @@ LocalBoost AI should deliver these capabilities as a practical growth workspace 
 - Local SEO keyword planner: implemented as tenant-scoped, rules-generated Tamil/English suggestions from owner-entered services and locality. No search volume, ranking, or difficulty metrics are fabricated.
 - Competitor workspace: implemented with owner-confirmed public profile identity, required source URL and observation date, repeatable snapshots, latest-to-prior rating/review-count comparisons, and snapshot history. These are owner-entered observations, not independently verified competitor rankings.
 - Review assistant: owner-supplied reviews can receive private Tamil/English reply drafts using the optional local Ollama model. Email addresses and Indian mobile numbers are redacted before generation. Drafts must be reviewed and saved by the owner; no reply is sent. Live Google review import remains pending authorised API access.
-- Google content calendar: draft and approve/reject workflow is available for manual publishing only. Automatic scheduling and publishing are not connected.
+- Google content calendar: local Ollama can generate editable Tamil/English post copy and a format-specific designer brief from owner-supplied facts. Draft saving and approval remain separate; the brief is not an image. Manual publishing only; automatic scheduling and publishing are not connected.
 
 ## Suggested delivery sequence
 
