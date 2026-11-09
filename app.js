@@ -4,9 +4,9 @@
   const API_BASE = (window.LOCALBOOST_API_BASE || "http://localhost:4100").replace(/\/$/, "");
   const TOKEN_KEY = "localboost_access_token";
   const BUSINESS_KEY = "localboost_business_id";
-  const views = ["overview", "audit", "menu", "sales", "retention", "competitors", "reviews", "content", "approvals", "consultant"];
+  const views = ["overview", "audit", "seo", "menu", "sales", "retention", "competitors", "reviews", "content", "approvals", "consultant"];
   const titles = {
-    overview: "Overview", audit: "Local presence audit", menu: "Menu intelligence", sales: "Sales analytics", retention: "Customer retention", competitors: "Competitors",
+    overview: "Overview", audit: "Local presence audit", seo: "Local SEO keywords", menu: "Menu intelligence", sales: "Sales analytics", retention: "Customer retention", competitors: "Competitors",
     reviews: "Reviews", content: "Campaign studio", approvals: "Approval centre", consultant: "Growth consultant"
   };
   let activeBusiness = null;
@@ -306,6 +306,54 @@
     }
   }
 
+
+  async function generateLocalSeo(event) {
+    event.preventDefault();
+    if (!activeBusiness || !token()) return message("seo-message", "Sign in and select a business first.", true);
+    const locality = $("#seo-locality").value.trim();
+    const services = $("#seo-services").value.split(",").map(value => value.trim()).filter(Boolean);
+    if (!locality || !services.length) return message("seo-message", "Enter a target locality and at least one product or service.", true);
+    const button = $("#seo-generate");
+    button.disabled = true;
+    button.textContent = "Generating…";
+    message("seo-message", "Creating local keyword ideas…");
+    try {
+      const result = await api("/v1/businesses/" + encodeURIComponent(activeBusiness.id) + "/local-seo/keywords", {
+        method: "POST",
+        body: JSON.stringify({ locality, services, language: $("#seo-language").value })
+      });
+      const root = $("#seo-keyword-list");
+      root.replaceChildren();
+      result.suggestions.forEach(item => {
+        const card = document.createElement("article");
+        card.className = "gi-card";
+        const head = document.createElement("div");
+        head.className = "gi-card-head";
+        const keyword = document.createElement("strong");
+        keyword.textContent = item.keyword;
+        const tag = document.createElement("span");
+        tag.className = "tag " + (item.relevance === "HIGH" ? "confirmed" : "pending-tag");
+        tag.textContent = item.relevance + " relevance";
+        head.append(keyword, tag);
+        const detail = document.createElement("p");
+        detail.textContent = item.language + " · " + item.intent.replaceAll("_", " ").toLowerCase();
+        const placement = document.createElement("small");
+        placement.textContent = "Suggested placement: " + item.suggestedPlacement.join(" · ");
+        card.append(head, detail, placement);
+        root.append(card);
+      });
+      $("#seo-methodology").textContent = result.methodology;
+      $("#seo-count").textContent = result.suggestions.length + " ideas";
+      $("#seo-results").classList.remove("hidden");
+      message("seo-message", "Generated and saved " + result.suggestions.length + " keyword ideas to this business workspace.");
+    } catch (error) {
+      message("seo-message", error.message, true);
+    } finally {
+      button.disabled = false;
+      button.textContent = "Generate keyword ideas";
+    }
+  }
+
   async function authenticate(mode) {
     const email = $("#owner-email").value.trim();
     const password = $("#owner-password").value;
@@ -365,7 +413,7 @@
 
   document.querySelectorAll("[data-view]").forEach(button => button.addEventListener("click", () => showView(button.dataset.view)));
   document.querySelectorAll("[data-go]").forEach(button => button.addEventListener("click", () => showView(button.dataset.go)));
-  $("#run-audit").addEventListener("click", runAudit);
+  $("#run-audit").addEventListener("click", runAudit);\n  $("#local-seo-form").addEventListener("submit", generateLocalSeo);
   $("#connect-google").addEventListener("click", connectGoogle);
   $("#load-google-locations").addEventListener("click", loadGoogleLocations);
   $("#google-location-select").addEventListener("change", () => { $("#import-google-location").disabled = !$("#google-location-select").value; });
