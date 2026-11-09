@@ -9,9 +9,8 @@ import { prisma } from "./db.js";
 import { findOwnedBusiness } from "./modules/businesses/access.js";
 import { recordBusinessActivity } from "./modules/activity/record.js";
 import { createRequireUser } from "./modules/identity/auth.js";
-import { registerIdentityRoutes } from "./modules/identity/routes.js";
 import { env, corsOrigins } from "./env.js";
-import { hashPassword, verifyPassword, issueAccessToken, verifyAccessToken, encryptSecret, randomUrlToken, decryptSecret } from "./security.js";
+import { verifyAccessToken, encryptSecret, randomUrlToken, decryptSecret } from "./security.js";
 import { buildAudit } from "./audit.js";
 import { buildBusinessIntelligence } from "./intelligence.js";
 import { generateLocalConsultant, getLocalAiStatus } from "./consultant.js";
@@ -37,10 +36,35 @@ await app.register(cors, {
 });
 await app.register(rateLimit, { max: 100, timeWindow: "1 minute" });
 
-const requireUser = createRequireUser(verifyAccessToken);
+const requireUser = createRequireUser(async (token) => {
+  const identity = await verifyAccessToken(token);
+  const bySubject = await prisma.user.findUnique({ where: { authSubject: identity.subject } });
+  if (bySubject) return bySubject.id;
+
+  const byEmail = await prisma.user.findUnique({ where: { email: identity.email } });
+  if (byEmail) {
+    if (byEmail.authSubject && byEmail.authSubject !== identity.subject) {
+      throw new Error("This email is already linked to a different identity");
+    }
+    const linked = await prisma.user.update({
+      where: { id: byEmail.id },
+      data: { authSubject: identity.subject, ...(identity.name ? { name: identity.name } : {}) }
+    });
+    return linked.id;
+  }
+
+  const created = await prisma.user.create({
+    data: {
+      email: identity.email,
+      authSubject: identity.subject,
+      name: identity.name,
+      passwordHash: null
+    }
+  });
+  return created.id;
+});
 
 app.decorateRequest("userId", null);
-registerIdentityRoutes(app, prisma, requireUser, { hashPassword, verifyPassword, issueAccessToken });
 declare module "fastify" {
   interface FastifyRequest { userId: string | null }
 }
