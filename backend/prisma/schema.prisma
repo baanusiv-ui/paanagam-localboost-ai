@@ -59,6 +59,7 @@ model Business {
   growthRecords   GrowthRecord[]
   growthActions   GrowthAction[]
   growthGoals     GrowthGoal[]
+  activityEvents  ActivityEvent[]
   @@index([ownerId, createdAt])
 }
 
@@ -178,4 +179,20 @@ model GrowthGoal {
   updatedAt   DateTime         @updatedAt
   @@unique([businessId, metric, monthStart])
   @@index([businessId, monthStart, archivedAt])
+}
+
+
+model ActivityEvent {
+  id          String   @id @default(cuid())
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  actorUserId String
+  eventType   String
+  entityType  String
+  entityId    String?
+  summary     String
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  @@index([businessId, createdAt])
+  @@index([businessId, eventType, createdAt])
 }
