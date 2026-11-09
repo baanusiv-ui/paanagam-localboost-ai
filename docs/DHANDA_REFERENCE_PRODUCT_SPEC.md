@@ -75,10 +75,21 @@ LocalBoost AI should deliver these capabilities as a practical growth workspace 
 - Mobile-friendly interface, while retaining the current web dashboard/API architecture.
 - No scraping or unsupported access to private Google or competitor data.
 
-## Implementation status\n- Google profile connection and read-only listing evidence import: existing foundation.\n- Evidence-based profile audit: existing rules engine and audit history. Its percentage measures checklist coverage, not Google ranking or visibility.\n- Local SEO keyword planner: implemented as tenant-scoped, rules-generated Tamil/English suggestions from owner-entered services and locality. Suggestions are stored as `LOCAL_KEYWORD` records with `RULES_GENERATED` provenance. No search volume, ranking, or difficulty metrics are fabricated.\n- Competitor, review, and content publishing workflows remain planned; publishing must continue to require explicit owner approval.\n\n## Suggested delivery sequence\n1. Audit and keyword foundations: data model, source/provenance model, Google connection status, scorecard UI.
-2. Competitor workspace: confirmed competitor list, comparison cards, evidence-backed gaps.
-3. Review workflow: review ingestion where authorized, Tamil/English reply drafts, approval queue.
-4. Content studio: calendar, templates, creative briefs, owner approval, publishing integration.
+## Implementation status
+
+- Google profile connection and read-only listing evidence import: existing foundation.
+- Evidence-based profile audit: implemented with audit history. Its percentage measures checklist coverage, not Google ranking or visibility.
+- Local SEO keyword planner: implemented as tenant-scoped, rules-generated Tamil/English suggestions from owner-entered services and locality. No search volume, ranking, or difficulty metrics are fabricated.
+- Competitor workspace: implemented with owner-confirmed public profile identity, required source URL and observation date, repeatable snapshots, latest-to-prior rating/review-count comparisons, and snapshot history. These are owner-entered observations, not independently verified competitor rankings.
+- Review assistant: owner-supplied reviews can receive private Tamil/English reply drafts using the optional local Ollama model. Email addresses and Indian mobile numbers are redacted before generation. Drafts must be reviewed and saved by the owner; no reply is sent. Live Google review import remains pending authorised API access.
+- Google content calendar: draft and approve/reject workflow is available for manual publishing only. Automatic scheduling and publishing are not connected.
+
+## Suggested delivery sequence
+
+1. Audit and keyword foundations: existing read-only profile evidence and rules-generated keyword planner.
+2. Competitor workspace: implemented; continue with authorised public evidence integrations only where supported.
+3. Review workflow: private local reply drafting implemented; authorised review import, theme analysis and auditable publish lifecycle remain.
+4. Content studio: improve post copy and creative briefs, then add authorised publishing only behind per-item approval.
 5. Unified growth cockpit: cross-module priorities, trends, and consultant explanations.
 
 ## Acceptance criteria
