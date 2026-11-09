@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "backend/**"
+      - "docs/**"
       - "app.js"
       - "config.js"
       - "index.html"
@@ -40,6 +41,7 @@ jobs:
       - run: npm run db:generate
       - run: npm run build
       - run: npm test
+      - run: npm run api:check
       - name: Check dashboard JavaScript syntax
         working-directory: .
         run: node --check app.js && node --check growth-intelligence.js
