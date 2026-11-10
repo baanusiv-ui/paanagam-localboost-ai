@@ -300,6 +300,7 @@ model SocialPost {
   asset           CreativeAsset?   @relation(fields: [assetId], references: [id], onDelete: SetNull)
   channel         SocialChannel
   status          SocialPostStatus @default(DRAFT)
+  sourceDraftId   String?
   caption         String            @db.Text
   approvedAt      DateTime?
   approvedByUserId String?
@@ -308,6 +309,7 @@ model SocialPost {
   publishError    String?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
+  @@unique([businessId, channel, sourceDraftId])
   @@index([businessId, status, createdAt])
   @@index([businessId, channel, createdAt])
 }
