@@ -421,9 +421,7 @@
   $("#google-location-select").addEventListener("change", () => { $("#import-google-location").disabled = !$("#google-location-select").value; });
   $("#import-google-location").addEventListener("click", importGoogleLocation);
   $("#dismiss-notice").addEventListener("click", () => $(".notice").classList.add("hidden"));
-  $("#auth-form").addEventListener("submit", event => { event.preventDefault(); authenticate("login"); });
-  $("#register-button").addEventListener("click", () => authenticate("register"));
-  $("#logout-button").addEventListener("click", () => signOut());
+  // Neon Auth in auth-client.js exclusively owns sign-in, registration and sign-out.
   $("#business-form").addEventListener("submit", createBusiness);
 
   $("#make-draft").addEventListener("click", () => {
@@ -468,5 +466,10 @@
     }
   }
 
+  window.addEventListener("localboost:auth-ready", () => { initialise(); });
+  window.addEventListener("localboost:auth-client-error", event => {
+    const detail = event.detail?.message || "Neon Auth could not initialise.";
+    message("auth-message", "Secure sign-in is unavailable: " + detail, true);
+  });
   initialise();
 })();
