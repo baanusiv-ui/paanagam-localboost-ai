@@ -1496,7 +1496,7 @@ app.post("/v1/businesses/:businessId/social-posts", { preHandler: requireUser, c
   const post = await prisma.socialPost.upsert({
     where: { businessId_channel_sourceDraftId: { businessId: business.id, channel: body.data.channel, sourceDraftId: body.data.sourceDraftId } },
     create: { businessId: business.id, channel: body.data.channel, sourceDraftId: body.data.sourceDraftId, caption: body.data.caption, assetId: body.data.assetId ?? null },
-    update: { caption: body.data.caption, assetId: body.data.assetId ?? null }
+    update: {}
   });
   await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "SOCIAL_DRAFT_CREATED", entityType: "SOCIAL_POST", entityId: post.id, summary: "Social post draft added to the approval centre", metadata: { channel: post.channel, hasImage: Boolean(post.assetId) } });
   return reply.code(201).send({ post });
@@ -1584,7 +1584,11 @@ app.post("/v1/businesses/:businessId/social-posts/:postId/publish", { preHandler
     }
     if (!externalPostId) throw new Error("Meta did not return a published post identifier.");
     const updated = await prisma.socialPost.update({ where: { id: post.id }, data: { status: "PUBLISHED", externalPostId, publishedAt: new Date(), publishError: null } });
-    await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "SOCIAL_POST_PUBLISHED", entityType: "SOCIAL_POST", entityId: post.id, summary: "Owner-triggered social post published through Meta", metadata: { channel: post.channel, externalPostId } });
+    try {
+      await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "SOCIAL_POST_PUBLISHED", entityType: "SOCIAL_POST", entityId: post.id, summary: "Owner-triggered social post published through Meta", metadata: { channel: post.channel, externalPostId } });
+    } catch (auditError) {
+      request.log.error({ error: auditError instanceof Error ? auditError.message : "unknown", postId: post.id }, "Social publish activity event could not be recorded");
+    }
     return { post: updated, published: true };
   } catch (error) {
     const reason = error instanceof Error ? error.message : "Meta publishing failed";
