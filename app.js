@@ -424,7 +424,7 @@
   // Neon Auth in auth-client.js exclusively owns sign-in, registration and sign-out.
   $("#business-form").addEventListener("submit", createBusiness);
 
-  $("#make-draft").addEventListener("click", () => {
+  $("#make-draft")?.addEventListener("click", () => {
     const topic = $("#content-topic").value.trim();
     const tone = $("#content-tone").value;
     const language = $("#content-language")?.value || "ta";
