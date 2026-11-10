@@ -441,7 +441,7 @@
 
   async function initialise() {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("google") === "connected") {
+    if (params.get("meta") === "connected") {\n      window.history.replaceState({}, "", window.location.pathname);\n      message("auth-message", "Meta authorised. Select the correct Facebook Page in Creative Studio to complete the connection.");\n    } else if (params.get("meta") === "cancelled") {\n      window.history.replaceState({}, "", window.location.pathname);\n      message("auth-message", "Meta connection was cancelled.");\n    } else if (params.get("meta") === "error") {\n      window.history.replaceState({}, "", window.location.pathname);\n      message("auth-message", "Meta authorisation could not be completed. Check the Meta app settings and try again.", true);\n    }\n    if (params.get("google") === "connected") {
       window.history.replaceState({}, "", window.location.pathname);
       message("auth-message", "Google authorisation completed. Choose the correct Google account and Paanagam listing below to import read-only profile evidence.");
     }
