@@ -179,8 +179,32 @@
 \n      <section class="view-panel hidden" id="competitors-view"><div class="section-heading"><div><h2>Competitor intelligence</h2><p>Compare dated public observations for businesses you have identified and confirmed.</p></div><span class="tag pending-tag">Owner-supplied evidence</span></div><div class="panel"><h3>Build your local competitor set</h3><p class="footnote">Add the correct public profile URL and confirm its identity. Save repeated snapshots to compare only the rating, review count and offers you personally observed. This does not scrape Google or claim market rankings.</p><button class="primary-button" id="open-gi-competitors" type="button">Open competitor workspace</button></div></section>
       <section class="view-panel hidden" id="reviews-view"><div class="empty-state"><div class="empty-icon">✳</div><h2>Review intelligence</h2><p>No reviews have been imported or supplied yet. Connect an authorised source or provide review data to analyse real customer feedback.</p><span class="tag pending-tag">Waiting for verified source</span></div></section>
       <section class="view-panel hidden" id="content-view">
-        <div class="section-heading"><div><h2>Content studio</h2><p>Create drafts for review. Nothing is published from this prototype.</p></div></div>
-        <div class="panel composer"><label for="content-topic">What would you like to promote?</label><input id="content-topic" type="text" placeholder="e.g. Filter coffee, evening snacks, new menu"><label for="content-tone">Tone</label><select id="content-tone"><option>Friendly and local</option><option>Warm and traditional</option><option>Offer-led and energetic</option></select><label for="content-language">Language</label><select id="content-language"><option value="ta">Tamil</option><option value="en">English</option><option value="both">Tamil + English</option></select><button class="primary-button" id="make-draft" type="button">Create draft</button><div id="draft-output" class="draft-output hidden"></div><button class="secondary-button" id="save-draft" type="button" disabled>Save draft to approval centre</button></div>
+        <div class="section-heading"><div><h2>Creative studio</h2><p>Generate social copy, prepare creative briefs, attach finished artwork and save to the selected business library.</p></div><span class="tag pending-tag">Approval required</span></div>
+        <div class="creative-layout">
+          <div class="panel">
+            <form id="creative-form" class="creative-form">
+              <label for="creative-topic">Campaign topic / product<input id="creative-topic" required maxlength="300" placeholder="e.g. Paanagam filter coffee"></label>
+              <label for="creative-offer">Offer or verified details (optional)<textarea id="creative-offer" maxlength="500" placeholder="Enter only confirmed price, offer dates or product facts"></textarea></label>
+              <label for="creative-platform">Destination channel<select id="creative-platform"><option value="Instagram + Facebook">Instagram + Facebook</option><option value="Instagram">Instagram</option><option value="Facebook">Facebook</option><option value="Google Business Profile">Google Business Profile</option></select></label>
+              <label for="creative-format">Creative format<select id="creative-format"><option value="feed">Square feed · 1:1</option><option value="portrait">Portrait feed · 4:5</option><option value="story">Story / Reel · 9:16</option></select></label>
+              <label for="creative-language">Language<select id="creative-language"><option value="ta">Tamil</option><option value="en">English</option><option value="both">Tamil + English</option></select></label>
+              <label for="creative-tone">Creative tone<select id="creative-tone"><option value="warm">Friendly and local</option><option value="traditional">Warm and traditional</option><option value="offer">Offer-led and energetic</option></select></label>
+              <button class="primary-button" id="creative-generate" type="submit">Generate campaign copy</button>
+            </form>
+            <div id="creative-preview" class="creative-preview hidden">
+              <h4>Generated caption</h4><p id="creative-preview-copy"></p>
+              <h4>Image / designer brief</h4><p id="creative-preview-brief"></p>
+              <label for="creative-asset-url" class="creative-form">Finished image URL (optional)<input id="creative-asset-url" type="url" placeholder="https://…"></label>
+              <button class="secondary-button" id="creative-save" type="button" disabled>Save to business creative library</button>
+            </div>
+            <p id="creative-message" class="creative-message" role="status">Sign in and select a business to load the creative library.</p>
+            <p class="footnote">Image generation is not yet connected inside this dashboard. Attach an HTTPS image asset after generating artwork with an approved creative tool. No publishing or scheduling is connected.</p>
+          </div>
+          <div class="panel">
+            <div class="panel-heading"><div><h3>Business creative library</h3><p>Drafts are stored per selected business.</p></div><span class="tag confirmed" id="creative-count">0</span></div>
+            <div id="creative-library" class="creative-library"><p class="empty-copy">Loading saved creative drafts…</p></div>
+          </div>
+        </div>
       </section>
       <section class="view-panel hidden" id="approvals-view"><div class="section-heading"><div><h2>Approval centre</h2><p>Review exact draft content. No publishing or sending action is connected.</p></div></div><div class="panel"><div id="approval-list"><p class="empty-copy">No saved drafts. Create one in Campaign Studio.</p></div><p class="footnote">Marking a draft reviewed records a local decision only. It does not publish, schedule or send anything.</p></div></section>
 
@@ -193,7 +217,7 @@
     </main>
   </div>
   <script src="config.js"></script>
-  <script src="app.js"></script><script src="growth.js"></script><script src="growth-intelligence.js"></script><script src="gbp-owner.js"></script>
+  <script src="app.js"></script><script src="growth.js"></script><script src="growth-intelligence.js"></script><script src="gbp-owner.js"></script><script src="creative-studio.js"></script>
   <script type="module" src="auth-client.js"></script>
 </body>
 </html>
