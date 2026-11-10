@@ -3,7 +3,7 @@
   const $ = id => document.getElementById(id);
   const API = () => (window.LOCALBOOST_API_BASE || "http://localhost:4100").replace(/\/$/, "");
   const TOKEN = "localboost_access_token", BUSINESS = "localboost_business_id";
-  let drafts = [], current = null, ready = false;
+  let drafts = [], current = null, ready = false, generatedImageDataUrl = "";
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const businessId = () => sessionStorage.getItem(BUSINESS);
   async function api(path, options = {}) {
@@ -42,6 +42,9 @@
     $("creative-generate").disabled=true; setMessage("Generating copy with the configured Local AI service…");
     try {
       const result=await api(base()+"/google-content/draft",{method:"POST",body:JSON.stringify({topic,offer,language:map[language],format:formatMap[format],tone:toneMap[tone]})});
+      generatedImageDataUrl="";
+      const imagePreview=$("creative-image-preview"); if(imagePreview){imagePreview.src="";imagePreview.classList.add("hidden");}
+      $("creative-image-generate").disabled=false; $("creative-image-download").disabled=true;
       current={id:"creative-studio:"+((crypto.randomUUID&&crypto.randomUUID())||Date.now()),kind:"LOCALBOOST_SOCIAL_CREATIVE",topic,offer,platform,format,language:map[language],caption:result.postCopy||result.caption||result.copy||result.postText||"",headline:result.headline||"",designerBrief:result.creativeBrief||result.imageBrief||result.designerBrief||"",assetUrl:"",status:"DRAFT",provenance:"LOCAL_AI_DRAFT",createdAt:new Date().toISOString()};
       if(!current.caption) current.caption=JSON.stringify(result,null,2);
       $("creative-preview").classList.remove("hidden");
@@ -52,6 +55,27 @@
       setMessage("Draft generated. Review the copy and attach a finished image asset before saving if available.");
     } catch(err){setMessage("Generation failed: "+err.message,true);}
     finally{$("creative-generate").disabled=false;}
+  });
+  $("creative-image-generate")?.addEventListener("click",async()=>{
+    if(!ready||!current){setMessage("Generate campaign copy first, then create its artwork.",true);return;}
+    const button=$("creative-image-generate"); button.disabled=true;
+    setMessage("Generating campaign artwork. This uses the configured image provider and may incur API charges…");
+    try{
+      const result=await api(base()+"/creative/image",{method:"POST",body:JSON.stringify({
+        topic:current.topic,offer:current.offer,creativeBrief:current.designerBrief,
+        language:current.language,format:({feed:"SQUARE",portrait:"PORTRAIT",story:"STORY"})[$("creative-format").value]
+      })});
+      generatedImageDataUrl=result.imageDataUrl||"";
+      if(!generatedImageDataUrl) throw new Error("Image provider returned no preview.");
+      const preview=$("creative-image-preview"); preview.src=generatedImageDataUrl; preview.classList.remove("hidden");
+      $("creative-image-download").disabled=false;
+      setMessage("Artwork generated · "+result.model+". Preview only; download it to keep the file.");
+    }catch(err){setMessage("Image generation failed: "+err.message,true);}
+    finally{button.disabled=false;}
+  });
+  $("creative-image-download")?.addEventListener("click",()=>{
+    if(!generatedImageDataUrl)return;
+    const a=document.createElement("a"); a.href=generatedImageDataUrl; a.download="localboost-campaign-artwork.png"; document.body.appendChild(a); a.click(); a.remove();
   });
   $("creative-save")?.addEventListener("click",async()=>{
     if(!ready||!current)return;
