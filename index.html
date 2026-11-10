@@ -59,25 +59,14 @@
       <div class="notice"><span>ⓘ</span><p><strong>Public preview mode.</strong> Explore the LocalBoost dashboard without signing in. Sample figures and findings are illustrative only; private business data and connected accounts remain protected.</p><button id="dismiss-notice" aria-label="Dismiss notice">×</button></div>
 
       <section class="panel setup-panel" id="connection-setup">
-        <div class="setup-intro"><div><span class="eyebrow">CONNECT YOUR PILOT</span><h2>Make this a live workspace</h2><p>Sign in or create an owner account, then register Paanagam. Your records remain private to your account.</p></div><span class="api-status" id="api-status">API not checked</span></div>
+        <div class="setup-intro"><div><span class="eyebrow">CONNECT YOUR PILOT</span><h2>Make this a live workspace</h2><p>Use your Google account to open the private Paanagam workspace. Only authorised owner accounts can access its records.</p></div><span class="api-status" id="api-status">API not checked</span></div>
         <div class="setup-columns">
-          <form id="auth-form" class="setup-form">
-            <h3>Owner account</h3>
-            <label for="owner-name">Name <small>(required for new account)</small></label>
-            <input id="owner-name" type="text" placeholder="Your name" autocomplete="name">
-            <label for="owner-email">Email</label>
-            <input id="owner-email" type="email" placeholder="you@example.com" required autocomplete="email">
-            <label for="owner-password">Password <small>(minimum 12 characters)</small></label>
-            <input id="owner-password" type="password" placeholder="Enter password" minlength="12" required autocomplete="current-password">
-            <div class="form-actions"><button class="primary-button" type="submit" id="login-button">Sign in</button><button class="secondary-button" type="button" id="register-button">Create account</button><button class="quiet-button" type="button" id="logout-button" hidden>Sign out</button></div>
-            <div class="form-actions"><button class="quiet-button" type="button" id="resend-verification-trigger">Resend verification email</button></div>
-            <div id="email-verification-panel" hidden>
-            <label for="owner-otp">Email verification code</label>
-            <input id="owner-otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="Enter the code from your email">
-            <div class="form-actions"><button class="primary-button" type="button" id="verify-email-button">Verify email</button><button class="secondary-button" type="button" id="resend-email-code">Resend code</button></div>
+          <div class="setup-form" id="auth-form">
+            <h3>Private owner access</h3>
+            <p>Continue with your Google account. No LocalBoost password or registration form is required.</p>
+            <div class="form-actions"><button class="primary-button" type="button" id="google-owner-login">Continue with Google</button><button class="quiet-button" type="button" id="logout-button" hidden>Sign out</button></div>
+            <p class="form-message" id="auth-message" role="status"></p>
           </div>
-          <p class="form-message" id="auth-message" role="status"></p>
-          </form>
           <form id="business-form" class="setup-form" hidden>
             <h3>Business workspace</h3>
             <label for="business-name">Business name</label><input id="business-name" value="Paanagam (பானகம்)" required maxlength="160">
