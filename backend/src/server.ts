@@ -1340,6 +1340,274 @@ app.get("/v1/google/callback", async (request, reply) => {
   return reply.redirect(`${env.APP_BASE_URL}/?google=connected`);
 });
 
+
+type MetaGraphError = { error?: { message?: string; type?: string; code?: number; error_subcode?: number } };
+async function metaRequest<T>(path: string, accessToken: string, method: "GET" | "POST" = "GET", values: Record<string, string> = {}): Promise<T> {
+  const url = new URL("https://graph.facebook.com/" + env.META_GRAPH_API_VERSION + "/" + path.replace(/^\//, ""));
+  const params = new URLSearchParams({ ...values, access_token: accessToken });
+  const response = await fetch(method === "GET" ? url.toString() + "?" + params.toString() : url.toString(), {
+    method,
+    ...(method === "POST" ? { headers: { "content-type": "application/x-www-form-urlencoded" }, body: params } : {}),
+    signal: AbortSignal.timeout(20000)
+  });
+  const data = await response.json() as T & MetaGraphError;
+  if (!response.ok) throw new Error(data.error?.message || "Meta Graph API request failed (" + response.status + ")");
+  return data;
+}
+app.post("/v1/meta/connect/:businessId/url", { preHandler: requireUser, config: { rateLimit: { max: 5, timeWindow: "1 minute" } } }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  if (!env.META_APP_ID || !env.META_APP_SECRET) return reply.code(503).send({ error: "Meta OAuth is not configured. Add META_APP_ID, META_APP_SECRET and META_REDIRECT_URI to the API deployment." });
+  const state = randomUrlToken();
+  await prisma.metaOAuthState.create({ data: { state, userId: request.userId!, businessId: business.id, expiresAt: new Date(Date.now() + 10 * 60 * 1000) } });
+  const url = new URL("https://www.facebook.com/" + env.META_GRAPH_API_VERSION + "/dialog/oauth");
+  url.search = new URLSearchParams({
+    client_id: env.META_APP_ID,
+    redirect_uri: env.META_REDIRECT_URI,
+    response_type: "code",
+    state,
+    scope: "pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish"
+  }).toString();
+  return { authorizationUrl: url.toString() };
+});
+
+app.get("/v1/meta/callback", async (request, reply) => {
+  const query = z.object({ code: z.string().optional(), state: z.string().min(1), error: z.string().optional() }).safeParse(request.query);
+  if (!query.success) return reply.code(400).send({ error: "Invalid Meta OAuth callback" });
+  if (query.data.error) return reply.redirect(env.APP_BASE_URL + "/?meta=cancelled");
+  if (!query.data.code) return reply.code(400).send({ error: "Missing Meta authorisation code" });
+  const state = await prisma.metaOAuthState.findUnique({ where: { state: query.data.state } });
+  if (!state || state.expiresAt.getTime() < Date.now()) {
+    if (state) await prisma.metaOAuthState.delete({ where: { id: state.id } });
+    return reply.code(400).send({ error: "Meta OAuth state is invalid or expired. Start the connection again." });
+  }
+  await prisma.metaOAuthState.delete({ where: { id: state.id } });
+  const tokenUrl = new URL("https://graph.facebook.com/" + env.META_GRAPH_API_VERSION + "/oauth/access_token");
+  tokenUrl.search = new URLSearchParams({ client_id: env.META_APP_ID, client_secret: env.META_APP_SECRET, redirect_uri: env.META_REDIRECT_URI, code: query.data.code }).toString();
+  const shortResponse = await fetch(tokenUrl, { signal: AbortSignal.timeout(20000) });
+  const shortData = await shortResponse.json() as { access_token?: string; error?: { message?: string } };
+  if (!shortResponse.ok || !shortData.access_token) {
+    request.log.warn({ providerMessage: shortData.error?.message }, "Meta OAuth token exchange failed");
+    return reply.redirect(env.APP_BASE_URL + "/?meta=error");
+  }
+  const longUrl = new URL("https://graph.facebook.com/" + env.META_GRAPH_API_VERSION + "/oauth/access_token");
+  longUrl.search = new URLSearchParams({ grant_type: "fb_exchange_token", client_id: env.META_APP_ID, client_secret: env.META_APP_SECRET, fb_exchange_token: shortData.access_token }).toString();
+  const longResponse = await fetch(longUrl, { signal: AbortSignal.timeout(20000) });
+  const longData = await longResponse.json() as { access_token?: string; expires_in?: number; error?: { message?: string } };
+  if (!longResponse.ok || !longData.access_token) {
+    request.log.warn({ providerMessage: longData.error?.message }, "Meta long-lived token exchange failed");
+    return reply.redirect(env.APP_BASE_URL + "/?meta=error");
+  }
+  let grantedScopes: string[] = [];
+  try {
+    const permissionResult = await metaRequest<{ data?: Array<{ permission: string; status: string }> }>("me/permissions", longData.access_token);
+    grantedScopes = (permissionResult.data ?? []).filter(item => item.status === "granted").map(item => item.permission);
+  } catch (error) {
+    request.log.warn({ error: error instanceof Error ? error.message : "unknown" }, "Could not verify Meta permissions");
+  }
+  await prisma.metaOAuthSession.upsert({
+    where: { businessId: state.businessId },
+    create: { businessId: state.businessId, userId: state.userId, userTokenEncrypted: encryptSecret(longData.access_token), scopes: grantedScopes.join(" "), expiresAt: new Date(Date.now() + (longData.expires_in ?? 5184000) * 1000) },
+    update: { userId: state.userId, userTokenEncrypted: encryptSecret(longData.access_token), scopes: grantedScopes.join(" "), expiresAt: new Date(Date.now() + (longData.expires_in ?? 5184000) * 1000) }
+  });
+  return reply.redirect(env.APP_BASE_URL + "/?meta=connected");
+});
+
+app.get("/v1/businesses/:businessId/meta", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const connection = await prisma.metaConnection.findUnique({ where: { businessId: business.id }, select: { pageId: true, pageName: true, instagramUserId: true, instagramUsername: true, scopes: true, connectedAt: true, updatedAt: true } });
+  const pending = await prisma.metaOAuthSession.findUnique({ where: { businessId: business.id }, select: { expiresAt: true } });
+  return { configured: Boolean(env.META_APP_ID && env.META_APP_SECRET), connected: Boolean(connection), connection, pageSelectionPending: Boolean(pending && pending.expiresAt > new Date()), graphApiVersion: env.META_GRAPH_API_VERSION };
+});
+
+app.get("/v1/businesses/:businessId/meta/pages", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const pending = await prisma.metaOAuthSession.findUnique({ where: { businessId: business.id } });
+  if (!pending || pending.userId !== request.userId || pending.expiresAt <= new Date()) return reply.code(409).send({ error: "Reconnect Meta to select a Page." });
+  try {
+    const result = await metaRequest<{ data?: Array<{ id: string; name: string; access_token: string; instagram_business_account?: { id: string; username?: string } }> }>("me/accounts", decryptSecret(pending.userTokenEncrypted), "GET", { fields: "id,name,access_token,instagram_business_account{id,username}", limit: "100" });
+    return { pages: (result.data ?? []).map(page => ({ id: page.id, name: page.name, instagramUserId: page.instagram_business_account?.id ?? null, instagramUsername: page.instagram_business_account?.username ?? null })) };
+  } catch (error) {
+    request.log.warn({ error: error instanceof Error ? error.message : "unknown" }, "Meta Page list failed");
+    return reply.code(502).send({ error: error instanceof Error ? error.message : "Could not list Meta Pages" });
+  }
+});
+
+app.post("/v1/businesses/:businessId/meta/page", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const body = z.object({ pageId: z.string().trim().min(1).max(100) }).safeParse(request.body);
+  if (!params.success || !body.success) return reply.code(400).send({ error: "Select a valid Facebook Page." });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const pending = await prisma.metaOAuthSession.findUnique({ where: { businessId: business.id } });
+  if (!pending || pending.userId !== request.userId || pending.expiresAt <= new Date()) return reply.code(409).send({ error: "Reconnect Meta before selecting a Page." });
+  try {
+    const result = await metaRequest<{ data?: Array<{ id: string; name: string; access_token: string; instagram_business_account?: { id: string; username?: string } }> }>("me/accounts", decryptSecret(pending.userTokenEncrypted), "GET", { fields: "id,name,access_token,instagram_business_account{id,username}", limit: "100" });
+    const page = (result.data ?? []).find(item => item.id === body.data.pageId);
+    if (!page?.access_token) return reply.code(403).send({ error: "That Page is not accessible to the connected Meta user." });
+    const granted = new Set(pending.scopes.split(" ").filter(Boolean));
+    const missingPageScopes = ["pages_show_list", "pages_read_engagement", "pages_manage_posts"].filter(scope => !granted.has(scope));
+    if (missingPageScopes.length) return reply.code(403).send({ error: "Meta did not grant the required Facebook Page permissions: " + missingPageScopes.join(", ") + ". Update the Meta app permissions and reconnect." });
+    const connection = await prisma.metaConnection.upsert({
+      where: { businessId: business.id },
+      create: { businessId: business.id, pageId: page.id, pageName: page.name, instagramUserId: page.instagram_business_account?.id ?? null, instagramUsername: page.instagram_business_account?.username ?? null, pageAccessTokenEncrypted: encryptSecret(page.access_token), scopes: pending.scopes },
+      update: { pageId: page.id, pageName: page.name, instagramUserId: page.instagram_business_account?.id ?? null, instagramUsername: page.instagram_business_account?.username ?? null, pageAccessTokenEncrypted: encryptSecret(page.access_token), scopes: pending.scopes }
+    });
+    await prisma.metaOAuthSession.delete({ where: { businessId: business.id } });
+    await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "META_PAGE_CONNECTED", entityType: "META_CONNECTION", entityId: connection.id, summary: "Facebook Page connected to this LocalBoost business", metadata: { pageId: page.id, pageName: page.name, instagramUsername: page.instagram_business_account?.username ?? null } });
+    return { connected: true, page: { id: page.id, name: page.name, instagramUserId: page.instagram_business_account?.id ?? null, instagramUsername: page.instagram_business_account?.username ?? null } };
+  } catch (error) {
+    request.log.warn({ error: error instanceof Error ? error.message : "unknown" }, "Meta Page selection failed");
+    return reply.code(502).send({ error: error instanceof Error ? error.message : "Could not connect the selected Page" });
+  }
+});
+
+app.delete("/v1/businesses/:businessId/meta", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  await prisma.metaConnection.deleteMany({ where: { businessId: business.id } });
+  await prisma.metaOAuthSession.deleteMany({ where: { businessId: business.id } });
+  await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "META_DISCONNECTED", entityType: "META_CONNECTION", summary: "Meta publishing connection removed", metadata: {} });
+  return reply.code(204).send();
+});
+
+app.post("/v1/businesses/:businessId/social-posts", { preHandler: requireUser, config: { rateLimit: { max: 20, timeWindow: "1 minute" } } }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const body = z.object({ channel: z.enum(["FACEBOOK", "INSTAGRAM"]), caption: z.string().trim().min(1).max(2200), sourceDraftId: z.string().trim().min(1).max(100), assetId: z.string().min(1).optional() }).safeParse(request.body);
+  if (!params.success || !body.success) return reply.code(400).send({ error: "Enter a valid channel and caption (maximum 2,200 characters)." });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  if (body.data.channel === "INSTAGRAM" && !body.data.assetId) return reply.code(400).send({ error: "Instagram feed publishing requires an image saved in the business creative library." });
+  if (body.data.assetId) {
+    const asset = await prisma.creativeAsset.findFirst({ where: { id: body.data.assetId, businessId: business.id }, select: { id: true, mimeType: true } });
+    if (!asset) return reply.code(404).send({ error: "Creative image not found in this business workspace." });
+    if (body.data.channel === "INSTAGRAM" && !["image/jpeg", "image/png"].includes(asset.mimeType)) return reply.code(415).send({ error: "Instagram image publishing currently accepts JPEG or PNG artwork." });
+  }
+  const post = await prisma.socialPost.upsert({
+    where: { businessId_channel_sourceDraftId: { businessId: business.id, channel: body.data.channel, sourceDraftId: body.data.sourceDraftId } },
+    create: { businessId: business.id, channel: body.data.channel, sourceDraftId: body.data.sourceDraftId, caption: body.data.caption, assetId: body.data.assetId ?? null },
+    update: {}
+  });
+  await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "SOCIAL_DRAFT_CREATED", entityType: "SOCIAL_POST", entityId: post.id, summary: "Social post draft added to the approval centre", metadata: { channel: post.channel, hasImage: Boolean(post.assetId) } });
+  return reply.code(201).send({ post });
+});
+
+app.get("/v1/businesses/:businessId/social-posts", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const posts = await prisma.socialPost.findMany({ where: { businessId: business.id }, include: { asset: { select: { id: true, fileName: true, mimeType: true, byteSize: true } } }, orderBy: { createdAt: "desc" }, take: 100 });
+  return { posts };
+});
+
+app.post("/v1/businesses/:businessId/social-posts/:postId/approve", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1), postId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid social post identifier" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const connection = await prisma.metaConnection.findUnique({ where: { businessId: business.id } });
+  if (!connection) return reply.code(409).send({ error: "Connect a Facebook Page before approving posts for publishing." });
+  const post = await prisma.socialPost.findFirst({ where: { id: params.data.postId, businessId: business.id }, include: { asset: { select: { mimeType: true } } } });
+  if (!post) return reply.code(404).send({ error: "Social post not found" });
+  if (!["DRAFT", "REJECTED", "FAILED"].includes(post.status)) return reply.code(409).send({ error: "Only draft, rejected or failed posts can be approved." });
+  const grantedScopes = new Set(connection.scopes.split(" ").filter(Boolean));
+  if (post.channel === "FACEBOOK" && !grantedScopes.has("pages_manage_posts")) return reply.code(403).send({ error: "The Meta connection is missing pages_manage_posts permission. Reconnect after enabling it in your Meta app." });
+  if (post.channel === "INSTAGRAM" && (!connection.instagramUserId || !post.asset || !["image/jpeg", "image/png"].includes(post.asset.mimeType) || !grantedScopes.has("instagram_basic") || !grantedScopes.has("instagram_content_publish"))) return reply.code(409).send({ error: "Connect a linked Instagram professional account, grant instagram_basic and instagram_content_publish, and attach a JPEG or PNG image before approving this post." });
+  const updated = await prisma.socialPost.update({ where: { id: post.id }, data: { status: "APPROVED", approvedAt: new Date(), approvedByUserId: request.userId!, publishError: null } });
+  await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "SOCIAL_POST_APPROVED", entityType: "SOCIAL_POST", entityId: post.id, summary: "Owner explicitly approved a social post for manual publishing", metadata: { channel: post.channel } });
+  return { post: updated, publishingStarted: false };
+});
+
+app.post("/v1/businesses/:businessId/social-posts/:postId/reject", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1), postId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid social post identifier" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const result = await prisma.socialPost.updateMany({ where: { id: params.data.postId, businessId: business.id, status: { in: ["DRAFT", "APPROVED", "FAILED"] } }, data: { status: "REJECTED", approvedAt: null, approvedByUserId: null } });
+  if (!result.count) return reply.code(409).send({ error: "This post cannot be rejected in its current state." });
+  await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "SOCIAL_POST_REJECTED", entityType: "SOCIAL_POST", entityId: params.data.postId, summary: "Owner rejected a social post draft", metadata: {} });
+  return { rejected: true };
+});
+
+app.post("/v1/businesses/:businessId/social-posts/:postId/publish", { preHandler: requireUser, config: { rateLimit: { max: 5, timeWindow: "1 minute" } } }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1), postId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid social post identifier" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const connection = await prisma.metaConnection.findUnique({ where: { businessId: business.id } });
+  if (!connection) return reply.code(409).send({ error: "Connect a Facebook Page before publishing." });
+  const post = await prisma.socialPost.findFirst({ where: { id: params.data.postId, businessId: business.id }, include: { asset: true } });
+  if (!post) return reply.code(404).send({ error: "Social post not found" });
+  if (post.status !== "APPROVED") return reply.code(409).send({ error: "Only owner-approved posts can be published. Approve this exact draft first." });
+  if (post.channel === "INSTAGRAM" && (!connection.instagramUserId || !post.asset)) return reply.code(409).send({ error: "A linked Instagram professional account and saved image are required." });
+  if (post.asset && !env.META_PUBLIC_API_BASE_URL) return reply.code(503).send({ error: "Set META_PUBLIC_API_BASE_URL to the public HTTPS API origin before publishing images." });
+  const claimed = await prisma.socialPost.updateMany({ where: { id: post.id, businessId: business.id, status: "APPROVED" }, data: { status: "PUBLISHING", publishError: null } });
+  if (!claimed.count) return reply.code(409).send({ error: "This post is already being processed or is no longer approved." });
+  let shareToken: string | null = null;
+  try {
+    let externalPostId = "";
+    const accessToken = decryptSecret(connection.pageAccessTokenEncrypted);
+    if (post.asset) {
+      shareToken = randomUrlToken(32);
+      await prisma.metaMediaShare.create({ data: { token: shareToken, businessId: business.id, assetId: post.asset.id, expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000) } });
+    }
+    if (post.channel === "FACEBOOK") {
+      const result: { id?: string; post_id?: string } = post.asset
+        ? await metaRequest<{ id?: string; post_id?: string }>(connection.pageId + "/photos", accessToken, "POST", { url: env.META_PUBLIC_API_BASE_URL.replace(/\/$/, "") + "/v1/meta/media/" + shareToken, caption: post.caption, published: "true" })
+        : await metaRequest<{ id?: string; post_id?: string }>(connection.pageId + "/feed", accessToken, "POST", { message: post.caption });
+      externalPostId = result.post_id || result.id || "";
+    } else {
+      const container = await metaRequest<{ id?: string }>(connection.instagramUserId + "/media", accessToken, "POST", { image_url: env.META_PUBLIC_API_BASE_URL.replace(/\/$/, "") + "/v1/meta/media/" + shareToken, caption: post.caption });
+      if (!container.id) throw new Error("Meta did not return an Instagram media container id.");
+      let ready = false;
+      for (let attempt = 0; attempt < 12; attempt++) {
+        const status = await metaRequest<{ status_code?: string; status?: string }>(container.id, accessToken, "GET", { fields: "status_code" });
+        const code = status.status_code || status.status;
+        if (code === "FINISHED") { ready = true; break; }
+        if (code === "ERROR" || code === "EXPIRED") throw new Error("Instagram could not process the uploaded image.");
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+      if (!ready) throw new Error("Instagram media is still processing. Try publishing again after checking the draft status.");
+      const published = await metaRequest<{ id?: string }>(connection.instagramUserId + "/media_publish", accessToken, "POST", { creation_id: container.id });
+      externalPostId = published.id || "";
+    }
+    if (!externalPostId) throw new Error("Meta did not return a published post identifier.");
+    const updated = await prisma.socialPost.update({ where: { id: post.id }, data: { status: "PUBLISHED", externalPostId, publishedAt: new Date(), publishError: null } });
+    try {
+      await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "SOCIAL_POST_PUBLISHED", entityType: "SOCIAL_POST", entityId: post.id, summary: "Owner-triggered social post published through Meta", metadata: { channel: post.channel, externalPostId } });
+    } catch (auditError) {
+      request.log.error({ error: auditError instanceof Error ? auditError.message : "unknown", postId: post.id }, "Social publish activity event could not be recorded");
+    }
+    return { post: updated, published: true };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "Meta publishing failed";
+    await prisma.socialPost.update({ where: { id: post.id }, data: { status: "FAILED", publishError: reason.slice(0, 500) } });
+    await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "SOCIAL_POST_PUBLISH_FAILED", entityType: "SOCIAL_POST", entityId: post.id, summary: "Meta publishing failed; owner action is required to retry", metadata: { channel: post.channel, reason: reason.slice(0, 240) } });
+    return reply.code(502).send({ error: reason });
+  } finally {
+    if (shareToken) await prisma.metaMediaShare.deleteMany({ where: { token: shareToken } });
+  }
+});
+
+app.get("/v1/meta/media/:token", async (request, reply) => {
+  const params = z.object({ token: z.string().min(20).max(128) }).safeParse(request.params);
+  if (!params.success) return reply.code(404).send();
+  const share = await prisma.metaMediaShare.findUnique({ where: { token: params.data.token }, include: { asset: { select: { data: true, mimeType: true } } } });
+  if (!share || share.expiresAt <= new Date()) return reply.code(404).send();
+  return reply.header("content-type", share.asset.mimeType).header("content-length", String(share.asset.data.length)).header("content-disposition", "inline").header("cache-control", "public, max-age=300").header("x-content-type-options", "nosniff").send(Buffer.from(share.asset.data));
+});
+
 app.setErrorHandler((error, request, reply) => {
   request.log.error(error);
   if (reply.sent) return;
