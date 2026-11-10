@@ -27,6 +27,9 @@ on:
       - "styles.css"
       - "growth-intelligence.js"
       - "growth-intelligence.css"
+      - "gbp-owner.css"
+      - "gbp-owner.js"
+      - "creative-studio.js"
       - "render.yaml"
       - ".github/workflows/backend-ci.yml"
 
@@ -53,7 +56,7 @@ jobs:
       - run: npm run security:check
       - name: Check dashboard JavaScript syntax
         working-directory: .
-        run: node --check app.js && node --check growth.js && node --check growth-intelligence.js && node --check auth-client.js
+        run: node --check app.js && node --check growth.js && node --check growth-intelligence.js && node --check gbp-owner.js && node --check creative-studio.js && node --check auth-client.js
 
       - name: Validate Render dashboard bundle and manual-deploy guard
         working-directory: .
