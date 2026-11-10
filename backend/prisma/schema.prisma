@@ -40,6 +40,7 @@ model User {
   createdAt    DateTime      @default(now())
   businesses   Business[]
   oauthStates  OAuthState[]
+  metaOAuthStates MetaOAuthState[]
 }
 
 model Business {
@@ -64,6 +65,11 @@ model Business {
   growthBaselines GrowthBaseline[]
   activityEvents  ActivityEvent[]
   creativeAssets  CreativeAsset[]
+  metaConnection  MetaConnection?
+  metaOAuthStates MetaOAuthState[]
+  metaOAuthSession MetaOAuthSession?
+  socialPosts SocialPost[]
+  metaMediaShares MetaMediaShare[]
   @@index([ownerId, createdAt])
 }
 
@@ -230,5 +236,90 @@ model CreativeAsset {
   data       Bytes
   altText    String?
   createdAt  DateTime @default(now())
+  socialPosts SocialPost[]
+  mediaShares MetaMediaShare[]
   @@index([businessId, createdAt])
+}
+
+enum SocialChannel {
+  FACEBOOK
+  INSTAGRAM
+}
+
+enum SocialPostStatus {
+  DRAFT
+  APPROVED
+  REJECTED
+  PUBLISHING
+  PUBLISHED
+  FAILED
+}
+
+model MetaConnection {
+  id                    String   @id @default(cuid())
+  businessId            String   @unique
+  business              Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  pageId                String
+  pageName              String
+  instagramUserId       String?
+  instagramUsername     String?
+  pageAccessTokenEncrypted String
+  scopes                String
+  connectedAt           DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model MetaOAuthState {
+  id        String   @id @default(cuid())
+  state     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessId String
+  business  Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([expiresAt])
+}
+
+model MetaOAuthSession {
+  id                  String   @id @default(cuid())
+  businessId          String   @unique
+  business            Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  userId              String
+  userTokenEncrypted  String
+  expiresAt           DateTime
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model SocialPost {
+  id              String           @id @default(cuid())
+  businessId      String
+  business        Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  assetId         String?
+  asset           CreativeAsset?   @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  channel         SocialChannel
+  status          SocialPostStatus @default(DRAFT)
+  caption         String            @db.Text
+  approvedAt      DateTime?
+  approvedByUserId String?
+  publishedAt     DateTime?
+  externalPostId  String?
+  publishError    String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  @@index([businessId, status, createdAt])
+  @@index([businessId, channel, createdAt])
+}
+
+model MetaMediaShare {
+  id        String        @id @default(cuid())
+  token     String        @unique
+  businessId String
+  business Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  assetId   String
+  asset     CreativeAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([expiresAt])
 }
