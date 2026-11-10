@@ -4,10 +4,10 @@
   const API_BASE = (window.LOCALBOOST_API_BASE || "http://localhost:4100").replace(/\/$/, "");
   const TOKEN_KEY = "localboost_access_token";
   const BUSINESS_KEY = "localboost_business_id";
-  const views = ["overview", "audit", "gbp", "seo", "menu", "sales", "retention", "competitors", "reviews", "content", "approvals", "goals", "consultant"];
+  const views = ["overview", "audit", "gbp", "seo", "menu", "sales", "retention", "competitors", "reviews", "content", "approvals", "goals", "consultant", "pos"];
   const titles = {
     overview: "Overview", audit: "Local presence audit", gbp: "GBP owner manager", seo: "Local SEO keywords", menu: "Menu intelligence", sales: "Sales analytics", retention: "Customer retention", competitors: "Competitors",
-    reviews: "Reviews", content: "Campaign studio", approvals: "Approval centre", goals: "Growth goals", consultant: "Growth consultant"
+    reviews: "Reviews", content: "Campaign studio", approvals: "Approval centre", goals: "Growth goals", consultant: "Growth consultant", pos: "POS integration"
   };
   let activeBusiness = null;
   let googleConnected = false;
@@ -412,9 +412,68 @@
     }
   }
 
+
+  async function refreshPosStatus() {
+    if (!activeBusiness || !token()) return;
+    try {
+      const result = await api("/v1/businesses/" + encodeURIComponent(activeBusiness.id) + "/pos-integration");
+      $("#pos-connection-badge").textContent = result.connected ? "Connected" : "Not connected";
+      $("#pos-business-name").textContent = result.businessName || "No POS business connected.";
+      $("#pos-last-tested").textContent = result.lastTestedAt ? new Date(result.lastTestedAt).toLocaleString() : "—";
+      $("#pos-last-synced").textContent = result.lastSyncedAt ? new Date(result.lastSyncedAt).toLocaleString() : "—";
+      $("#pos-test-status").textContent = result.lastStatus || "Not tested";
+      $("#pos-sync-status").textContent = result.lastSyncedAt ? "Synced" : "Not synced";
+      $("#pos-test-button").disabled = !result.connected;
+      $("#pos-sync-button").disabled = !result.connected;
+      if (result.lastError) message("pos-sync-message", result.lastError, true);
+    } catch (error) { message("pos-connect-message", error.message, true); }
+  }
+
+  async function connectPos(event) {
+    event.preventDefault();
+    if (!activeBusiness || !token()) return message("pos-connect-message", "Sign in and select Paanagam first.", true);
+    const apiKey = $("#pos-api-key").value.trim();
+    const button = $("#pos-connect-button");
+    if (!apiKey) return message("pos-connect-message", "Paste the POS integration key.", true);
+    button.disabled = true; button.textContent = "Verifying…";
+    try {
+      const result = await api("/v1/businesses/" + encodeURIComponent(activeBusiness.id) + "/pos-integration/connect", { method: "POST", body: JSON.stringify({ apiKey }) });
+      $("#pos-api-key").value = "";
+      message("pos-connect-message", result.message || "POS connected securely.");
+      await refreshPosStatus();
+    } catch (error) { message("pos-connect-message", error.message, true); }
+    finally { button.disabled = false; button.textContent = "Verify and connect"; }
+  }
+
+  async function testPos() {
+    if (!activeBusiness) return;
+    const button = $("#pos-test-button"); button.disabled = true; button.textContent = "Testing…";
+    try {
+      const result = await api("/v1/businesses/" + encodeURIComponent(activeBusiness.id) + "/pos-integration/test", { method: "POST", body: "{}" });
+      message("pos-connect-message", "Connection verified. POS data status: " + result.posStatus + ".");
+      await refreshPosStatus();
+    } catch (error) { message("pos-connect-message", error.message, true); await refreshPosStatus(); }
+    finally { button.disabled = false; button.textContent = "Test connection"; }
+  }
+
+  async function syncPos() {
+    if (!activeBusiness) return;
+    const button = $("#pos-sync-button"); button.disabled = true; button.textContent = "Syncing…";
+    try {
+      const result = await api("/v1/businesses/" + encodeURIComponent(activeBusiness.id) + "/pos-integration/sync", { method: "POST", body: "{}" });
+      message("pos-sync-message", "Imported " + result.importedMenu + " menu items and " + result.importedSalesDays + " sales days (" + result.periodStart + " to " + result.periodEnd + "). POS was not modified.");
+      await refreshPosStatus();
+    } catch (error) { message("pos-sync-message", error.message, true); await refreshPosStatus(); }
+    finally { button.disabled = false; button.textContent = "Sync menu and sales"; }
+  }
+
   document.querySelectorAll("[data-view]").forEach(button => button.addEventListener("click", () => showView(button.dataset.view)));
   document.querySelectorAll("[data-go]").forEach(button => button.addEventListener("click", () => showView(button.dataset.go)));
   $("#run-audit").addEventListener("click", runAudit);
+  $("#pos-connect-form").addEventListener("submit", connectPos);
+  $("#pos-test-button").addEventListener("click", testPos);
+  $("#pos-sync-button").addEventListener("click", syncPos);
+  window.addEventListener("localboost:business-ready", refreshPosStatus);
   $("#local-seo-form").addEventListener("submit", generateLocalSeo);
   $("#connect-google").addEventListener("click", connectGoogle);
   $("#load-google-locations").addEventListener("click", loadGoogleLocations);

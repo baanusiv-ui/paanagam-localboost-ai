@@ -32,6 +32,7 @@
         <button class="nav-item" data-view="menu"><span>▦</span> Menu intelligence</button><button class="nav-item" data-view="sales"><span>↗</span> Sales analytics</button><button class="nav-item" data-view="retention"><span>♡</span> Customer retention</button><button class="nav-item" data-view="competitors"><span>◎</span> Competitors</button>
         <button class="nav-item" data-view="reviews"><span>✳</span> Reviews</button>
         <button class="nav-item" data-view="content"><span>▤</span> Content studio</button>
+        <button class="nav-item" data-view="pos"><span>▣</span> POS integration</button>
         <button class="nav-item" data-view="goals"><span>◎</span> Growth goals</button><button class="nav-item" data-view="consultant"><span>✦</span> Growth consultant</button><button class="nav-item" data-view="approvals"><span>✓</span> Approval centre <i class="count">2</i></button>
       </nav>
       <div class="sidebar-bottom">
@@ -250,7 +251,27 @@
       </section>
       <section class="view-panel hidden" id="consultant-view"><div class="section-heading"><div><h2>Growth consultant</h2><p>Evidence-first business analysis with an optional private AI explanation running on your Windows PC.</p></div><span class="tag pending-tag">Rules + Local AI</span></div><div class="panel"><p class="footnote" id="cloud-sync-status">Sign in and select a business to connect owner records to the cloud database.</p><p class="footnote" id="data-freshness-status">Data sources and freshness will appear after selecting a business.</p><button class="primary-button" id="generate-insights">Review recorded data</button><div id="insight-list"><p class="empty-copy">Enter menu and sales data, then run the review.</p></div><div class="divider"></div><div class="section-heading"><div><h3>Local AI consultant</h3><p>Uses Ollama on your own PC. Numeric calculations remain controlled by the rules engine.</p></div><span class="tag pending-tag" id="local-ai-status">Checking when requested</span></div><div class="gi-form"><label for="ai-consultant-language">Response language</label><select id="ai-consultant-language"><option>Tamil + English</option><option>Tamil</option><option>English</option></select><button class="secondary-button" id="generate-ai-consultant" type="button">Ask local AI consultant</button></div><div id="ai-consultant-output" class="gi-results"><p class="empty-copy">Connect Ollama on the Windows PC to generate evidence-grounded explanations and next steps.</p></div></div></section>
       <footer>LOCALBOOST AI <span>·</span> PAANAGAM PILOT <span>·</span> EVIDENCE BEFORE OPTIMISATION</footer>
-    </main>
+    
+      <section class="view-panel hidden" id="pos-view">
+        <div class="section-heading"><div><h2>Paanagam POS integration</h2><p>Secure, read-only connection to your Paanagam POS business data.</p></div><span class="tag confirmed" id="pos-connection-badge">Not connected</span></div>
+        <div class="panel">
+          <div class="panel-heading"><div><h3>Connect your POS</h3><p>Your API key is sent to the LocalBoost server over HTTPS and stored encrypted. It is never saved in browser storage.</p></div></div>
+          <form id="pos-connect-form" class="gi-form">
+            <label>POS integration API key<input id="pos-api-key" type="password" autocomplete="off" spellcheck="false" required placeholder="Paste the key generated in Paanagam POS"></label>
+            <button class="primary-button" id="pos-connect-button" type="submit">Verify and connect</button>
+          </form>
+          <p id="pos-connect-message" class="form-message" role="status"></p>
+          <div class="form-actions"><button class="secondary-button" type="button" id="pos-test-button" disabled>Test connection</button><button class="primary-button" type="button" id="pos-sync-button" disabled>Sync menu and sales</button></div>
+          <p id="pos-sync-message" class="form-message" role="status"></p>
+        </div>
+        <div class="panel">
+          <div class="panel-heading"><div><h3>Connection status</h3><p id="pos-business-name">No POS business connected.</p></div></div>
+          <div class="check-row"><div><strong>Last connection test</strong><small id="pos-last-tested">—</small></div><span class="tag" id="pos-test-status">Not tested</span></div>
+          <div class="check-row"><div><strong>Last successful sync</strong><small id="pos-last-synced">—</small></div><span class="tag" id="pos-sync-status">Not synced</span></div>
+          <p class="footnote">Read-only scope. LocalBoost imports menu items and daily sales summaries only. It does not create bills, change prices, edit stock, or write back to the POS.</p>
+        </div>
+      </section>
+</main>
   </div>
   <script src="config.js"></script>
   <script src="app.js"></script><script src="growth.js"></script><script src="growth-intelligence.js"></script><script src="gbp-owner.js"></script><script src="creative-studio.js"></script><script src="social-publishing.js"></script><script src="growth-goals.js"></script>
