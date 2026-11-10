@@ -204,7 +204,7 @@
               <button class="secondary-button" id="creative-save" type="button" disabled>Save to business creative library</button>
             </div>
             <p id="creative-message" class="creative-message" role="status">Sign in and select a business to load the creative library.</p>
-            <p class="footnote">Image generation may incur API charges. Generated artwork can be saved to the selected business workspace; each image is limited to 4 MB and each business library to 100 assets / 100 MB. Publishing and scheduling are not connected.</p>
+            <p class="footnote">Image generation may incur API charges. Save finished artwork to the business library before adding it to an Instagram post. Publishing is never automatic.</p>
           </div>
           <div class="panel">
             <div class="panel-heading"><div><h3>Business creative library</h3><p>Drafts and image files are stored per selected business.</p></div><span class="tag confirmed" id="creative-count">0</span></div>
@@ -218,13 +218,13 @@
             <button class="primary-button" id="meta-connect" type="button">Connect Facebook</button>
             <button class="secondary-button" id="meta-disconnect" type="button" hidden>Disconnect</button>
           </div>
-        </section>
-        <div id="meta-page-picker" class="meta-page-picker hidden">
+          <div id="meta-page-picker" class="meta-page-picker hidden">
             <label for="meta-page-select">Choose the correct Facebook Page<select id="meta-page-select"><option value="">Loading Pages…</option></select></label>
             <button class="secondary-button" id="meta-select-page" type="button" disabled>Use this Page</button>
           </div>
           <p class="footnote">Requires a Meta developer app with Facebook Login, Pages permissions and Instagram publishing permission. Only the selected business workspace can use its connection. Disconnecting removes stored tokens.</p>
         </div>
+      </section>
       <section class="view-panel hidden" id="approvals-view"><div class="section-heading"><div><h2>Approval centre</h2><p>Approve the exact content first. Publishing is a separate manual action and is never scheduled automatically.</p></div><span class="tag pending-tag">Owner action required</span></div><div class="panel"><p id="approval-message" class="creative-message" role="status">Approval queue is loaded for the selected business.</p><div id="approval-list"><p class="empty-copy">No social posts waiting for review.</p></div><p class="footnote">Approve does not publish. Use “Publish now” only after reviewing the final caption and image. Publishing calls Meta immediately.</p></div></section>
 
 
