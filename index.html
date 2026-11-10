@@ -207,7 +207,20 @@
           </div>
         </div>
       </section>
-      <section class="view-panel hidden" id="approvals-view"><div class="section-heading"><div><h2>Approval centre</h2><p>Review exact draft content. No publishing or sending action is connected.</p></div></div><div class="panel"><div id="approval-list"><p class="empty-copy">No saved drafts. Create one in Campaign Studio.</p></div><p class="footnote">Marking a draft reviewed records a local decision only. It does not publish, schedule or send anything.</p></div></section>
+        <div class="panel meta-connection-panel">
+          <div class="panel-heading"><div><h3>Facebook &amp; Instagram connection</h3><p>Connect a Facebook Page and its linked Instagram professional account.</p></div><span class="tag pending-tag" id="meta-connection-badge">Not connected</span></div>
+          <p id="meta-connection-status" class="creative-message" role="status">Meta connection status will appear here after sign-in.</p>
+          <div class="meta-connection-actions">
+            <button class="primary-button" id="meta-connect" type="button">Connect Facebook</button>
+            <button class="secondary-button" id="meta-disconnect" type="button" hidden>Disconnect</button>
+          </div>
+          <div id="meta-page-picker" class="meta-page-picker hidden">
+            <label for="meta-page-select">Choose the correct Facebook Page<select id="meta-page-select"><option value="">Loading Pages…</option></select></label>
+            <button class="secondary-button" id="meta-select-page" type="button" disabled>Use this Page</button>
+          </div>
+          <p class="footnote">Requires a Meta developer app with Facebook Login, Pages permissions and Instagram publishing permission. Only the selected business workspace can use its connection. Disconnecting removes stored tokens.</p>
+        </div>
+      <section class="view-panel hidden" id="approvals-view"><div class="section-heading"><div><h2>Approval centre</h2><p>Approve the exact content first. Publishing is a separate manual action and is never scheduled automatically.</p></div><span class="tag pending-tag">Owner action required</span></div><div class="panel"><div id="approval-list"><p class="empty-copy">No social posts waiting for review.</p></div><p class="footnote">Approve does not publish. Use “Publish now” only after reviewing the final caption and image. Publishing calls Meta immediately.</p></div></section>
 
 
       <section class="view-panel hidden" id="menu-view"><div class="section-heading"><div><h2>Menu intelligence</h2><p>Owner-entered item data. Contribution requires verified cost.</p></div><span class="tag pending-tag">Browser-local data</span></div><div class="panel"><form id="menu-form" class="data-form"><label>Menu item<input id="menu-name" required placeholder="Filter coffee"></label><label>Selling price (₹)<input id="menu-price" type="number" min="0" step=".01" required></label><label>Unit cost (₹)<input id="menu-cost" type="number" min="0" step=".01" placeholder="Optional"></label><label>Units sold<input id="menu-qty" type="number" min="0" step=".01" value="0"></label><button class="primary-button">Add item</button></form><p class="footnote">Stored in this browser only. Do not mix cost and selling price with different tax bases.</p></div><div class="panel table-panel"><h3>Menu register</h3><div id="menu-table"><p class="empty-copy">No menu items entered.</p></div></div></section>
@@ -235,7 +248,7 @@
     </main>
   </div>
   <script src="config.js"></script>
-  <script src="app.js"></script><script src="growth.js"></script><script src="growth-intelligence.js"></script><script src="gbp-owner.js"></script><script src="creative-studio.js"></script><script src="growth-goals.js"></script>
+  <script src="app.js"></script><script src="growth.js"></script><script src="growth-intelligence.js"></script><script src="gbp-owner.js"></script><script src="creative-studio.js"></script><script src="social-publishing.js"></script><script src="growth-goals.js"></script>
   <script type="module" src="auth-client.js"></script>
 </body>
 </html>
