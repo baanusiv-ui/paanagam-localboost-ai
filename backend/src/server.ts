@@ -1563,9 +1563,9 @@ app.post("/v1/businesses/:businessId/social-posts/:postId/publish", { preHandler
       await prisma.metaMediaShare.create({ data: { token: shareToken, businessId: business.id, assetId: post.asset.id, expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000) } });
     }
     if (post.channel === "FACEBOOK") {
-      const result = post.asset
+      const result: { id?: string; post_id?: string } = post.asset
         ? await metaRequest<{ id?: string; post_id?: string }>(connection.pageId + "/photos", accessToken, "POST", { url: env.META_PUBLIC_API_BASE_URL.replace(/\/$/, "") + "/v1/meta/media/" + shareToken, caption: post.caption, published: "true" })
-        : await metaRequest<{ id?: string }>(connection.pageId + "/feed", accessToken, "POST", { message: post.caption });
+        : await metaRequest<{ id?: string; post_id?: string }>(connection.pageId + "/feed", accessToken, "POST", { message: post.caption });
       externalPostId = result.post_id || result.id || "";
     } else {
       const container = await metaRequest<{ id?: string }>(connection.instagramUserId + "/media", accessToken, "POST", { image_url: env.META_PUBLIC_API_BASE_URL.replace(/\/$/, "") + "/v1/meta/media/" + shareToken, caption: post.caption });
