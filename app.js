@@ -4,10 +4,10 @@
   const API_BASE = (window.LOCALBOOST_API_BASE || "http://localhost:4100").replace(/\/$/, "");
   const TOKEN_KEY = "localboost_access_token";
   const BUSINESS_KEY = "localboost_business_id";
-  const views = ["overview", "audit", "gbp", "seo", "menu", "sales", "retention", "competitors", "reviews", "content", "approvals", "consultant"];
+  const views = ["overview", "audit", "gbp", "seo", "menu", "sales", "retention", "competitors", "reviews", "content", "approvals", "goals", "consultant"];
   const titles = {
     overview: "Overview", audit: "Local presence audit", gbp: "GBP owner manager", seo: "Local SEO keywords", menu: "Menu intelligence", sales: "Sales analytics", retention: "Customer retention", competitors: "Competitors",
-    reviews: "Reviews", content: "Campaign studio", approvals: "Approval centre", consultant: "Growth consultant"
+    reviews: "Reviews", content: "Campaign studio", approvals: "Approval centre", goals: "Growth goals", consultant: "Growth consultant"
   };
   let activeBusiness = null;
   let googleConnected = false;
