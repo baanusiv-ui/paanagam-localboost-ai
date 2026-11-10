@@ -29,6 +29,11 @@ on:
       - "styles.css"
       - "growth-intelligence.js"
       - "growth-intelligence.css"
+      - "gbp-owner.css"
+      - "gbp-owner.js"
+      - "creative-studio.js"
+      - "growth-goals.js"
+      - "growth-goals.css"
       - "render.yaml"
       - ".github/workflows/backend-ci.yml"
 
@@ -61,5 +66,5 @@ jobs:
         working-directory: .
         run: |
           grep -q 'cp index.html styles.css growth-intelligence.css gbp-owner.css app.js growth.js growth-intelligence.js gbp-owner.js creative-studio.js growth-goals.js growth-goals.css config.js auth-client.js public-dist/' render.yaml
-          for asset in index.html styles.css growth-intelligence.css gbp-owner.css app.js auth-client.js growth.js growth-intelligence.js gbp-owner.js creative-studio.js config.js; do test -f "$asset"; done
+          for asset in index.html styles.css growth-intelligence.css gbp-owner.css app.js auth-client.js growth.js growth-intelligence.js gbp-owner.js creative-studio.js growth-goals.js growth-goals.css config.js; do test -f "$asset"; done
           test "$(grep -c 'autoDeployTrigger: off' render.yaml)" -eq 2
