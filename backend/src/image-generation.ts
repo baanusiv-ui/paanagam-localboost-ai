@@ -43,7 +43,7 @@ export async function generateCampaignImage(input: ImageDraftInput) {
       model: imageModel(),
       prompt,
       n: 1,
-      size: input.format === "SQUARE" ? "1024x1024" : input.format === "PORTRAIT" ? "1024x1536" : "1024x1536",
+      size: input.format === "SQUARE" ? "1024x1024" : input.format === "PORTRAIT" ? "1024x1280" : "1008x1792",
       quality: "medium",
       output_format: "png"
     }),
