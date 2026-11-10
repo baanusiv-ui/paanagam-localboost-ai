@@ -106,3 +106,30 @@ The owner workspace presents up to three deterministic, evidence-linked growth a
 
 ## Growth Action Tracking
 Growth suggestions support owner-managed states (suggested, accepted, in progress, completed and dismissed) with optional progress notes and timestamps. Tracking is stored per business and reattached to refreshed recommendations using stable action IDs. Stale IDs are rejected. The feature requires the `20261109110000_growth_action_tracking` database migration. Tracking a recommendation does not execute it or publish anything.
+
+
+## Official Website Benchmark Review (10 November 2026)
+
+Primary reference: https://dhanda.app/ . This section records the capabilities advertised on the public website; vendor-reported adoption and performance figures are marketing claims and are not independently verified.
+
+### Website-advertised capabilities
+- Google Maps optimization: profile performance score, actionable insights, recommendations to improve local visibility, and progress tracking.
+- AI social posting: generate images and captions, create content ideas for festivals, product shots and offers, and publish to Facebook and Instagram from one app.
+- Ready-to-share AI content library.
+- Website marketing claims include 10,000+ local businesses, 50,000+ reviews managed, and 2M+ social posts created; treat these strictly as Dhanda-reported claims, never as LocalBoost benchmarks.
+
+### Expanded parity assessment
+- Google profile audit and action recommendations: LocalBoost has an evidence-based completeness audit. It must not be represented as an actual Google Maps rank/visibility score unless a valid measurement source is integrated.
+- Progress tracking: LocalBoost has owner-managed growth-action status tracking. Historical Google visibility/performance trend charts are a separate capability and remain a gap until a supported data source is available.
+- Social image generation: current LocalBoost content workflow creates copy and creative briefs; actual generated image assets and a reusable asset library remain to be built/integrated.
+- Facebook + Instagram cross-posting: not implemented. Requires supported Meta authorization, connected Page/Instagram professional account, permission review, token handling, and channel-specific publishing validation.
+- Google Business Profile posts: keep separate from Meta social publishing. Do not assume one channel's authorization grants access to another.
+- Content calendar and approvals: retain explicit per-item owner approval. Do not automatically publish or schedule merely because Dhanda advertises automation.
+- Review replies: remain private drafts until the owner explicitly approves a supported publish action.
+
+### LocalBoost implementation priorities from this review
+1. Build a real Creative Studio: image generation, editable captions, brand/business asset library, Tamil/English variants, and channel-specific formats.
+2. Add Meta account connection diagnostics and Facebook/Instagram publishing only after permissions and account eligibility are verified; retain approval queue and audit log.
+3. Add a content calendar that separates draft, owner-approved, scheduled (only when a real scheduler is connected), published (confirmed by channel response), and failed states.
+4. Add historical Google Business Profile performance charts only from authorised Google metrics; show source, date range, and missing-data states.
+5. Preserve tenant isolation and per-business content ownership across all assets, drafts, approvals, and publishing connections.
