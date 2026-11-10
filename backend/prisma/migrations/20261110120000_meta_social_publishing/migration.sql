@@ -46,6 +46,7 @@ CREATE TABLE "SocialPost" (
   "assetId" TEXT,
   "channel" "SocialChannel" NOT NULL,
   "status" "SocialPostStatus" NOT NULL DEFAULT 'DRAFT',
+  "sourceDraftId" TEXT,
   "caption" TEXT NOT NULL,
   "approvedAt" TIMESTAMP(3),
   "approvedByUserId" TEXT,
@@ -56,6 +57,7 @@ CREATE TABLE "SocialPost" (
   "updatedAt" TIMESTAMP(3) NOT NULL,
   CONSTRAINT "SocialPost_pkey" PRIMARY KEY ("id")
 );
+CREATE UNIQUE INDEX "SocialPost_businessId_channel_sourceDraftId_key" ON "SocialPost"("businessId", "channel", "sourceDraftId");
 CREATE INDEX "SocialPost_businessId_status_createdAt_idx" ON "SocialPost"("businessId", "status", "createdAt");
 CREATE INDEX "SocialPost_businessId_channel_createdAt_idx" ON "SocialPost"("businessId", "channel", "createdAt");
 ALTER TABLE "SocialPost" ADD CONSTRAINT "SocialPost_businessId_fkey" FOREIGN KEY ("businessId") REFERENCES "Business"("id") ON DELETE CASCADE ON UPDATE CASCADE;
