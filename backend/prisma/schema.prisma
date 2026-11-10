@@ -20,7 +20,9 @@ enum AuditStatus {
   INCOMPLETE
 }
 
-enum GrowthRecordType {\n  MENU_ITEM\n  DAILY_SALES
+enum GrowthRecordType {
+  MENU_ITEM
+  DAILY_SALES
   RETENTION_SNAPSHOT
   CAMPAIGN_DRAFT
   COMPETITOR
@@ -63,7 +65,8 @@ model Business {
   growthBaselines GrowthBaseline[]
   activityEvents  ActivityEvent[]
   creativeAssets  CreativeAsset[]
-  posIntegrationConnection PosIntegrationConnection?\n  metaConnection  MetaConnection?
+  posIntegrationConnection PosIntegrationConnection?
+  metaConnection  MetaConnection?
   metaOAuthStates MetaOAuthState[]
   metaOAuthSession MetaOAuthSession?
   socialPosts SocialPost[]
