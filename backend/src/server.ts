@@ -16,6 +16,7 @@ import { buildBusinessIntelligence } from "./intelligence.js";
 import { generateLocalConsultant, getLocalAiStatus } from "./consultant.js";
 import { generateLocalReviewReplyDraft } from "./review-replies.js";
 import { generateLocalContentDraft } from "./content-drafts.js";
+import { generateCampaignImage } from "./image-generation.js";
 import { generateLocalKeywords } from "./local-seo.js";
 import { normalizeGoogleReview, type GoogleReviewApiRecord } from "./google-reviews.js";
 import { analyzeReviewThemes } from "./review-themes.js";
@@ -476,6 +477,38 @@ app.post("/v1/businesses/:businessId/google-content/draft", {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Local AI content drafting is unavailable";
     request.log.warn({ message }, "Local AI Google content drafting failed");
+    return reply.code(503).send({ error: message });
+  }
+});
+
+app.post("/v1/businesses/:businessId/creative/image", {
+  preHandler: requireUser,
+  config: { rateLimit: { max: 3, timeWindow: "1 minute" } }
+}, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const body = z.object({
+    topic: z.string().trim().min(1).max(300),
+    offer: z.string().trim().max(500).optional(),
+    creativeBrief: z.string().trim().max(1200).optional(),
+    language: z.enum(["Tamil", "English", "Tamil + English"]).default("Tamil + English"),
+    format: z.enum(["SQUARE", "PORTRAIT", "STORY"]).default("SQUARE")
+  }).safeParse(request.body);
+  if (!params.success || !body.success) return reply.code(400).send({ error: "Invalid creative image request" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  try {
+    const image = await generateCampaignImage({
+      businessName: business.displayName,
+      topic: body.data.topic,
+      offer: body.data.offer,
+      creativeBrief: body.data.creativeBrief,
+      language: body.data.language,
+      format: body.data.format
+    });
+    return { business: { id: business.id, displayName: business.displayName }, ...image };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Campaign image generation is unavailable";
+    request.log.warn({ message, businessId: business.id }, "Campaign image generation failed");
     return reply.code(503).send({ error: message });
   }
 });
