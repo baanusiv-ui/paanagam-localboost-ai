@@ -25,6 +25,7 @@
       <nav class="nav-list" aria-label="Main navigation">
         <button class="nav-item active" data-view="overview"><span>◫</span> Overview</button>
         <button class="nav-item" data-view="audit"><span>⌕</span> Local presence audit</button>
+        <button class="nav-item" data-view="gbp"><span>◎</span> GBP owner manager</button>
         <button class="nav-item" data-view="seo"><span>⌖</span> Local SEO keywords</button>
         <button class="nav-item" data-view="menu"><span>▦</span> Menu intelligence</button><button class="nav-item" data-view="sales"><span>↗</span> Sales analytics</button><button class="nav-item" data-view="retention"><span>♡</span> Customer retention</button><button class="nav-item" data-view="competitors"><span>◎</span> Competitors</button>
         <button class="nav-item" data-view="reviews"><span>✳</span> Reviews</button>
@@ -130,6 +131,33 @@
       </section>
 
 
+      <section class="view-panel hidden" id="gbp-view">
+        <div class="section-heading"><div><h2>Google Business Profile · Manual Owner</h2><p>Prepare and track profile updates, review replies and posts. Apply changes yourself in Google Business Profile Manager.</p></div><span class="tag confirmed">Manual owner mode</span></div>
+        <div class="notice"><span>ⓘ</span><p><strong>No Google API required.</strong> These notes are stored in this browser for the selected workspace. Nothing is sent to Google, replied to or published automatically.</p></div>
+        <div class="panel"><div class="panel-heading"><div><h3>Business profile details</h3><p>Enter only details confirmed by the business owner.</p></div><span class="tag">Owner-confirmed</span></div>
+          <form id="gbp-profile-form" class="gi-form">
+            <label>Business name<input id="gbp-name" maxlength="160" value="Paanagam (பானகம்)" required></label>
+            <label>Primary category<input id="gbp-category" maxlength="120" placeholder="e.g. Coffee shop"></label>
+            <label>Address<input id="gbp-address" maxlength="300" placeholder="Owner-confirmed address"></label>
+            <label>Phone<input id="gbp-phone" maxlength="40" placeholder="Business phone"></label>
+            <label>Website<input id="gbp-website" type="url" placeholder="https://"></label>
+            <label>Opening hours<textarea id="gbp-hours" rows="3" maxlength="1000" placeholder="Enter each day's owner-confirmed hours"></textarea></label>
+            <label>Services / attributes<textarea id="gbp-services" rows="3" maxlength="1200" placeholder="Services, dining options and attributes"></textarea></label>
+            <button class="primary-button" type="submit">Save owner details</button>
+            <p id="gbp-profile-status" class="form-message" role="status"></p>
+          </form>
+        </div>
+        <div class="panel"><div class="panel-heading"><div><h3>Profile action checklist</h3><p>Track actions you complete manually in Google.</p></div><span class="tag">Owner-tracked</span></div>
+          <div id="gbp-checklist" class="gbp-checklist"></div>
+        </div>
+        <div class="panel"><div class="panel-heading"><div><h3>Review reply workspace</h3><p>Paste a real review and prepare a private response draft. Do not paste personal customer information.</p></div><span class="tag pending-tag">Draft only</span></div>
+          <form id="gbp-review-form" class="gi-form"><label>Review text<textarea id="gbp-review-text" rows="3" maxlength="3000" required placeholder="Paste the review text"></textarea></label><label>Rating<select id="gbp-review-rating"><option value="">Not supplied</option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label><label>Reply draft<textarea id="gbp-review-reply" rows="4" maxlength="3000" required placeholder="Write a thoughtful reply for owner review"></textarea></label><button class="primary-button" type="submit">Save private reply draft</button></form><div id="gbp-review-drafts"></div>
+        </div>
+        <div class="panel"><div class="panel-heading"><div><h3>Google post planner</h3><p>Draft an update, offer or event post. Copy it to Google only after owner review.</p></div><span class="tag pending-tag">Not published</span></div>
+          <form id="gbp-post-form" class="gi-form"><label>Post type<select id="gbp-post-type"><option>What's new</option><option>Offer</option><option>Event</option></select></label><label>Post copy<textarea id="gbp-post-copy" rows="5" maxlength="1500" required placeholder="Write accurate business information and offer terms"></textarea></label><label>Call to action URL<input id="gbp-post-url" type="url" placeholder="https://"></label><button class="primary-button" type="submit">Save post draft</button></form><div id="gbp-post-drafts"></div>
+        </div>
+        <div class="panel"><div class="panel-heading"><div><h3>Manual owner data backup</h3><p>Export or restore this browser's GBP notes and drafts.</p></div></div><div class="form-actions"><button class="secondary-button" id="gbp-export" type="button">Export backup</button><label class="secondary-button" for="gbp-import-file">Import backup</label><input id="gbp-import-file" type="file" accept="application/json" hidden></div><p id="gbp-backup-status" class="form-message" role="status"></p></div>
+      </section>
       <section class="view-panel hidden" id="seo-view">
         <div class="section-heading"><div><h2>Local SEO keyword planner</h2><p>Build Tamil and English keyword ideas around your products, services and service area.</p></div><span class="tag confirmed">Rules-generated</span></div>
         <div class="panel">
@@ -164,7 +192,7 @@
     </main>
   </div>
   <script src="config.js"></script>
-  <script src="app.js"></script><script src="growth.js"></script><script src="growth-intelligence.js"></script>
+  <script src="app.js"></script><script src="growth.js"></script><script src="growth-intelligence.js"></script><script src="gbp-owner.js"></script>
   <script type="module" src="auth-client.js"></script>
 </body>
 </html>
