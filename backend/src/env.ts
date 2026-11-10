@@ -20,7 +20,9 @@ const schema = z.object({
     try { const url = new URL(value); return ["http:", "https:"].includes(url.protocol) && ["localhost", "127.0.0.1", "::1", "host.docker.internal"].includes(url.hostname); }
     catch { return false; }
   }, "OLLAMA_BASE_URL must point to localhost or host.docker.internal"),
-  OLLAMA_MODEL: z.string().trim().min(1).default("qwen2.5:7b")
+  OLLAMA_MODEL: z.string().trim().min(1).default("qwen2.5:7b"),
+  OPENAI_API_KEY: z.string().optional().default(""),
+  OPENAI_IMAGE_MODEL: z.string().trim().min(1).default("gpt-image-2.5-flare")
 });
 
 export const env = schema.parse(process.env);
