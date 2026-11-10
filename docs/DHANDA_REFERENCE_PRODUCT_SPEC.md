@@ -145,3 +145,15 @@ Primary reference: https://dhanda.app/ . This section records the capabilities a
 - Signed-out and unavailable-cloud states are shown. No browser-local persistence is used for the creative library.
 - Actual image generation/upload and connected Meta/Google publishing are not part of this increment. The optional asset URL attaches a reference to an image created elsewhere; it is not an image generator or file uploader.
 - No deployment or live browser/backend integration test was performed. Validate authenticated save/load, business isolation, local Ollama output, approval-state persistence and mobile layout before production use.
+
+
+## Campaign Image Generation Increment (10 November 2026)
+
+- Added an authenticated, business-scoped `POST /v1/businesses/:businessId/creative/image` endpoint. It verifies the signed-in owner and business ownership before calling the image provider and applies a 3-requests-per-minute limit.
+- Added an OpenAI Images API adapter using `gpt-image-2.5-flare` by default. The model can be changed with `OPENAI_IMAGE_MODEL`; the API key is read only from the backend environment as `OPENAI_API_KEY` and is never sent to the browser.
+- Prompt construction uses the business name, campaign topic, owner-entered facts and creative brief. It asks the model not to invent offers, prices, logos, brand marks or text overlays.
+- Creative Studio now has a separate Generate campaign artwork action, temporary preview and Download artwork control. Generating copy does not automatically generate an image.
+- Image generation may incur OpenAI API charges. No generation request is made until an owner clicks the artwork action. Provider key is not yet configured in Render, so live generation remains unavailable until the owner adds it.
+- Generated image bytes are returned as a temporary browser data URL. The image is not persisted in the database or an object store; download the artwork to keep it. The existing optional HTTPS asset field can reference an asset after it is uploaded to an approved storage location.
+- No publishing, scheduling, Meta connection, Google publishing, Render deployment or environment-variable change was performed.
+- OpenAI API reference: https://developers.openai.com/api/docs/guides/image-generation and https://developers.openai.com/api/reference/resources/images/methods/generate .
