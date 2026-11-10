@@ -326,3 +326,18 @@ model MetaMediaShare {
   createdAt DateTime @default(now())
   @@index([expiresAt])
 }
+
+model PosIntegrationConnection {
+  id              String   @id @default(cuid())
+  businessId      String   @unique
+  business        Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  apiKeyEncrypted String
+  posBusinessId   String
+  posBusinessName String?
+  lastTestedAt    DateTime?
+  lastSyncedAt    DateTime?
+  lastStatus      String   @default("CONNECTED")
+  lastError       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
