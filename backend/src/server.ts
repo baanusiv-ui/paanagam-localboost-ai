@@ -1400,9 +1400,16 @@ app.get("/v1/meta/callback", async (request, reply) => {
     request.log.warn({ providerMessage: longData.error?.message }, "Meta long-lived token exchange failed");
     return reply.redirect(env.APP_BASE_URL + "/?meta=error");
   }
+  let grantedScopes: string[] = [];
+  try {
+    const permissionResult = await metaRequest<{ data?: Array<{ permission: string; status: string }> }>("me/permissions", longData.access_token);
+    grantedScopes = (permissionResult.data ?? []).filter(item => item.status === "granted").map(item => item.permission);
+  } catch (error) {
+    request.log.warn({ error: error instanceof Error ? error.message : "unknown" }, "Could not verify Meta permissions");
+  }
   await prisma.metaOAuthSession.upsert({
     where: { businessId: state.businessId },
-    create: { businessId: state.businessId, userId: state.userId, userTokenEncrypted: encryptSecret(longData.access_token), expiresAt: new Date(Date.now() + (longData.expires_in ?? 5184000) * 1000) },
+    create: { businessId: state.businessId, userId: state.userId, userTokenEncrypted: encryptSecret(longData.access_token), scopes: grantedScopes.join(" "), expiresAt: new Date(Date.now() + (longData.expires_in ?? 5184000) * 1000) },
     update: { userId: state.userId, userTokenEncrypted: encryptSecret(longData.access_token), expiresAt: new Date(Date.now() + (longData.expires_in ?? 5184000) * 1000) }
   });
   return reply.redirect(env.APP_BASE_URL + "/?meta=connected");
@@ -1446,10 +1453,12 @@ app.post("/v1/businesses/:businessId/meta/page", { preHandler: requireUser }, as
     const result = await metaRequest<{ data?: Array<{ id: string; name: string; access_token: string; instagram_business_account?: { id: string; username?: string } }> }>("me/accounts", decryptSecret(pending.userTokenEncrypted), "GET", { fields: "id,name,access_token,instagram_business_account{id,username}", limit: "100" });
     const page = (result.data ?? []).find(item => item.id === body.data.pageId);
     if (!page?.access_token) return reply.code(403).send({ error: "That Page is not accessible to the connected Meta user." });
-    const scopes = "pages_show_list pages_read_engagement pages_manage_posts instagram_basic instagram_content_publish";
+    const granted = new Set(pending.scopes.split(" ").filter(Boolean));
+    const missingPageScopes = ["pages_show_list", "pages_read_engagement", "pages_manage_posts"].filter(scope => !granted.has(scope));
+    if (missingPageScopes.length) return reply.code(403).send({ error: "Meta did not grant the required Facebook Page permissions: " + missingPageScopes.join(", ") + ". Update the Meta app permissions and reconnect." });
     const connection = await prisma.metaConnection.upsert({
       where: { businessId: business.id },
-      create: { businessId: business.id, pageId: page.id, pageName: page.name, instagramUserId: page.instagram_business_account?.id ?? null, instagramUsername: page.instagram_business_account?.username ?? null, pageAccessTokenEncrypted: encryptSecret(page.access_token), scopes },
+      create: { businessId: business.id, pageId: page.id, pageName: page.name, instagramUserId: page.instagram_business_account?.id ?? null, instagramUsername: page.instagram_business_account?.username ?? null, pageAccessTokenEncrypted: encryptSecret(page.access_token), scopes: pending.scopes },
       update: { pageId: page.id, pageName: page.name, instagramUserId: page.instagram_business_account?.id ?? null, instagramUsername: page.instagram_business_account?.username ?? null, pageAccessTokenEncrypted: encryptSecret(page.access_token), scopes }
     });
     await prisma.metaOAuthSession.delete({ where: { businessId: business.id } });
@@ -1512,7 +1521,9 @@ app.post("/v1/businesses/:businessId/social-posts/:postId/approve", { preHandler
   const post = await prisma.socialPost.findFirst({ where: { id: params.data.postId, businessId: business.id }, include: { asset: { select: { mimeType: true } } } });
   if (!post) return reply.code(404).send({ error: "Social post not found" });
   if (!["DRAFT", "REJECTED", "FAILED"].includes(post.status)) return reply.code(409).send({ error: "Only draft, rejected or failed posts can be approved." });
-  if (post.channel === "INSTAGRAM" && (!connection.instagramUserId || !post.asset || !["image/jpeg", "image/png"].includes(post.asset.mimeType))) return reply.code(409).send({ error: "Connect a linked Instagram professional account and attach a JPEG or PNG image before approving this post." });
+  const grantedScopes = new Set(connection.scopes.split(" ").filter(Boolean));
+  if (post.channel === "FACEBOOK" && !grantedScopes.has("pages_manage_posts")) return reply.code(403).send({ error: "The Meta connection is missing pages_manage_posts permission. Reconnect after enabling it in your Meta app." });
+  if (post.channel === "INSTAGRAM" && (!connection.instagramUserId || !post.asset || !["image/jpeg", "image/png"].includes(post.asset.mimeType) || !grantedScopes.has("instagram_basic") || !grantedScopes.has("instagram_content_publish"))) return reply.code(409).send({ error: "Connect a linked Instagram professional account, grant instagram_basic and instagram_content_publish, and attach a JPEG or PNG image before approving this post." });
   const updated = await prisma.socialPost.update({ where: { id: post.id }, data: { status: "APPROVED", approvedAt: new Date(), approvedByUserId: request.userId!, publishError: null } });
   await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "SOCIAL_POST_APPROVED", entityType: "SOCIAL_POST", entityId: post.id, summary: "Owner explicitly approved a social post for manual publishing", metadata: { channel: post.channel } });
   return { post: updated, publishingStarted: false };
