@@ -271,6 +271,8 @@ app.post("/v1/businesses/:businessId/creative-assets", {
   const jpeg = body.data.mimeType === "image/jpeg" && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
   const webp = body.data.mimeType === "image/webp" && bytes.length >= 12 && bytes.toString("ascii", 0, 4) === "RIFF" && bytes.toString("ascii", 8, 12) === "WEBP";
   if (!png && !jpeg && !webp) return reply.code(415).send({ error: "Image content does not match its declared PNG, JPEG or WebP type." });
+  const usage = await prisma.creativeAsset.aggregate({ where: { businessId: business.id }, _count: { _all: true }, _sum: { byteSize: true } });
+  if (usage._count._all >= 100 || (usage._sum.byteSize ?? 0) + bytes.length > 100 * 1024 * 1024) return reply.code(413).send({ error: "Business creative library limit reached (100 assets or 100 MB)." });
   const fileName = body.data.fileName.replace(/[^A-Za-z0-9._-]+/g, "_").slice(0, 120) || "campaign-artwork";
   const asset = await prisma.creativeAsset.create({ data: { businessId: business.id, fileName, mimeType: body.data.mimeType, byteSize: bytes.length, data: bytes, altText: body.data.altText || null }, select: { id: true, fileName: true, mimeType: true, byteSize: true, altText: true, createdAt: true } });
   await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "CREATIVE_ASSET_UPLOADED", entityType: "CREATIVE_ASSET", entityId: asset.id, summary: "Campaign artwork saved to the business creative library", metadata: { mimeType: asset.mimeType, byteSize: asset.byteSize } });
