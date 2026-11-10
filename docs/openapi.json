@@ -2908,11 +2908,16 @@
                   },
                   "assetId": {
                     "type": "string"
+                  },
+                  "sourceDraftId": {
+                    "type": "string",
+                    "maxLength": 100
                   }
                 },
                 "required": [
                   "channel",
-                  "caption"
+                  "caption",
+                  "sourceDraftId"
                 ]
               }
             }
