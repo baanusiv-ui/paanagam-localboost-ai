@@ -56,8 +56,10 @@ export async function generateCampaignImage(input: ImageDraftInput) {
   }
   const parsed = imageResponseSchema.safeParse(raw);
   if (!parsed.success) throw new Error("Image provider returned an unsupported response.");
+  const firstImage = parsed.data.data[0];
+  if (!firstImage) throw new Error("Image provider returned no image data.");
   return {
-    imageDataUrl: "data:image/png;base64," + parsed.data.data[0].b64_json,
+    imageDataUrl: "data:image/png;base64," + firstImage.b64_json,
     mimeType: "image/png",
     provider: "OPENAI_IMAGES_API",
     model: imageModel(),
