@@ -1354,10 +1354,6 @@ async function metaRequest<T>(path: string, accessToken: string, method: "GET" |
   if (!response.ok) throw new Error(data.error?.message || "Meta Graph API request failed (" + response.status + ")");
   return data;
 }
-function metaConfigured() {
-  return Boolean(env.META_APP_ID && env.META_APP_SECRET && env.META_REDIRECT_URI && env.META_PUBLIC_API_BASE_URL);
-}
-
 app.post("/v1/meta/connect/:businessId/url", { preHandler: requireUser, config: { rateLimit: { max: 5, timeWindow: "1 minute" } } }, async (request, reply) => {
   const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
   if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
@@ -1478,7 +1474,7 @@ app.delete("/v1/businesses/:businessId/meta", { preHandler: requireUser }, async
 
 app.post("/v1/businesses/:businessId/social-posts", { preHandler: requireUser, config: { rateLimit: { max: 20, timeWindow: "1 minute" } } }, async (request, reply) => {
   const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
-  const body = z.object({ channel: z.enum(["FACEBOOK", "INSTAGRAM"]), caption: z.string().trim().max(2200), assetId: z.string().min(1).optional() }).safeParse(request.body);
+  const body = z.object({ channel: z.enum(["FACEBOOK", "INSTAGRAM"]), caption: z.string().trim().min(1).max(2200), assetId: z.string().min(1).optional() }).safeParse(request.body);
   if (!params.success || !body.success) return reply.code(400).send({ error: "Enter a valid channel and caption (maximum 2,200 characters)." });
   const business = await ownedBusiness(request.userId!, params.data.businessId);
   if (!business) return reply.code(404).send({ error: "Business not found" });
