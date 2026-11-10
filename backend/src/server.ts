@@ -256,6 +256,58 @@ app.post("/v1/businesses/:businessId/local-seo/keywords", {
 });
 
 
+app.post("/v1/businesses/:businessId/creative-assets", {
+  preHandler: requireUser, bodyLimit: 6 * 1024 * 1024,
+  config: { rateLimit: { max: 12, timeWindow: "1 minute" } }
+}, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const body = z.object({ fileName: z.string().trim().min(1).max(160), mimeType: z.enum(["image/png", "image/jpeg", "image/webp"]), dataBase64: z.string().min(16).max(5_600_000).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/), altText: z.string().trim().max(240).optional() }).safeParse(request.body);
+  if (!params.success || !body.success) return reply.code(400).send({ error: "Provide a PNG, JPEG or WebP image and a valid file name." });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const bytes = Buffer.from(body.data.dataBase64, "base64");
+  if (!bytes.length || bytes.length > 4 * 1024 * 1024 || bytes.toString("base64") !== body.data.dataBase64) return reply.code(413).send({ error: "Image must be a valid base64 file no larger than 4 MB." });
+  const png = body.data.mimeType === "image/png" && bytes.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
+  const jpeg = body.data.mimeType === "image/jpeg" && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
+  const webp = body.data.mimeType === "image/webp" && bytes.length >= 12 && bytes.toString("ascii", 0, 4) === "RIFF" && bytes.toString("ascii", 8, 12) === "WEBP";
+  if (!png && !jpeg && !webp) return reply.code(415).send({ error: "Image content does not match its declared PNG, JPEG or WebP type." });
+  const fileName = body.data.fileName.replace(/[^A-Za-z0-9._-]+/g, "_").slice(0, 120) || "campaign-artwork";
+  const asset = await prisma.creativeAsset.create({ data: { businessId: business.id, fileName, mimeType: body.data.mimeType, byteSize: bytes.length, data: bytes, altText: body.data.altText || null }, select: { id: true, fileName: true, mimeType: true, byteSize: true, altText: true, createdAt: true } });
+  await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "CREATIVE_ASSET_UPLOADED", entityType: "CREATIVE_ASSET", entityId: asset.id, summary: "Campaign artwork saved to the business creative library", metadata: { mimeType: asset.mimeType, byteSize: asset.byteSize } });
+  return reply.code(201).send({ asset, contentPath: "/v1/businesses/" + business.id + "/creative-assets/" + asset.id + "/content", storage: "BUSINESS_DATABASE" });
+});
+
+app.get("/v1/businesses/:businessId/creative-assets", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const query = z.object({ limit: z.coerce.number().int().min(1).max(100).default(50) }).safeParse(request.query);
+  if (!params.success || !query.success) return reply.code(400).send({ error: "Invalid creative asset query" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const assets = await prisma.creativeAsset.findMany({ where: { businessId: business.id }, select: { id: true, fileName: true, mimeType: true, byteSize: true, altText: true, createdAt: true }, orderBy: { createdAt: "desc" }, take: query.data.limit });
+  return { assets, storage: "BUSINESS_DATABASE" };
+});
+
+app.get("/v1/businesses/:businessId/creative-assets/:assetId/content", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1), assetId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid creative asset identifier" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const asset = await prisma.creativeAsset.findFirst({ where: { id: params.data.assetId, businessId: business.id }, select: { data: true, mimeType: true } });
+  if (!asset) return reply.code(404).send({ error: "Creative asset not found" });
+  return reply.header("content-type", asset.mimeType).header("content-length", String(asset.data.length)).header("content-disposition", "inline").header("cache-control", "private, no-store").header("x-content-type-options", "nosniff").send(Buffer.from(asset.data));
+});
+
+app.delete("/v1/businesses/:businessId/creative-assets/:assetId", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1), assetId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid creative asset identifier" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const asset = await prisma.creativeAsset.findFirst({ where: { id: params.data.assetId, businessId: business.id }, select: { id: true, fileName: true, byteSize: true } });
+  if (!asset) return reply.code(404).send({ error: "Creative asset not found" });
+  await prisma.creativeAsset.delete({ where: { id: asset.id } });
+  await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "CREATIVE_ASSET_DELETED", entityType: "CREATIVE_ASSET", entityId: asset.id, summary: "Campaign artwork removed from the business creative library", metadata: { fileName: asset.fileName, byteSize: asset.byteSize } });
+  return reply.code(204).send();
+});
 app.get("/v1/businesses/:businessId/growth-records", { preHandler: requireUser }, async (request, reply) => {
   const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
   const query = z.object({
