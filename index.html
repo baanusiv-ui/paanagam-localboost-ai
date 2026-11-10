@@ -193,12 +193,12 @@
             </form>
             <div id="creative-preview" class="creative-preview hidden">
               <h4>Generated caption</h4><p id="creative-preview-copy"></p>
-              <h4>Image / designer brief</h4><p id="creative-preview-brief"></p>
+              <h4>Image / designer brief</h4><p id="creative-preview-brief"></p>\n              <button class="primary-button" id="creative-image-generate" type="button">Generate campaign artwork</button>\n              <img id="creative-image-preview" class="creative-image-preview hidden" alt="Generated campaign artwork preview">\n              <button class="secondary-button" id="creative-image-download" type="button" disabled>Download artwork</button>
               <label for="creative-asset-url" class="creative-form">Finished image URL (optional)<input id="creative-asset-url" type="url" placeholder="https://…"></label>
               <button class="secondary-button" id="creative-save" type="button" disabled>Save to business creative library</button>
             </div>
             <p id="creative-message" class="creative-message" role="status">Sign in and select a business to load the creative library.</p>
-            <p class="footnote">Image generation is not yet connected inside this dashboard. Attach an HTTPS image asset after generating artwork with an approved creative tool. No publishing or scheduling is connected.</p>
+            <p class="footnote">Image generation uses the configured OpenAI Images API. Generation may incur API charges. Download artwork to keep it; persistent asset storage and publishing are not connected.</p>
           </div>
           <div class="panel">
             <div class="panel-heading"><div><h3>Business creative library</h3><p>Drafts are stored per selected business.</p></div><span class="tag confirmed" id="creative-count">0</span></div>
