@@ -1343,7 +1343,7 @@ app.get("/v1/google/callback", async (request, reply) => {
 
 type MetaGraphError = { error?: { message?: string; type?: string; code?: number; error_subcode?: number } };
 async function metaRequest<T>(path: string, accessToken: string, method: "GET" | "POST" = "GET", values: Record<string, string> = {}): Promise<T> {
-  const url = new URL("https://graph.facebook.com/" + env.META_GRAPH_API_VERSION + "/" + path.replace(/^\\//, ""));
+  const url = new URL("https://graph.facebook.com/" + env.META_GRAPH_API_VERSION + "/" + path.replace(/^\//, ""));
   const params = new URLSearchParams({ ...values, access_token: accessToken });
   const response = await fetch(method === "GET" ? url.toString() + "?" + params.toString() : url.toString(), {
     method,
@@ -1549,7 +1549,7 @@ app.post("/v1/businesses/:businessId/social-posts/:postId/publish", { preHandler
     }
     if (post.channel === "FACEBOOK") {
       const result = post.asset
-        ? await metaRequest<{ id?: string; post_id?: string }>(connection.pageId + "/photos", accessToken, "POST", { url: env.META_PUBLIC_API_BASE_URL.replace(/\\/$/, "") + "/v1/meta/media/" + shareToken, caption: post.caption, published: "true" })
+        ? await metaRequest<{ id?: string; post_id?: string }>(connection.pageId + "/photos", accessToken, "POST", { url: env.META_PUBLIC_API_BASE_URL.replace(/\/$/, "") + "/v1/meta/media/" + shareToken, caption: post.caption, published: "true" })
         : await metaRequest<{ id?: string }>(connection.pageId + "/feed", accessToken, "POST", { message: post.caption });
       externalPostId = result.post_id || result.id || "";
     } else {
