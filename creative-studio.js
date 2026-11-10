@@ -110,8 +110,8 @@
     current.assetUrl=assetUrl; current.updatedAt=new Date().toISOString();
     try{
       await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:current.id,payload:current,recordedAt:current.updatedAt})});
-      const channels = current.platform === "Instagram + Facebook" ? ["FACEBOOK","INSTAGRAM"] : current.platform === "Instagram" ? ["INSTAGRAM"] : current.platform === "Facebook" ? ["FACEBOOK"] : [];
-      const queued = [], skipped = [];
+      const channels = current.format === "story" ? [] : (current.platform === "Instagram + Facebook" ? ["FACEBOOK","INSTAGRAM"] : current.platform === "Instagram" ? ["INSTAGRAM"] : current.platform === "Facebook" ? ["FACEBOOK"] : []);
+      const queued = [], skipped = current.format === "story" ? ["Story/Reel publishing is not supported yet; this remains a creative-library draft"] : [];
       for (const channel of channels) {
         if (channel === "INSTAGRAM" && !current.assetId) { skipped.push("Instagram needs a saved JPEG/PNG image"); continue; }
         await api(base()+"/social-posts",{method:"POST",body:JSON.stringify({channel,caption:current.caption,sourceDraftId:current.id,assetId:current.assetId||undefined})});
