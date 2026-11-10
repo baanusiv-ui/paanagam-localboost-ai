@@ -94,7 +94,7 @@
     const button=$("creative-image-save"); button.disabled=true;
     setMessage("Saving artwork to the selected business library…");
     try{
-      const result=await api(base()+"/creative-assets",{method:"POST",body:JSON.stringify({fileName:"localboost-"+Date.now()+".png",mimeType:match[1],dataBase64:match[2],altText:current.topic})});
+      const result=await api(base()+"/creative-assets",{method:"POST",body:JSON.stringify({fileName:"localboost-"+Date.now()+(match[1]==="image/jpeg"?".jpg":match[1]==="image/webp"?".webp":".png"),mimeType:match[1],dataBase64:match[2],altText:current.topic})});
       current.assetId=result.asset.id; current.assetName=result.asset.fileName; current.assetUrl="";
       setMessage("Artwork saved to the selected business workspace ("+(result.asset.byteSize/1024).toFixed(0)+" KB). Save the campaign draft next.");
     }catch(err){setMessage("Artwork save failed: "+err.message,true);button.disabled=false;}
