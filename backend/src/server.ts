@@ -1557,7 +1557,7 @@ app.post("/v1/businesses/:businessId/social-posts/:postId/publish", { preHandler
         : await metaRequest<{ id?: string }>(connection.pageId + "/feed", accessToken, "POST", { message: post.caption });
       externalPostId = result.post_id || result.id || "";
     } else {
-      const container = await metaRequest<{ id?: string }>(connection.instagramUserId + "/media", accessToken, "POST", { image_url: env.META_PUBLIC_API_BASE_URL.replace(/\\/$/, "") + "/v1/meta/media/" + shareToken, caption: post.caption });
+      const container = await metaRequest<{ id?: string }>(connection.instagramUserId + "/media", accessToken, "POST", { image_url: env.META_PUBLIC_API_BASE_URL.replace(/\/$/, "") + "/v1/meta/media/" + shareToken, caption: post.caption });
       if (!container.id) throw new Error("Meta did not return an Instagram media container id.");
       let ready = false;
       for (let attempt = 0; attempt < 12; attempt++) {
