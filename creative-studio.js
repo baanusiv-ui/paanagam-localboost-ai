@@ -42,7 +42,7 @@
     $("creative-generate").disabled=true; setMessage("Generating copy with the configured Local AI service…");
     try {
       const result=await api(base()+"/google-content/draft",{method:"POST",body:JSON.stringify({topic,offer,language:map[language],format:formatMap[format],tone:toneMap[tone]})});
-      current={id:"creative-studio:"+((crypto.randomUUID&&crypto.randomUUID())||Date.now()),kind:"LOCALBOOST_SOCIAL_CREATIVE",topic,offer,platform,format,language:map[language],caption:result.caption||result.copy||result.postText||"",headline:result.headline||"",designerBrief:result.imageBrief||result.creativeBrief||result.designerBrief||"",assetUrl:"",status:"DRAFT",provenance:"LOCAL_AI_DRAFT",createdAt:new Date().toISOString()};
+      current={id:"creative-studio:"+((crypto.randomUUID&&crypto.randomUUID())||Date.now()),kind:"LOCALBOOST_SOCIAL_CREATIVE",topic,offer,platform,format,language:map[language],caption:result.postCopy||result.caption||result.copy||result.postText||"",headline:result.headline||"",designerBrief:result.creativeBrief||result.imageBrief||result.designerBrief||"",assetUrl:"",status:"DRAFT",provenance:"LOCAL_AI_DRAFT",createdAt:new Date().toISOString()};
       if(!current.caption) current.caption=JSON.stringify(result,null,2);
       $("creative-preview").classList.remove("hidden");
       $("creative-preview-copy").textContent=current.caption;
