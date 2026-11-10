@@ -133,3 +133,15 @@ Primary reference: https://dhanda.app/ . This section records the capabilities a
 3. Add a content calendar that separates draft, owner-approved, scheduled (only when a real scheduler is connected), published (confirmed by channel response), and failed states.
 4. Add historical Google Business Profile performance charts only from authorised Google metrics; show source, date range, and missing-data states.
 5. Preserve tenant isolation and per-business content ownership across all assets, drafts, approvals, and publishing connections.
+
+
+## Creative Studio Delivery Increment (10 November 2026)
+
+- Replaced the basic campaign composer with a responsive Creative Studio workspace.
+- Campaign inputs include topic, owner-supplied offer/facts, destination channel, feed/story format, language and tone.
+- Uses the existing authenticated local Ollama content-draft endpoint. Maps its postCopy and creativeBrief output into a reviewable preview.
+- Saves creative drafts as CAMPAIGN_DRAFT growth records in the authenticated selected-business workspace, with tenant ownership enforced by the existing growth-record API.
+- Includes a business-scoped creative library, caption copy action, optional HTTPS URL reference to a finished image, and an owner-approval state. Approval is an internal record only; it does not publish or schedule.
+- Signed-out and unavailable-cloud states are shown. No browser-local persistence is used for the creative library.
+- Actual image generation/upload and connected Meta/Google publishing are not part of this increment. The optional asset URL attaches a reference to an image created elsewhere; it is not an image generator or file uploader.
+- No deployment or live browser/backend integration test was performed. Validate authenticated save/load, business isolation, local Ollama output, approval-state persistence and mobile layout before production use.
