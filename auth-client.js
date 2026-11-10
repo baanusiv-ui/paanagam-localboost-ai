@@ -28,8 +28,8 @@
     return null;
   }
   function tokenFrom(data) {
-    return data?.session?.access_token || data?.access_token ||
-      data?.session?.token || data?.token || null;
+    return data?.token || data?.accessToken || data?.access_token ||
+      data?.data?.token || data?.data?.accessToken || data?.data?.access_token || null;
   }
 
   async function boot() {
@@ -38,6 +38,14 @@
     const auth = createAuthClient(AUTH_URL);
 
     async function currentAccessToken() {
+      // Neon Auth's session token is not the JWT expected by the LocalBoost API.
+      // Use the SDK's dedicated JWT method for API bearer authentication.
+      if (typeof auth.getJWTToken === "function") {
+        const jwtResult = await auth.getJWTToken();
+        const jwt = typeof jwtResult === "string" ? jwtResult : tokenFrom(jwtResult);
+        const saved = saveToken(jwt);
+        if (saved) return saved;
+      }
       const result = unwrap(await auth.getSession());
       return saveToken(tokenFrom(result));
     }
