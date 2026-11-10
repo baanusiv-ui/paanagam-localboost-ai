@@ -197,7 +197,17 @@
       return nativeFetch(input, init);
     };
 
-    const existingToken = await currentAccessToken();
+    // A fresh visitor has no Neon Auth session. The token endpoint may return
+    // 401 in that normal state; keep the sign-in UI available instead of
+    // treating the missing session as a fatal Auth initialisation failure.
+    let existingToken = null;
+    try {
+      existingToken = await currentAccessToken();
+    } catch (error) {
+      const detail = error?.message || "";
+      if (!/401|unauthorized|unauthori[sz]ed/i.test(detail)) throw error;
+      console.info("No existing Neon Auth session; sign-in is ready.");
+    }
     if (existingToken) window.dispatchEvent(new Event("localboost:auth-ready"));
     window.dispatchEvent(new Event("localboost:auth-client-ready"));
   }
