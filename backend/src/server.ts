@@ -1410,7 +1410,7 @@ app.get("/v1/meta/callback", async (request, reply) => {
   await prisma.metaOAuthSession.upsert({
     where: { businessId: state.businessId },
     create: { businessId: state.businessId, userId: state.userId, userTokenEncrypted: encryptSecret(longData.access_token), scopes: grantedScopes.join(" "), expiresAt: new Date(Date.now() + (longData.expires_in ?? 5184000) * 1000) },
-    update: { userId: state.userId, userTokenEncrypted: encryptSecret(longData.access_token), expiresAt: new Date(Date.now() + (longData.expires_in ?? 5184000) * 1000) }
+    update: { userId: state.userId, userTokenEncrypted: encryptSecret(longData.access_token), scopes: grantedScopes.join(" "), expiresAt: new Date(Date.now() + (longData.expires_in ?? 5184000) * 1000) }
   });
   return reply.redirect(env.APP_BASE_URL + "/?meta=connected");
 });
@@ -1459,7 +1459,7 @@ app.post("/v1/businesses/:businessId/meta/page", { preHandler: requireUser }, as
     const connection = await prisma.metaConnection.upsert({
       where: { businessId: business.id },
       create: { businessId: business.id, pageId: page.id, pageName: page.name, instagramUserId: page.instagram_business_account?.id ?? null, instagramUsername: page.instagram_business_account?.username ?? null, pageAccessTokenEncrypted: encryptSecret(page.access_token), scopes: pending.scopes },
-      update: { pageId: page.id, pageName: page.name, instagramUserId: page.instagram_business_account?.id ?? null, instagramUsername: page.instagram_business_account?.username ?? null, pageAccessTokenEncrypted: encryptSecret(page.access_token), scopes }
+      update: { pageId: page.id, pageName: page.name, instagramUserId: page.instagram_business_account?.id ?? null, instagramUsername: page.instagram_business_account?.username ?? null, pageAccessTokenEncrypted: encryptSecret(page.access_token), scopes: pending.scopes }
     });
     await prisma.metaOAuthSession.delete({ where: { businessId: business.id } });
     await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "META_PAGE_CONNECTED", entityType: "META_CONNECTION", entityId: connection.id, summary: "Facebook Page connected to this LocalBoost business", metadata: { pageId: page.id, pageName: page.name, instagramUsername: page.instagram_business_account?.username ?? null } });
