@@ -19,8 +19,22 @@
   function render() {
     const list=$("creative-library");
     if (!list) return;
-    list.innerHTML = drafts.map((d,i) => '<article class="creative-card"><div class="creative-card-top"><span class="tag '+(d.status==="APPROVED"?"confirmed":"pending-tag")+'">'+esc(d.status||"DRAFT")+'</span><small>'+esc(d.platform||"Social")+' · '+esc(d.format||"Feed")+'</small></div><h3>'+esc(d.topic)+'</h3><p>'+esc(d.caption||"")+'</p>'+(d.assetUrl?'<a href="'+esc(d.assetUrl)+'" target="_blank" rel="noopener">Open attached creative</a>':'<small class="footnote">No image asset attached</small>')+'<div class="creative-card-actions"><button type="button" data-copy="'+i+'" class="secondary-button">Copy caption</button><button type="button" data-approve="'+i+'" class="secondary-button" '+(d.status==="APPROVED"?"disabled":"")+'>'+ (d.status==="APPROVED"?"Owner approved":"Approve draft")+'</button></div></article>').join("") || '<p class="empty-copy">No saved creative drafts in this business workspace.</p>';
+    list.innerHTML = drafts.map((d,i) => '<article class="creative-card"><div class="creative-card-top"><span class="tag '+(d.status==="APPROVED"?"confirmed":"pending-tag")+'">'+esc(d.status||"DRAFT")+'</span><small>'+esc(d.platform||"Social")+' · '+esc(d.format||"Feed")+'</small></div><h3>'+esc(d.topic)+'</h3><p>'+esc(d.caption||"")+'</p>'+(d.assetId?'<img class="creative-card-image" data-asset-id="'+esc(d.assetId)+'" alt="'+esc(d.topic||"Campaign artwork")+'">':(d.assetUrl?'<a href="'+esc(d.assetUrl)+'" target="_blank" rel="noopener">Open attached creative</a>':'<small class="footnote">No image asset attached</small>'))+'<div class="creative-card-actions"><button type="button" data-copy="'+i+'" class="secondary-button">Copy caption</button><button type="button" data-approve="'+i+'" class="secondary-button" '+(d.status==="APPROVED"?"disabled":"")+'>'+ (d.status==="APPROVED"?"Owner approved":"Approve draft")+'</button></div></article>').join("") || '<p class="empty-copy">No saved creative drafts in this business workspace.</p>';
     const count=$("creative-count"); if(count) count.textContent=String(drafts.length);
+    hydrateAssetImages();
+  }
+  async function hydrateAssetImages() {
+    for (const img of document.querySelectorAll("#creative-library img[data-asset-id]")) {
+      const id=img.dataset.assetId;
+      if (!id || img.dataset.loaded === "true") continue;
+      img.dataset.loaded="true";
+      try {
+        const response=await fetch(API()+base()+"/creative-assets/"+encodeURIComponent(id)+"/content",{headers:{authorization:"Bearer "+sessionStorage.getItem(TOKEN)}});
+        if(!response.ok) throw new Error("Asset unavailable");
+        const url=URL.createObjectURL(await response.blob());
+        if(img.isConnected) img.src=url; else URL.revokeObjectURL(url);
+      } catch { img.alt="Saved artwork could not be loaded"; img.classList.add("asset-unavailable"); }
+    }
   }
   async function load() {
     ready=false; drafts=[]; current=null; render();
@@ -44,7 +58,7 @@
       const result=await api(base()+"/google-content/draft",{method:"POST",body:JSON.stringify({topic,offer,language:map[language],format:formatMap[format],tone:toneMap[tone]})});
       generatedImageDataUrl="";
       const imagePreview=$("creative-image-preview"); if(imagePreview){imagePreview.src="";imagePreview.classList.add("hidden");}
-      $("creative-image-generate").disabled=false; $("creative-image-download").disabled=true;
+      $("creative-image-generate").disabled=false; $("creative-image-download").disabled=true; $("creative-image-save").disabled=true;
       current={id:"creative-studio:"+((crypto.randomUUID&&crypto.randomUUID())||Date.now()),kind:"LOCALBOOST_SOCIAL_CREATIVE",topic,offer,platform,format,language:map[language],caption:result.postCopy||result.caption||result.copy||result.postText||"",headline:result.headline||"",designerBrief:result.creativeBrief||result.imageBrief||result.designerBrief||"",assetUrl:"",status:"DRAFT",provenance:"LOCAL_AI_DRAFT",createdAt:new Date().toISOString()};
       if(!current.caption) current.caption=JSON.stringify(result,null,2);
       $("creative-preview").classList.remove("hidden");
@@ -68,10 +82,22 @@
       generatedImageDataUrl=result.imageDataUrl||"";
       if(!generatedImageDataUrl) throw new Error("Image provider returned no preview.");
       const preview=$("creative-image-preview"); preview.src=generatedImageDataUrl; preview.classList.remove("hidden");
-      $("creative-image-download").disabled=false;
-      setMessage("Artwork generated · "+result.model+". Preview only; download it to keep the file.");
+      $("creative-image-download").disabled=false; $("creative-image-save").disabled=false;
+      setMessage("Artwork generated · "+result.model+". Save it to the selected business library to keep it in the cloud.");
     }catch(err){setMessage("Image generation failed: "+err.message,true);}
     finally{button.disabled=false;}
+  });
+  $("creative-image-save")?.addEventListener("click",async()=>{
+    if(!ready||!current||!generatedImageDataUrl)return;
+    const match=generatedImageDataUrl.match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/);
+    if(!match){setMessage("Generated artwork format is not supported for secure storage.",true);return;}
+    const button=$("creative-image-save"); button.disabled=true;
+    setMessage("Saving artwork to the selected business library…");
+    try{
+      const result=await api(base()+"/creative-assets",{method:"POST",body:JSON.stringify({fileName:"localboost-"+Date.now()+".png",mimeType:match[1],dataBase64:match[2],altText:current.topic})});
+      current.assetId=result.asset.id; current.assetName=result.asset.fileName; current.assetUrl="";
+      setMessage("Artwork saved to the selected business workspace ("+(result.asset.byteSize/1024).toFixed(0)+" KB). Save the campaign draft next.");
+    }catch(err){setMessage("Artwork save failed: "+err.message,true);button.disabled=false;}
   });
   $("creative-image-download")?.addEventListener("click",()=>{
     if(!generatedImageDataUrl)return;
