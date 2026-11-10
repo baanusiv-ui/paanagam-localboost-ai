@@ -40,7 +40,7 @@
     async function currentAccessToken() {
       // Managed Neon Auth exposes a JWKS-verifiable API JWT at GET /token.
       // getJWTToken() in this SDK build calls the unsupported /get-jwt-token path.
-      const tokenUrl = AUTH_URL.replace(/\\/$/, "") + "/token";
+      const tokenUrl = AUTH_URL.replace(/\/$/, "") + "/token";
       const response = await fetch(tokenUrl, { method: "GET", credentials: "include" });
       let payload = null;
       try { payload = await response.json(); } catch { /* handled below */ }
