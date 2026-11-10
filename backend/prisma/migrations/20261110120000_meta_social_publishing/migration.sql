@@ -33,6 +33,7 @@ CREATE TABLE "MetaOAuthSession" (
   "businessId" TEXT NOT NULL,
   "userId" TEXT NOT NULL,
   "userTokenEncrypted" TEXT NOT NULL,
+  "scopes" TEXT NOT NULL DEFAULT '',
   "expiresAt" TIMESTAMP(3) NOT NULL,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt" TIMESTAMP(3) NOT NULL,
