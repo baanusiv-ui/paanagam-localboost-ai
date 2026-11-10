@@ -114,7 +114,7 @@
       const queued = [], skipped = [];
       for (const channel of channels) {
         if (channel === "INSTAGRAM" && !current.assetId) { skipped.push("Instagram needs a saved JPEG/PNG image"); continue; }
-        await api(base()+"/social-posts",{method:"POST",body:JSON.stringify({channel,caption:current.caption,assetId:current.assetId||undefined})});
+        await api(base()+"/social-posts",{method:"POST",body:JSON.stringify({channel,caption:current.caption,sourceDraftId:current.id,assetId:current.assetId||undefined})});
         queued.push(channel);
       }
       drafts.unshift({...current}); current=null; $("creative-save").disabled=true; $("creative-preview").classList.add("hidden"); $("creative-form").reset(); render();
@@ -124,7 +124,7 @@
   $("creative-library")?.addEventListener("click",async e=>{
     const copy=e.target.dataset.copy, approve=e.target.dataset.approve;
     if(copy!==undefined){const d=drafts[Number(copy)]; if(d) navigator.clipboard?.writeText(d.caption||"").then(()=>setMessage("Caption copied."),()=>setMessage("Copy unavailable in this browser.",true));}
-    if(approve!==undefined){const d=drafts[Number(approve)];if(!d||d.status==="REVIEWED")return;const next={...d,status:"REVIEWED",reviewedAt:new Date().toISOString(),approvalNote:"Marked reviewed in the creative library; this is not publishing approval."};try{await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:d.id,payload:next,recordedAt:next.approvedAt})});drafts[Number(approve)]=next;render();setMessage("Marked reviewed. Use the separate Approval Centre to approve and manually publish a social post.");}catch(err){setMessage("Approval save failed: "+err.message,true);}}
+    if(approve!==undefined){const d=drafts[Number(approve)];if(!d||d.status==="REVIEWED")return;const next={...d,status:"REVIEWED",reviewedAt:new Date().toISOString(),approvalNote:"Marked reviewed in the creative library; this is not publishing approval."};try{await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:d.id,payload:next,recordedAt:next.reviewedAt})});drafts[Number(approve)]=next;render();setMessage("Marked reviewed. Use the separate Approval Centre to approve and manually publish a social post.");}catch(err){setMessage("Approval save failed: "+err.message,true);}}
   });
   window.addEventListener("localboost:business-ready",load);
   window.addEventListener("localboost:signed-out",()=>{drafts=[];current=null;ready=false;render();setMessage("Signed out. Cloud creative library is locked.");});
