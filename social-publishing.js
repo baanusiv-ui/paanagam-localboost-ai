@@ -45,7 +45,8 @@
       statusMessage("Meta authorised. Select the business's correct Facebook Page to finish linking.");
     }catch(e){select.innerHTML="<option value=''>Could not load Pages</option>";statusMessage(e.message,true);}
   }
-  function approvalMessage(text,error=false){const el=$("approval-message");if(el){el.textContent=text;el.classList.toggle("error",error);}}\n  async function loadPosts(){
+  function approvalMessage(text,error=false){const el=$("approval-message");if(el){el.textContent=text;el.classList.toggle("error",error);}}
+  async function loadPosts(){
     const list=$("approval-list");if(!list||!businessId()||!sessionStorage.getItem(TOKEN))return;
     try{const result=await api(base()+"/social-posts");posts=result.posts||[];renderPosts();}
     catch(e){list.textContent="Could not load approval queue: "+e.message;}
