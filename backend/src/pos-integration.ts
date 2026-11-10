@@ -13,7 +13,7 @@ async function posGet(apiKey: string, path: string) {
   const response = await fetch(url, { method: "GET", headers: { authorization: "Bearer " + apiKey, accept: "application/json" }, signal: AbortSignal.timeout(15000) });
   const body = await response.json().catch(() => null) as any;
   if (!response.ok) throw new Error(body?.error?.message || body?.error?.code || "POS API request failed (" + response.status + ")");
-  if (!body || body.source !== "paanagam-pos" || body.api_version !== "v1" || !Array.isArray(body.data)) throw new Error("Unexpected POS API response");
+  if (!body || body.source !== "paanagam-pos" || body.api_version !== "v1") throw new Error("Unexpected POS API response");
   return body;
 }
 
