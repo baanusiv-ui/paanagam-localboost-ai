@@ -175,3 +175,14 @@ Approval is required separately for each profile edit, review reply, post, messa
 - Campaign Studio can save generated artwork to the business library and render it beside its saved draft after reload. Image content is served only after authentication and business ownership checks; no public asset URL is created.
 - This uses database-backed storage for the pilot. A dedicated object-storage provider should replace or supplement it before high-volume commercial use. Publishing and scheduling remain disconnected.
 - Migration `20261110100000_creative_assets` must be applied before deploying the API feature.
+
+
+## Meta publishing and approval workflow (feature branch)
+- Facebook Login OAuth with one-time, expiring state; exchanges the short-lived user token for a long-lived token and encrypts both the temporary user token and selected Page token at rest.
+- Owner selects the exact Facebook Page. The API discovers whether a linked Instagram professional account is available.
+- Tenant-scoped SocialPost records hold Facebook or Instagram drafts with explicit DRAFT → APPROVED → PUBLISHING → PUBLISHED / FAILED states. Rejection is separate. Approving never publishes.
+- A separate, explicit Publish now action is required after approval. No scheduling, background publishing or automatic publishing exists.
+- Instagram feed publishing requires a saved JPEG/PNG asset and a short-lived public media URL for Meta ingestion; Facebook supports text posts or image posts.
+- Meta connection secrets stay server-side. All business routes verify ownership; activity history records connect, approve, reject and publish actions.
+- Before production use: configure Meta app ID/secret, exact redirect URI and public API URL in Render; complete Meta app setup and App Review/Advanced Access for external businesses; test against a non-production Page and linked Instagram professional account.
+- Current release supports Facebook Page feed posts and Instagram single-image feed posts only. No Reels, Stories, carousels, scheduling, analytics or comments are enabled.
