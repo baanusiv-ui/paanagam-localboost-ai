@@ -1474,7 +1474,7 @@ app.delete("/v1/businesses/:businessId/meta", { preHandler: requireUser }, async
 
 app.post("/v1/businesses/:businessId/social-posts", { preHandler: requireUser, config: { rateLimit: { max: 20, timeWindow: "1 minute" } } }, async (request, reply) => {
   const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
-  const body = z.object({ channel: z.enum(["FACEBOOK", "INSTAGRAM"]), caption: z.string().trim().min(1).max(2200), assetId: z.string().min(1).optional() }).safeParse(request.body);
+  const body = z.object({ channel: z.enum(["FACEBOOK", "INSTAGRAM"]), caption: z.string().trim().min(1).max(2200), sourceDraftId: z.string().trim().min(1).max(100), assetId: z.string().min(1).optional() }).safeParse(request.body);
   if (!params.success || !body.success) return reply.code(400).send({ error: "Enter a valid channel and caption (maximum 2,200 characters)." });
   const business = await ownedBusiness(request.userId!, params.data.businessId);
   if (!business) return reply.code(404).send({ error: "Business not found" });
@@ -1484,7 +1484,11 @@ app.post("/v1/businesses/:businessId/social-posts", { preHandler: requireUser, c
     if (!asset) return reply.code(404).send({ error: "Creative image not found in this business workspace." });
     if (body.data.channel === "INSTAGRAM" && !["image/jpeg", "image/png"].includes(asset.mimeType)) return reply.code(415).send({ error: "Instagram image publishing currently accepts JPEG or PNG artwork." });
   }
-  const post = await prisma.socialPost.create({ data: { businessId: business.id, channel: body.data.channel, caption: body.data.caption, assetId: body.data.assetId ?? null } });
+  const post = await prisma.socialPost.upsert({
+    where: { businessId_channel_sourceDraftId: { businessId: business.id, channel: body.data.channel, sourceDraftId: body.data.sourceDraftId } },
+    create: { businessId: business.id, channel: body.data.channel, sourceDraftId: body.data.sourceDraftId, caption: body.data.caption, assetId: body.data.assetId ?? null },
+    update: { caption: body.data.caption, assetId: body.data.assetId ?? null }
+  });
   await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "SOCIAL_DRAFT_CREATED", entityType: "SOCIAL_POST", entityId: post.id, summary: "Social post draft added to the approval centre", metadata: { channel: post.channel, hasImage: Boolean(post.assetId) } });
   return reply.code(201).send({ post });
 });
