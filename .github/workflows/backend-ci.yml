@@ -13,6 +13,9 @@ on:
       - "growth-intelligence.js"
       - "growth.js"
       - "growth-intelligence.css"
+      - "gbp-owner.css"
+      - "gbp-owner.js"
+      - "creative-studio.js"
       - "render.yaml"
       - ".github/workflows/backend-ci.yml"
   pull_request:
@@ -55,6 +58,6 @@ jobs:
       - name: Validate Render dashboard bundle and manual-deploy guard
         working-directory: .
         run: |
-          grep -q 'cp index.html styles.css growth-intelligence.css app.js growth.js growth-intelligence.js config.js public-dist/' render.yaml
-          for asset in index.html styles.css growth-intelligence.css app.js auth-client.js growth.js growth-intelligence.js config.js; do test -f "$asset"; done
+          grep -q 'cp index.html styles.css growth-intelligence.css gbp-owner.css app.js growth.js growth-intelligence.js gbp-owner.js creative-studio.js config.js auth-client.js public-dist/' render.yaml
+          for asset in index.html styles.css growth-intelligence.css gbp-owner.css app.js auth-client.js growth.js growth-intelligence.js gbp-owner.js creative-studio.js config.js; do test -f "$asset"; done
           test "$(grep -c 'autoDeployTrigger: off' render.yaml)" -eq 2
