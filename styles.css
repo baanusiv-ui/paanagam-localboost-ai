@@ -183,5 +183,3 @@ footer{padding:36px 0 24px}
 }
 @media(prefers-reduced-motion:reduce){.sidebar,.mobile-nav-backdrop{transition:none}}
 
-/* Public read-only preview: authentication controls stay hidden, protected APIs remain gated. */
-#connection-setup{display:none!important}
