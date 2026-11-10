@@ -13,8 +13,27 @@ async function posGet(apiKey: string, path: string) {
   const response = await fetch(url, { method: "GET", headers: { authorization: "Bearer " + apiKey, accept: "application/json" }, signal: AbortSignal.timeout(15000) });
   const body = await response.json().catch(() => null) as any;
   if (!response.ok) throw new Error(body?.error?.message || body?.error?.code || "POS API request failed (" + response.status + ")");
-  if (!body || body.source !== "paanagam-pos" || body.api_version !== "v1") throw new Error("Unexpected POS API response");
+  if (!body || body.source !== "paanagam-pos" || body.api_version !== "v1" || !Array.isArray(body.data)) throw new Error("Unexpected POS API response");
   return body;
+}
+
+async function posGetAll(apiKey: string, path: string) {
+  const url = new URL(POS_BASE + "/" + path);
+  const rows: unknown[] = [];
+  const seen = new Set<string>();
+  for (let page = 0; page < 1000; page++) {
+    const response = await fetch(url, { method: "GET", headers: { authorization: "Bearer " + apiKey, accept: "application/json" }, signal: AbortSignal.timeout(15000) });
+    const body = await response.json().catch(() => null) as any;
+    if (!response.ok) throw new Error(body?.error?.message || body?.error?.code || "POS API request failed (" + response.status + ")");
+    if (!body || body.source !== "paanagam-pos" || body.api_version !== "v1" || !Array.isArray(body.data)) throw new Error("Unexpected POS API response");
+    rows.push(...body.data);
+    const cursor = body.next_cursor;
+    if (!cursor) return { ...body, data: rows, next_cursor: null };
+    if (typeof cursor !== "string" || seen.has(cursor)) throw new Error("POS API returned an invalid or repeated pagination cursor");
+    seen.add(cursor);
+    url.searchParams.set("cursor", cursor);
+  }
+  throw new Error("POS API pagination exceeded the safety limit");
 }
 
 export async function registerPosIntegrationRoutes(app: FastifyInstance, prisma: PrismaClient, requireUser: any) {
@@ -70,8 +89,8 @@ export async function registerPosIntegrationRoutes(app: FastifyInstance, prisma:
     const to = new Date(), from = new Date(to.getTime() - 29 * 86400000);
     try {
       const [menu, daily] = await Promise.all([
-        posGet(key, "menu?limit=500"),
-        posGet(key, "sales/daily?from=" + dateOnly(from) + "&to=" + dateOnly(to) + "&limit=500")
+        posGetAll(key, "menu?limit=500"),
+        posGetAll(key, "sales/daily?from=" + dateOnly(from) + "&to=" + dateOnly(to) + "&limit=500")
       ]);
       let importedMenu = 0, importedDays = 0;
       for (const item of (Array.isArray(menu.data) ? menu.data : [])) {
