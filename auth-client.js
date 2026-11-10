@@ -38,16 +38,23 @@
     const auth = createAuthClient(AUTH_URL);
 
     async function currentAccessToken() {
-      // Neon Auth's session token is not the JWT expected by the LocalBoost API.
-      // Use the SDK's dedicated JWT method for API bearer authentication.
-      if (typeof auth.getJWTToken === "function") {
-        const jwtResult = await auth.getJWTToken();
-        const jwt = typeof jwtResult === "string" ? jwtResult : tokenFrom(jwtResult);
-        const saved = saveToken(jwt);
-        if (saved) return saved;
+      // Managed Neon Auth exposes a JWKS-verifiable API JWT at GET /token.
+      // getJWTToken() in this SDK build calls the unsupported /get-jwt-token path.
+      const tokenUrl = AUTH_URL.replace(/\/$/, "") + "/token";
+      const response = await fetch(tokenUrl, { method: "GET", credentials: "include" });
+      let payload = null;
+      try { payload = await response.json(); } catch { /* handled below */ }
+      if (!response.ok) {
+        const detail = payload?.message || payload?.error || ("HTTP " + response.status);
+        throw new Error("Neon Auth token request failed: " + detail);
       }
-      const result = unwrap(await auth.getSession());
-      return saveToken(tokenFrom(result));
+      const jwt = tokenFrom(payload) || payload?.session?.access_token || payload?.data?.session?.access_token;
+      const saved = saveToken(jwt);
+      if (saved) return saved;
+
+      // Some SDK responses include the short-lived JWT in the session object.
+      const sessionResult = unwrap(await auth.getSession());
+      return saveToken(tokenFrom(sessionResult) || sessionResult?.session?.access_token);
     }
     async function requestVerification(email) {
       const result = unwrap(await auth.emailOtp.sendVerificationOtp({
