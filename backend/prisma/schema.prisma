@@ -63,6 +63,7 @@ model Business {
   growthGoals     GrowthGoal[]
   growthBaselines GrowthBaseline[]
   activityEvents  ActivityEvent[]
+  creativeAssets  CreativeAsset[]
   @@index([ownerId, createdAt])
 }
 
@@ -216,4 +217,18 @@ model GrowthBaseline {
   updatedAt    DateTime         @updatedAt
   @@index([businessId, metric, periodStart, periodEnd])
   @@index([businessId, archivedAt, createdAt])
+}
+
+
+model CreativeAsset {
+  id         String   @id @default(cuid())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  fileName   String
+  mimeType   String
+  byteSize   Int
+  data       Bytes
+  altText    String?
+  createdAt  DateTime @default(now())
+  @@index([businessId, createdAt])
 }
