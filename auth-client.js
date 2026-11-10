@@ -15,9 +15,13 @@
     if (result?.error) throw new Error(result.error.message || "Google sign-in failed");
     return result?.data ?? result;
   }
-  function tokenFrom(data) {
-    return data?.token || data?.accessToken || data?.access_token ||
-      data?.data?.token || data?.data?.accessToken || data?.data?.access_token || null;
+  function tokenFrom(value) {
+    if (typeof value === "string") return value;
+    return value?.token || value?.accessToken || value?.access_token ||
+      value?.session?.token || value?.session?.accessToken || value?.session?.access_token ||
+      value?.data?.token || value?.data?.accessToken || value?.data?.access_token ||
+      value?.data?.session?.token || value?.data?.session?.accessToken ||
+      value?.data?.session?.access_token || null;
   }
   function saveToken(value) {
     const token = typeof value === "string" ? value : null;
@@ -34,19 +38,20 @@
     const auth = createAuthClient(AUTH_URL);
 
     async function currentAccessToken() {
-      const tokenUrl = AUTH_URL.replace(/\/$/, "") + "/token";
-      const response = await fetch(tokenUrl, { method: "GET", credentials: "include" });
-      let payload = null;
-      try { payload = await response.json(); } catch { /* handled below */ }
-      if (!response.ok) {
-        const detail = payload?.message || payload?.error || ("HTTP " + response.status);
-        throw new Error("Google owner session request failed: " + detail);
-      }
-      const jwt = tokenFrom(payload) || payload?.session?.access_token || payload?.data?.session?.access_token;
-      const saved = saveToken(jwt);
-      if (saved) return saved;
+      // getSession() completes Neon Auth's OAuth callback/verifier exchange after Google redirects back.
       const sessionResult = unwrap(await auth.getSession());
-      return saveToken(tokenFrom(sessionResult) || sessionResult?.session?.access_token);
+      let jwt = saveToken(tokenFrom(sessionResult));
+      if (jwt) return jwt;
+
+      // Neon Auth exposes the API-ready JWT through getJWTToken() in supported SDK versions.
+      if (typeof auth.getJWTToken === "function") {
+        const jwtResult = await auth.getJWTToken();
+        jwt = saveToken(tokenFrom(jwtResult));
+        if (jwt) return jwt;
+      }
+
+      // Keep the session cookie as the source of truth; never treat a missing token as signed in.
+      return null;
     }
 
     document.getElementById("google-owner-login")?.addEventListener("click", async () => {
@@ -54,10 +59,15 @@
       button.disabled = true;
       showMessage("Opening Google sign-in…");
       try {
-        unwrap(await auth.signIn.social({
+        const result = await auth.signIn.social({
           provider: "google",
           callbackURL: window.location.origin + window.location.pathname
-        }));
+        });
+        if (result?.error) throw new Error(result.error.message || "Google sign-in could not start");
+        // Better Auth normally redirects the page. If it does not, surface a useful message.
+        if (!result?.data?.url && !result?.url && !result?.data?.redirect) {
+          showMessage("Google sign-in started. Complete the Google prompt and return to this dashboard.");
+        }
       } catch (error) {
         showMessage(error?.message || "Google sign-in could not start. Check the Neon Auth Google provider settings.", true);
         button.disabled = false;
@@ -88,7 +98,7 @@
             return nativeFetch(input, { ...init, headers });
           }
         } catch (error) {
-          console.warn("LocalBoost could not refresh the Google owner session before the API request.", error);
+          console.warn("LocalBoost could not restore the Google owner session before the API request.", error);
         }
       }
       return nativeFetch(input, init);
