@@ -151,6 +151,21 @@
       }
     }
 
+    async function resendVerificationFromSignIn() {
+      const email = document.getElementById("owner-email").value.trim();
+      if (!email) return showMessage("Enter your email first, then request a verification email.", true);
+      setBusy("resend-verification-trigger", true);
+      try {
+        await requestVerification(email);
+        document.getElementById("email-verification-panel").hidden = false;
+        document.getElementById("owner-otp").focus();
+      } catch (error) {
+        showMessage(error?.message || "Could not resend verification email. Check the email address and try again.", true);
+      } finally {
+        setBusy("resend-verification-trigger", false);
+      }
+    }
+
     async function resendCode() {
       const email = document.getElementById("owner-email").value.trim();
       if (!email) return showMessage("Enter your email first.", true);
@@ -178,6 +193,7 @@
     document.getElementById("logout-button")?.addEventListener("click", signOut, true);
     document.getElementById("verify-email-button")?.addEventListener("click", verifyEmail);
     document.getElementById("resend-email-code")?.addEventListener("click", resendCode);
+    document.getElementById("resend-verification-trigger")?.addEventListener("click", resendVerificationFromSignIn);
 
     const nativeFetch = window.fetch.bind(window);
     window.fetch = async (input, init = {}) => {
