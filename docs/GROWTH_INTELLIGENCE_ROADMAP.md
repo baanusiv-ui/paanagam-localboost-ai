@@ -167,3 +167,11 @@ Approval is required separately for each profile edit, review reply, post, messa
 - Activity history records baseline creation and archival.
 - Migration `20261109160000_growth_baselines` must be applied and Prisma Client regenerated before the feature is available in a deployed environment.
 - This stage stores reference points only. Automated comparison against subsequent periods, independent verification and POS-sourced baseline capture remain future work; no comparison or outcome is inferred from a baseline alone.
+
+
+## Creative Asset Library (implemented on feature branch)
+- Added a tenant-scoped CreativeAsset table and authenticated upload, list, content-read and delete endpoints.
+- Artwork is stored as binary data in the selected business's PostgreSQL record; supported types are PNG, JPEG and WebP, with MIME/signature checks, a 4 MB per-image limit, a 100-asset / 100 MB per-business quota, and upload rate limiting.
+- Campaign Studio can save generated artwork to the business library and render it beside its saved draft after reload. Image content is served only after authentication and business ownership checks; no public asset URL is created.
+- This uses database-backed storage for the pilot. A dedicated object-storage provider should replace or supplement it before high-volume commercial use. Publishing and scheduling remain disconnected.
+- Migration `20261110100000_creative_assets` must be applied before deploying the API feature.
