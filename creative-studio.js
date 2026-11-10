@@ -19,7 +19,7 @@
   function render() {
     const list=$("creative-library");
     if (!list) return;
-    list.innerHTML = drafts.map((d,i) => '<article class="creative-card"><div class="creative-card-top"><span class="tag '+(d.status==="APPROVED"?"confirmed":"pending-tag")+'">'+esc(d.status||"DRAFT")+'</span><small>'+esc(d.platform||"Social")+' · '+esc(d.format||"Feed")+'</small></div><h3>'+esc(d.topic)+'</h3><p>'+esc(d.caption||"")+'</p>'+(d.assetId?'<img class="creative-card-image" data-asset-id="'+esc(d.assetId)+'" alt="'+esc(d.topic||"Campaign artwork")+'">':(d.assetUrl?'<a href="'+esc(d.assetUrl)+'" target="_blank" rel="noopener">Open attached creative</a>':'<small class="footnote">No image asset attached</small>'))+'<div class="creative-card-actions"><button type="button" data-copy="'+i+'" class="secondary-button">Copy caption</button><button type="button" data-approve="'+i+'" class="secondary-button" '+(d.status==="APPROVED"?"disabled":"")+'>'+ (d.status==="APPROVED"?"Owner approved":"Approve draft")+'</button></div></article>').join("") || '<p class="empty-copy">No saved creative drafts in this business workspace.</p>';
+    list.innerHTML = drafts.map((d,i) => '<article class="creative-card"><div class="creative-card-top"><span class="tag '+(d.status==="REVIEWED"?"confirmed":"pending-tag")+'">'+esc(d.status||"DRAFT")+'</span><small>'+esc(d.platform||"Social")+' · '+esc(d.format||"Feed")+'</small></div><h3>'+esc(d.topic)+'</h3><p>'+esc(d.caption||"")+'</p>'+(d.assetId?'<img class="creative-card-image" data-asset-id="'+esc(d.assetId)+'" alt="'+esc(d.topic||"Campaign artwork")+'">':(d.assetUrl?'<a href="'+esc(d.assetUrl)+'" target="_blank" rel="noopener">Open attached creative</a>':'<small class="footnote">No image asset attached</small>'))+'<div class="creative-card-actions"><button type="button" data-copy="'+i+'" class="secondary-button">Copy caption</button><button type="button" data-approve="'+i+'" class="secondary-button" '+(d.status==="REVIEWED"?"disabled":"")+'>'+ (d.status==="REVIEWED"?"Reviewed":"Mark reviewed")+'</button></div></article>').join("") || '<p class="empty-copy">No saved creative drafts in this business workspace.</p>';
     const count=$("creative-count"); if(count) count.textContent=String(drafts.length);
     hydrateAssetImages();
   }
@@ -110,13 +110,21 @@
     current.assetUrl=assetUrl; current.updatedAt=new Date().toISOString();
     try{
       await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:current.id,payload:current,recordedAt:current.updatedAt})});
-      drafts.unshift({...current}); current=null; $("creative-save").disabled=true; $("creative-preview").classList.add("hidden"); $("creative-form").reset(); render(); setMessage("Draft saved to the selected business cloud library. It has not been published or scheduled.");
+      const channels = current.platform === "Instagram + Facebook" ? ["FACEBOOK","INSTAGRAM"] : current.platform === "Instagram" ? ["INSTAGRAM"] : current.platform === "Facebook" ? ["FACEBOOK"] : [];
+      const queued = [], skipped = [];
+      for (const channel of channels) {
+        if (channel === "INSTAGRAM" && !current.assetId) { skipped.push("Instagram needs a saved JPEG/PNG image"); continue; }
+        await api(base()+"/social-posts",{method:"POST",body:JSON.stringify({channel,caption:current.caption,assetId:current.assetId||undefined})});
+        queued.push(channel);
+      }
+      drafts.unshift({...current}); current=null; $("creative-save").disabled=true; $("creative-preview").classList.add("hidden"); $("creative-form").reset(); render();
+      setMessage("Draft saved. "+queued.length+" social post(s) added to Approval Centre; nothing has been approved or published."+(skipped.length?" "+skipped.join("; ")+".":""));
     }catch(err){setMessage("Save failed: "+err.message,true);}
   });
   $("creative-library")?.addEventListener("click",async e=>{
     const copy=e.target.dataset.copy, approve=e.target.dataset.approve;
     if(copy!==undefined){const d=drafts[Number(copy)]; if(d) navigator.clipboard?.writeText(d.caption||"").then(()=>setMessage("Caption copied."),()=>setMessage("Copy unavailable in this browser.",true));}
-    if(approve!==undefined){const d=drafts[Number(approve)];if(!d||d.status==="APPROVED")return;const next={...d,status:"APPROVED",approvedAt:new Date().toISOString(),approvalNote:"Owner-approved for later manual publishing; no external action performed."};try{await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:d.id,payload:next,recordedAt:next.approvedAt})});drafts[Number(approve)]=next;render();setMessage("Owner approval recorded. No post was published or scheduled.");}catch(err){setMessage("Approval save failed: "+err.message,true);}}
+    if(approve!==undefined){const d=drafts[Number(approve)];if(!d||d.status==="REVIEWED")return;const next={...d,status:"REVIEWED",reviewedAt:new Date().toISOString(),approvalNote:"Marked reviewed in the creative library; this is not publishing approval."};try{await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:d.id,payload:next,recordedAt:next.approvedAt})});drafts[Number(approve)]=next;render();setMessage("Marked reviewed. Use the separate Approval Centre to approve and manually publish a social post.");}catch(err){setMessage("Approval save failed: "+err.message,true);}}
   });
   window.addEventListener("localboost:business-ready",load);
   window.addEventListener("localboost:signed-out",()=>{drafts=[];current=null;ready=false;render();setMessage("Signed out. Cloud creative library is locked.");});
