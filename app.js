@@ -467,7 +467,17 @@
     finally { button.disabled = false; button.textContent = "Sync menu and sales"; }
   }
 
-  document.querySelectorAll("[data-view]").forEach(button => button.addEventListener("click", () => showView(button.dataset.view)));
+  const mobileMenuButton = $("#mobile-menu-toggle");
+  const mobileBackdrop = $("#mobile-nav-backdrop");
+  function setMobileNav(open) {
+    document.body.classList.toggle("mobile-nav-open", open);
+    if (mobileMenuButton) mobileMenuButton.setAttribute("aria-expanded", String(open));
+    if (mobileMenuButton) mobileMenuButton.setAttribute("aria-label", open ? "Close navigation" : "Open navigation");
+  }
+  mobileMenuButton?.addEventListener("click", () => setMobileNav(!document.body.classList.contains("mobile-nav-open")));
+  mobileBackdrop?.addEventListener("click", () => setMobileNav(false));
+  document.addEventListener("keydown", event => { if (event.key === "Escape") setMobileNav(false); });
+  document.querySelectorAll("[data-view]").forEach(button => button.addEventListener("click", () => { showView(button.dataset.view); setMobileNav(false); }));
   document.querySelectorAll("[data-go]").forEach(button => button.addEventListener("click", () => showView(button.dataset.go)));
   $("#run-audit").addEventListener("click", runAudit);
   $("#pos-connect-form").addEventListener("submit", connectPos);
