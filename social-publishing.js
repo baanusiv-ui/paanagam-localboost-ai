@@ -45,7 +45,7 @@
       statusMessage("Meta authorised. Select the business's correct Facebook Page to finish linking.");
     }catch(e){select.innerHTML="<option value=''>Could not load Pages</option>";statusMessage(e.message,true);}
   }
-  async function loadPosts(){
+  function approvalMessage(text,error=false){const el=$("approval-message");if(el){el.textContent=text;el.classList.toggle("error",error);}}\n  async function loadPosts(){
     const list=$("approval-list");if(!list||!businessId()||!sessionStorage.getItem(TOKEN))return;
     try{const result=await api(base()+"/social-posts");posts=result.posts||[];renderPosts();}
     catch(e){list.textContent="Could not load approval queue: "+e.message;}
@@ -83,9 +83,9 @@
     button.disabled=true;
     try{
       const result=await api(base()+"/social-posts/"+encodeURIComponent(id)+"/"+action,{method:"POST",body:"{}"});
-      statusMessage(action==="publish"?(result.published?"Post published successfully.":"Publishing completed.") : action==="approve"?"Owner approval recorded. Nothing has been published.":"Draft rejected.");
+      approvalMessage(action==="publish"?(result.published?"Post published successfully.":"Publishing completed.") : action==="approve"?"Owner approval recorded. Nothing has been published.":"Draft rejected.");
       await loadPosts();
-    }catch(e){statusMessage(e.message,true);await loadPosts();}
+    }catch(e){approvalMessage(e.message,true);await loadPosts();}
     finally{button.disabled=false;}
   });
   window.addEventListener("localboost:business-ready",()=>{void loadMeta();void loadPosts();});
