@@ -172,6 +172,44 @@
     }
   }
 
+  let canvaContinuation = null;
+  let canvaSearchTerm = "";
+  function renderCanvaDesigns(items, append = false) {
+    const root = $("canva-design-list");
+    if (!root) return;
+    const cards = (items || []).map(design => {
+      const title = esc(design.title || "Untitled Canva design");
+      const thumb = design.thumbnail?.url ? '<img class="creative-card-image" src="' + esc(design.thumbnail.url) + '" alt="' + title + '" loading="lazy">' : "";
+      const href = design.urls?.edit_url || design.urls?.view_url || "";
+      return '<article class="creative-card">' + thumb + '<h3>' + title + '</h3><small>' + (design.updated_at ? 'Updated ' + esc(new Date(design.updated_at * 1000).toLocaleDateString()) : 'Canva design') + '</small>' + (href ? '<p><a href="' + esc(href) + '" target="_blank" rel="noopener noreferrer">Open in Canva ↗</a></p>' : '<small class="footnote">Canva did not provide an open link.</small>') + '</article>';
+    }).join("");
+    if (append) root.insertAdjacentHTML("beforeend", cards);
+    else root.innerHTML = cards || '<p class="empty-copy">No Canva designs found for this search.</p>';
+  }
+  async function loadCanvaDesigns({ append = false, query = canvaSearchTerm } = {}) {
+    const panel = $("canva-design-library");
+    const message = $("canva-design-message");
+    if (!panel || !businessId() || !sessionStorage.getItem(TOKEN)) return;
+    panel.hidden = false;
+    const button = $("canva-design-refresh");
+    if (button) button.disabled = true;
+    if (message) message.textContent = "Loading designs from Canva…";
+    try {
+      const params = new URLSearchParams({ limit: "25", ownership: "any", sort_by: "modified_descending" });
+      if (query) params.set("query", query);
+      if (append && canvaContinuation) params.set("continuation", canvaContinuation);
+      const result = await api(base() + "/canva/designs?" + params.toString());
+      renderCanvaDesigns(result.items || [], append);
+      canvaContinuation = result.continuation || null;
+      const more = $("canva-design-more");
+      if (more) more.hidden = !canvaContinuation;
+      if (message) message.textContent = (result.count || 0) + " Canva design(s) loaded.";
+    } catch (err) {
+      if (message) message.textContent = "Canva designs could not be loaded: " + err.message;
+      if (!append) $("canva-design-list").innerHTML = '<p class="empty-copy">Design library unavailable. Check Canva permissions and reconnect if prompted.</p>';
+    } finally { if (button) button.disabled = false; }
+  }
+
   async function loadDesignIntegrations() {
     const panel=$("design-integrations-panel");
     if(!panel) return;
@@ -196,12 +234,19 @@
       connectButton.disabled=!canva.enabled;
       connectButton.textContent=canva.enabled?"Connect Canva":"Canva credentials required";
       if(disconnectButton) disconnectButton.hidden=!canvaConnected;
+      const designPanel = $("canva-design-library");
+      if (designPanel) designPanel.hidden = !canvaConnected;
+      if (canvaConnected) await loadCanvaDesigns();
       $("adobe-integration-status").textContent=adobe.configured?"Client ID configured":"Setup / approval required";
       $("adobe-open").disabled=!adobe.enabled;
       $("adobe-open").textContent=adobe.enabled?"Open Adobe Express":"Adobe SDK setup required";
     } catch { panel.hidden=true; }
   }
 
+  $("canva-design-refresh")?.addEventListener("click", () => { canvaContinuation = null; loadCanvaDesigns({ append: false }); });
+  $("canva-design-search-button")?.addEventListener("click", () => { canvaSearchTerm = $("canva-design-search")?.value.trim() || ""; canvaContinuation = null; loadCanvaDesigns({ append: false, query: canvaSearchTerm }); });
+  $("canva-design-search")?.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); $("canva-design-search-button")?.click(); } });
+  $("canva-design-more")?.addEventListener("click", () => loadCanvaDesigns({ append: true }));
   $("canva-connect")?.addEventListener("click",connectCanva);
   $("canva-disconnect")?.addEventListener("click",async()=>{
     if(!businessId() || !sessionStorage.getItem(TOKEN)) { setMessage("Sign in and select a business workspace first.",true); return; }
