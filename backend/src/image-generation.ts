@@ -1,5 +1,3 @@
-import { z } from "zod";
-
 export type ImageDraftInput = {
   businessName: string;
   topic: string;
@@ -9,15 +7,14 @@ export type ImageDraftInput = {
   format: "SQUARE" | "PORTRAIT" | "STORY";
 };
 
-const imageResponseSchema = z.object({
-  data: z.array(z.object({ b64_json: z.string().min(1) })).min(1)
-});
-
-const imageModel = () => (process.env.OPENAI_IMAGE_MODEL || "gpt-image-2.5-flare").trim();
+const imageModel = "@cf/black-forest-labs/flux-1-schnell";
 
 export async function generateCampaignImage(input: ImageDraftInput) {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
-  if (!apiKey) throw new Error("Image generation is not configured. Add OPENAI_API_KEY to the LocalBoost API service environment before generating artwork.");
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID?.trim();
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN?.trim();
+  if (!accountId || !apiToken) {
+    throw new Error("Free image generation is not configured yet. Add CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN to the LocalBoost API environment in Render. Create a Workers AI API token in Cloudflare with Workers AI Read and Edit permissions.");
+  }
 
   const formatGuidance: Record<ImageDraftInput["format"], string> = {
     SQUARE: "Square 1:1 composition for a social feed.",
@@ -36,35 +33,33 @@ export async function generateCampaignImage(input: ImageDraftInput) {
     "Use natural lighting, authentic materials, clear subject hierarchy and professional commercial food/product photography where appropriate."
   ].join("\n");
 
-  const response = await fetch("https://api.openai.com/v1/images/generations", {
+  const url = "https://api.cloudflare.com/client/v4/accounts/" + encodeURIComponent(accountId) + "/ai/run/" + imageModel;
+  const response = await fetch(url, {
     method: "POST",
-    headers: { authorization: "Bearer " + apiKey, "content-type": "application/json" },
-    body: JSON.stringify({
-      model: imageModel(),
-      prompt,
-      n: 1,
-      size: input.format === "SQUARE" ? "1024x1024" : input.format === "PORTRAIT" ? "1024x1280" : "1008x1792",
-      quality: "medium",
-      output_format: "png"
-    }),
+    headers: { authorization: "Bearer " + apiToken, "content-type": "application/json" },
+    body: JSON.stringify({ prompt, steps: 4 }),
     signal: AbortSignal.timeout(180000)
   });
-  const raw = await response.json() as unknown;
-  if (!response.ok) {
-    const message = (raw as { error?: { message?: string } })?.error?.message;
-    throw new Error(message || "Image provider request failed with HTTP " + response.status);
+  const raw = await response.json() as {
+    success?: boolean;
+    result?: { image?: string };
+    errors?: Array<{ message?: string }>;
+  };
+  if (!response.ok || raw.success === false) {
+    const message = raw.errors?.map(item => item.message).filter(Boolean).join("; ");
+    throw new Error(message || "Cloudflare Workers AI image generation failed with HTTP " + response.status);
   }
-  const parsed = imageResponseSchema.safeParse(raw);
-  if (!parsed.success) throw new Error("Image provider returned an unsupported response.");
-  const firstImage = parsed.data.data[0];
-  if (!firstImage) throw new Error("Image provider returned no image data.");
+  const image = raw.result?.image;
+  if (!image || !/^[A-Za-z0-9+/]+={0,2}$/.test(image)) {
+    throw new Error("Cloudflare image provider returned an unsupported image response.");
+  }
   return {
-    imageDataUrl: "data:image/png;base64," + firstImage.b64_json,
-    mimeType: "image/png",
-    provider: "OPENAI_IMAGES_API",
-    model: imageModel(),
+    imageDataUrl: "data:image/jpeg;base64," + image,
+    mimeType: "image/jpeg",
+    provider: "CLOUDFLARE_WORKERS_AI",
+    model: imageModel,
     generatedAt: new Date().toISOString(),
     storage: "TEMPORARY_BROWSER_PREVIEW",
-    disclaimer: "Generated artwork is a temporary preview. Download it or upload it to an approved asset store; this response does not persist the image or publish it."
+    disclaimer: "Generated artwork is a temporary preview. Download it or upload it to the business creative library; this response does not persist the image or publish it."
   };
 }
