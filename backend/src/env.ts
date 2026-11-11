@@ -26,6 +26,8 @@ const schema = z.object({
   META_REDIRECT_URI: z.string().url().optional().default("http://localhost:4100/v1/meta/callback"),
   META_PUBLIC_API_BASE_URL: z.string().url().or(z.literal("")).default(""),
   META_GRAPH_API_VERSION: z.string().regex(/^v\d+\.0$/).default("v26.0"),
+  GEMINI_API_KEY: z.string().optional().default(""),
+  GEMINI_TEXT_MODEL: z.string().trim().min(1).default("gemini-2.5-flash"),
   OPENAI_API_KEY: z.string().optional().default(""),
   OPENAI_TEXT_MODEL: z.string().trim().min(1).default("gpt-4o-mini"),
   OPENAI_IMAGE_MODEL: z.string().trim().min(1).default("gpt-image-2.5-flare")
