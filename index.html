@@ -262,6 +262,13 @@ We look forward to welcoming you!</textarea></label>
             <article class="metric-card"><div class="metric-top"><strong>Adobe Express</strong><span class="tag pending-tag" id="adobe-integration-status">Not configured</span></div><p>Open the embedded Express editor to refine artwork and return the finished design.</p><button type="button" class="secondary-button" id="adobe-open" disabled>Open Adobe Express · setup required</button></article>
           </div>
           <p class="footnote">Administrator access only. Provider actions remain disabled until credentials, OAuth / SDK configuration and provider approval are completed. No content is published automatically.</p>
+          <section class="panel" id="canva-design-library" hidden style="margin-top:14px">
+            <div class="panel-heading"><div><h3>Canva design library</h3><p>Browse designs from the connected Canva account. Opening a design takes you to Canva; LocalBoost does not edit it.</p></div><button type="button" class="secondary-button" id="canva-design-refresh">Refresh designs</button></div>
+            <div class="form-actions"><input id="canva-design-search" type="search" maxlength="255" placeholder="Search Canva designs" aria-label="Search Canva designs"><button type="button" class="secondary-button" id="canva-design-search-button">Search</button></div>
+            <p class="form-message" id="canva-design-message" role="status">Connect Canva to browse your designs.</p>
+            <div id="canva-design-list" class="creative-library"><p class="empty-copy">No designs loaded.</p></div>
+            <button type="button" class="secondary-button" id="canva-design-more" hidden>Load more</button>
+          </section>
         </div>
         <div class="panel meta-connection-panel">
           <div class="panel-heading"><div><h3>Facebook &amp; Instagram connection</h3><p>Connect a Facebook Page and its linked Instagram professional account.</p></div><span class="tag pending-tag" id="meta-connection-badge">Not connected</span></div>
