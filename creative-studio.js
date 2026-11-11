@@ -175,7 +175,7 @@
   let canvaContinuation = null;
   let canvaSearchTerm = "Paanagam";
   const isPaanagamDesign = design => /paanagam|பானகம்/i.test(String(design?.title || ""));
-  const canvaQuery = term => ["Paanagam", String(term || "").trim()].filter(Boolean).join(" ");
+  const canvaQuery = term => ["Paanagam", String(term || "").trim().replace(/^paanagam\\s*/i, "")].filter(Boolean).join(" ");
   function renderCanvaDesigns(items, append = false) {
     const root = $("canva-design-list");
     if (!root) return;
