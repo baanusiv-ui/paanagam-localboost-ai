@@ -14,19 +14,19 @@ const contentSchema = z.object({
   postCopy: z.string().trim().min(1).max(2000),
   creativeBrief: z.string().trim().min(1).max(1200)
 }).strict();
-const localBaseUrl = () => (process.env.OLLAMA_BASE_URL || "").replace(/\/$/, "");
-const localModel = () => (process.env.OLLAMA_MODEL || "qwen2.5:7b").trim();
+
+const modelName = () => (process.env.OPENAI_TEXT_MODEL || "gpt-4o-mini").trim();
 
 export function buildContentDraftMessages(input: ContentDraftInput) {
   return [
     {
       role: "system",
       content: [
-        "You create truthful Google Business Profile update drafts for an Indian local business.",
-        "Use only the supplied business name, topic and offer. Never invent prices, discounts, dates, availability, opening hours, addresses, product ingredients, awards, customer reviews or guarantees.",
+        "You create truthful social campaign drafts for an Indian local business.",
+        "Use only the supplied business name, topic, offer and publish date. Never invent prices, discounts, dates, availability, opening hours, addresses, ingredients, awards, customer reviews or guarantees.",
         "If no offer is supplied, do not create an offer or imply a discount.",
-        "Write concise, natural copy in the requested language. Avoid fake urgency and unsupported superlatives.",
-        "Create a practical visual creative brief for a designer; do not claim an image has been generated.",
+        "Write concise, natural, engaging copy in the requested language. For Tamil + English, write natural Tamil first and a short English version second.",
+        "Create a practical visual creative brief for a designer. Do not claim an image has been generated.",
         "The brief must match the requested format and must not add products, logos or brand facts that were not supplied.",
         "Return JSON only with exactly two keys: postCopy and creativeBrief. No markdown fences.",
         "Language: " + input.language + ". Tone: " + input.tone + ". Format: " + input.format + "."
@@ -49,34 +49,46 @@ export function parseContentDraftOutput(raw: string) {
 }
 
 export async function generateLocalContentDraft(input: ContentDraftInput) {
-  const baseUrl = localBaseUrl();
-  const model = localModel();
-  if (!baseUrl) throw new Error("Local AI is not configured. Set OLLAMA_BASE_URL in backend/.env and restart the API.");
-  const response = await fetch(baseUrl + "/api/chat", {
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  if (!apiKey) {
+    throw new Error("Cloud AI is not configured. Add OPENAI_API_KEY to the LocalBoost API service environment in Render, then redeploy.");
+  }
+
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      authorization: "Bearer " + apiKey,
+      "content-type": "application/json"
+    },
     body: JSON.stringify({
-      model,
+      model: modelName(),
       messages: buildContentDraftMessages(input),
-      stream: false,
-      format: "json",
-      options: { temperature: 0.35 }
+      response_format: { type: "json_object" },
+      temperature: 0.5,
+      max_tokens: 900
     }),
-    signal: AbortSignal.timeout(45000)
+    signal: AbortSignal.timeout(60000)
   });
-  const data = await response.json() as { message?: { content?: string }; error?: string };
-  if (!response.ok) throw new Error(data.error || "Local Ollama request failed with HTTP " + response.status);
-  const content = data.message?.content;
-  if (!content) throw new Error("Local AI returned an empty content draft. Try again or check the model.");
+
+  const data = await response.json() as {
+    choices?: Array<{ message?: { content?: string | null } }>;
+    error?: { message?: string };
+  };
+  if (!response.ok) {
+    const reason = data.error?.message || "OpenAI request failed with HTTP " + response.status;
+    throw new Error("Cloud AI generation failed: " + reason);
+  }
+  const content = data.choices?.[0]?.message?.content;
+  if (!content) throw new Error("Cloud AI returned an empty content draft. Try again.");
   return {
     ...parseContentDraftOutput(content),
-    provider: "LOCAL_OLLAMA",
-    model,
+    provider: "OPENAI_API",
+    model: modelName(),
     language: input.language,
     format: input.format,
     tone: input.tone,
     generatedAt: new Date().toISOString(),
     status: "DRAFT",
-    disclaimer: "Draft only. Verify every business fact and approve before manual publishing. Nothing was scheduled or published."
+    disclaimer: "AI-generated draft. Verify every business fact and approve before manual publishing. Nothing was scheduled or published."
   };
 }
