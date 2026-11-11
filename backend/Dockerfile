@@ -20,4 +20,4 @@ COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=build /app/dist ./dist
 COPY prisma ./prisma
 EXPOSE 4100
-CMD ["sh", "-c", "if [ \"${SKIP_PRISMA_MIGRATIONS:-false}\" != \"true\" ]; then npx prisma migrate deploy; fi && exec node dist/server.js"]
+CMD ["sh", "-c", "if [ \"${SKIP_PRISMA_MIGRATIONS:-false}\" != \"true\" ]; then attempt=1; until npx prisma migrate deploy; do if [ \"$attempt\" -ge 6 ]; then echo \"Prisma migrations failed after 6 attempts\"; exit 1; fi; echo \"Prisma migration lock unavailable; retrying in 10 seconds (attempt $((attempt + 1))/6)\"; attempt=$((attempt + 1)); sleep 10; done; fi && exec node dist/server.js"]
