@@ -48,7 +48,7 @@
     <main class="main">
       <header class="topbar">
         <button class="mobile-menu-toggle" id="mobile-menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button><div class="crumb">Workspace <span>/</span> <strong id="crumb-title">Overview</strong></div>
-        <div class="top-actions"><span class="demo-pill"><span></span> <span id="data-mode">DEMO DATA</span></span><button class="help-button" type="button" aria-label="Help">?</button></div>
+        <div class="top-actions"><span class="demo-pill"><span></span> <span id="data-mode">DEMO DATA</span></span><button class="quiet-button" type="button" id="logout-button" hidden>Sign out</button><button class="help-button" type="button" aria-label="Help">?</button></div>
       </header>
 
       <section class="page-heading">
@@ -64,7 +64,7 @@
           <div class="setup-form" id="auth-form">
             <h3>Private owner access</h3>
             <p>Continue with your Google account. No LocalBoost password or registration form is required.</p>
-            <div class="form-actions"><button class="primary-button" type="button" id="google-owner-login">Continue with Google</button><button class="quiet-button" type="button" id="logout-button" hidden>Sign out</button><button id="login-button" type="button" hidden>Sign in</button><button id="register-button" type="button" hidden>Create account</button></div>
+            <div class="form-actions"><button class="primary-button" type="button" id="google-owner-login">Continue with Google</button><button id="login-button" type="button" hidden>Sign in</button><button id="register-button" type="button" hidden>Create account</button></div>
             <p class="form-message" id="auth-message" role="status"></p>
           </div>
           <form id="business-form" class="setup-form" hidden>
