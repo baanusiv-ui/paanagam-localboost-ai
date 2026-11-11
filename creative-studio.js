@@ -153,7 +153,28 @@
     if(copy!==undefined){const d=drafts[Number(copy)]; if(d) navigator.clipboard?.writeText(d.caption||"").then(()=>setMessage("Caption copied."),()=>setMessage("Copy unavailable in this browser.",true));}
     if(approve!==undefined){const d=drafts[Number(approve)];if(!d||d.status==="REVIEWED")return;const next={...d,status:"REVIEWED",reviewedAt:new Date().toISOString(),approvalNote:"Marked reviewed in the creative library; this is not publishing approval."};try{await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:d.id,payload:next,recordedAt:next.reviewedAt})});drafts[Number(approve)]=next;render();setMessage("Marked reviewed. Use the separate Approval Centre to approve and manually publish a social post.");}catch(err){setMessage("Approval save failed: "+err.message,true);}}
   });
-  window.addEventListener("localboost:business-ready",load);
+
+  async function loadDesignIntegrations() {
+    const panel=$("design-integrations-panel");
+    if(!panel) return;
+    try {
+      const response=await fetch(API()+"/v1/creative-integrations/status",{headers:{authorization:"Bearer "+sessionStorage.getItem(TOKEN)}});
+      if(!response.ok) { panel.hidden=true; return; }
+      const status=await response.json();
+      panel.hidden=!status.administrator;
+      if(!status.administrator) return;
+      $("design-integrations-access").textContent="Administrator access";
+      const canva=status.providers?.canva||{}, adobe=status.providers?.adobeExpress||{};
+      $("canva-integration-status").textContent=canva.configured?"Credentials configured":"Setup required";
+      $("canva-connect").disabled=!canva.enabled;
+      $("canva-connect").textContent=canva.enabled?"Connect Canva":"Canva credentials required";
+      $("adobe-integration-status").textContent=adobe.configured?"Client ID configured":"Setup / approval required";
+      $("adobe-open").disabled=!adobe.enabled;
+      $("adobe-open").textContent=adobe.enabled?"Open Adobe Express":"Adobe SDK setup required";
+    } catch { panel.hidden=true; }
+  }
+
+  window.addEventListener("localboost:business-ready",()=>{load();loadDesignIntegrations();});
   window.addEventListener("localboost:signed-out",()=>{drafts=[];current=null;ready=false;render();setMessage("Signed out. Cloud creative library is locked.");});
   if(businessId()) load();
 })();
