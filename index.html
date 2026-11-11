@@ -52,7 +52,7 @@
       </header>
 
       <section class="page-heading">
-        <div><p class="eyebrow">SATURDAY, NOVEMBER 7, 2026</p><h1 id="page-title">Good morning, Paanagam <span>✦</span></h1><p class="subheading">Your local growth command centre. Start with what you can verify.</p></div>
+        <div><p class="eyebrow" id="dashboard-current-date">Loading date…</p><h1 id="page-title">Good morning, Paanagam <span>✦</span></h1><p class="subheading">Your local growth command centre. Start with what you can verify.</p></div>
         <div class="heading-actions"><button class="secondary-button" id="connect-google" disabled>Connect Google</button><button class="primary-button" id="run-audit">＋ Start a business audit</button></div>
       </section>
 
@@ -380,5 +380,25 @@
 
 </script><script src="growth-goals.js"></script>
   <script type="module" src="auth-client.js"></script>
+<script>
+(() => {
+  const el = document.getElementById("dashboard-current-date");
+  if (!el) return;
+  const updateDashboardDate = () => {
+    const now = new Date();
+    el.textContent = new Intl.DateTimeFormat("en-IN", {
+      timeZone: "Asia/Kolkata",
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    }).format(now).toUpperCase();
+  };
+  updateDashboardDate();
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) updateDashboardDate();
+  });
+})();
+</script>
 </body>
 </html>
