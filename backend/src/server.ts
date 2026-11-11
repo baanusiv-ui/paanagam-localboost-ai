@@ -859,8 +859,21 @@ app.post("/v1/businesses/:businessId/google-description", { preHandler: requireU
   try {
     const accessToken = await googleAccessToken(business.id);
     const resource = connection.googleLocationResourceName;
+    if (!/^locations\\/[A-Za-z0-9_-]+$/.test(resource)) {
+      throw new Error("The saved Google location reference is invalid. Re-import the verified Paanagam location in LocalBoost.");
+    }
+    // Confirm the selected location still exists and is accessible before attempting the write.
+    try {
+      await googleGet<{ name?: string }>(
+        "https://mybusinessbusinessinformation.googleapis.com/v1/" + resource + "?readMask=name",
+        accessToken
+      );
+    } catch (lookupError) {
+      const detail = lookupError instanceof Error ? lookupError.message : "Google location lookup failed";
+      throw new Error("Google could not find the selected Business Profile location. In LocalBoost, reconnect/import the verified Paanagam location, then retry. Details: " + detail);
+    }
     const updated = await googlePatch<{ name?: string; profile?: { description?: string } }>(
-      "https://mybusinessbusinessinformation.googleapis.com/v1/" + resource + "?updateMask=profile",
+      "https://mybusinessbusinessinformation.googleapis.com/v1/" + resource + "?updateMask=profile.description",
       accessToken,
       { profile: { description: body.data.description } }
     );
