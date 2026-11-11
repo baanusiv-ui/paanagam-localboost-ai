@@ -176,5 +176,5 @@
 
   window.addEventListener("localboost:business-ready",()=>{load();loadDesignIntegrations();});
   window.addEventListener("localboost:signed-out",()=>{drafts=[];current=null;ready=false;render();setMessage("Signed out. Cloud creative library is locked.");});
-  if(businessId()) load();
+  if(businessId()) { load(); loadDesignIntegrations(); }
 })();
