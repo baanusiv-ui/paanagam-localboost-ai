@@ -66,6 +66,8 @@ model Business {
   activityEvents  ActivityEvent[]
   creativeAssets  CreativeAsset[]
   posIntegrationConnection PosIntegrationConnection?
+  customers Customer[]
+  customerEvents CustomerEvent[]
   metaConnection  MetaConnection?
   metaOAuthStates MetaOAuthState[]
   metaOAuthSession MetaOAuthSession?
@@ -343,3 +345,84 @@ model PosIntegrationConnection {
   updatedAt       DateTime @updatedAt
 }
 
+
+enum CustomerStatus {
+  ACTIVE
+  BLOCKED
+  DELETED
+}
+
+enum CustomerConsentChannel {
+  WHATSAPP
+  SMS
+  EMAIL
+}
+
+enum CustomerConsentPurpose {
+  SERVICE
+  MARKETING
+}
+
+enum CustomerEventType {
+  PROFILE_CREATED
+  CONSENT_GRANTED
+  CONSENT_REVOKED
+  PURCHASE_RECORDED
+  REVIEW_SUBMITTED
+  REFERRAL_RECEIVED
+  REFERRAL_CONVERTED
+  REWARD_EARNED
+  REWARD_REDEEMED
+  PROFILE_UPDATED
+}
+
+model Customer {
+  id          String         @id @default(cuid())
+  businessId  String
+  business    Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  name        String?
+  phoneE164   String?
+  email       String?
+  status      CustomerStatus @default(ACTIVE)
+  source      String         @default("OWNER_ENTERED")
+  firstSeenAt DateTime       @default(now())
+  lastSeenAt  DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  consents    CustomerConsent[]
+  events      CustomerEvent[]
+  @@unique([businessId, phoneE164])
+  @@unique([businessId, email])
+  @@index([businessId, status, createdAt])
+  @@index([businessId, lastSeenAt])
+}
+
+model CustomerConsent {
+  id          String                 @id @default(cuid())
+  customerId  String
+  customer    Customer               @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  channel     CustomerConsentChannel
+  purpose     CustomerConsentPurpose
+  granted     Boolean
+  capturedAt  DateTime               @default(now())
+  source      String
+  evidence    String?
+  @@index([customerId, channel, purpose, capturedAt])
+}
+
+model CustomerEvent {
+  id          String           @id @default(cuid())
+  businessId  String
+  business    Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  customerId  String?
+  customer    Customer?        @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  eventType   CustomerEventType
+  source      String
+  externalId  String?
+  occurredAt  DateTime         @default(now())
+  metadata    Json?
+  createdAt   DateTime         @default(now())
+  @@unique([businessId, source, externalId])
+  @@index([businessId, eventType, occurredAt])
+  @@index([customerId, occurredAt])
+}
