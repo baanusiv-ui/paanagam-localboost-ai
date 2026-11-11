@@ -43,7 +43,7 @@ export async function registerCanvaRoutes(app: FastifyInstance, db: PrismaClient
   });
   app.get("/v1/canva/callback", async (req: any, reply) => {
     const q = req.query as { code?: string; state?: string; error?: string };
-    const back = (s: string) => reply.redirect(env.APP_BASE_URL.replace(/\/$/, "") + "/creative-studio?canva=" + s);
+    const back = (s: string) => reply.redirect(env.APP_BASE_URL.replace(/\/$/, "") + "/?canva=" + encodeURIComponent(s));
     if (q.error || !q.code || !q.state) return back(q.error ? "denied" : "error");
     const pending = await db.canvaOAuthState.findUnique({ where: { state: q.state } });
     if (!pending || pending.expiresAt <= new Date()) {
