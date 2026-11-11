@@ -128,6 +128,22 @@
       <section class="view-panel hidden" id="gbp-view">
         <div class="section-heading"><div><h2>Google Business Profile · Manual Owner</h2><p>Prepare and track profile updates, review replies and posts. Apply changes yourself in Google Business Profile Manager.</p></div><span class="tag confirmed">Manual owner mode</span></div>
         <div class="notice"><span>ⓘ</span><p><strong>No Google API required.</strong> Owner records are saved to the selected business cloud workspace. Nothing is sent to Google, replied to or published automatically. Sign in and select a business before saving.</p></div>
+        <div class="panel">
+          <div class="panel-heading"><div><h3>Google Business Profile · நேரடி வெளியீடு</h3><p>Google கணக்கையும் பானகம் இடத்தையும் தேர்ந்தெடுத்து, ஒப்புதல் பெற்ற பிறகே வெளியிடலாம்.</p></div><span class="tag pending-tag">ஒப்புதல் அவசியம்</span></div>
+          <div class="form-actions">
+            <button class="secondary-button" type="button" id="gbp-google-load-accounts">Google கணக்குகளைப் பெறு</button>
+            <select id="gbp-google-account" aria-label="Google கணக்கு"><option value="">Google கணக்கைத் தேர்ந்தெடுக்கவும்</option></select>
+            <button class="secondary-button" type="button" id="gbp-google-load-locations">இடங்களைப் பெறு</button>
+            <select id="gbp-google-location" aria-label="Google வணிக இடம்"><option value="">பானகம் இடத்தைத் தேர்ந்தெடுக்கவும்</option></select>
+            <button class="primary-button" type="button" id="gbp-google-import-location">பானகம் சுயவிவரத்தை இணை</button>
+          </div>
+          <form id="gbp-google-post-form" class="gi-form">
+            <label>அறிவிப்பு — தமிழ் முதலில், ஆங்கிலம் அடுத்து<textarea id="gbp-google-summary" rows="8" maxlength="1500" required placeholder="🎉 வளையப்பட்டியில் விரைவில்… பானகம்!&#10;&#10;☕ காபியும் [லோகோ குறியீடு] கதையும்&#10;&#10;📍 3/15, திருச்சி சாலை, வளையப்பட்டி&#10;📅 திறப்பு நாள்: 27.12.2026&#10;&#10;---&#10;&#10;Coming Soon to Valayapatty… PAANAGAM!&#10;Coffee [logo mark] Conversations&#10;Opening: 27 December 2026"></textarea></label>
+            <button class="primary-button" type="submit">Google அறிவிப்பு வரைவைச் சேமி</button>
+          </form>
+          <div id="gbp-google-post-list"></div>
+          <p id="gbp-publish-status" class="form-message" role="status">கணக்கையும் இடத்தையும் தேர்ந்தெடுத்த பிறகு அறிவிப்பைச் சேமிக்கவும்.</p>
+        </div>
         <div class="panel"><div class="panel-heading"><div><h3>Business profile details</h3><p>Enter only details confirmed by the business owner.</p></div><span class="tag">Owner-confirmed</span></div>
           <form id="gbp-profile-form" class="gi-form">
             <label>Business name<input id="gbp-name" maxlength="160" value="Paanagam (பானகம்)" required></label>
@@ -265,7 +281,7 @@
 </main>
   </div>
   <script src="config.js"></script>
-  <script src="app.js"></script><script src="growth.js"></script><script src="growth-intelligence.js"></script><script src="gbp-owner.js"></script><script src="creative-studio.js"></script><script src="social-publishing.js"></script><script src="growth-goals.js"></script>
+  <script src="app.js"></script><script src="growth.js"></script><script src="growth-intelligence.js"></script><script src="gbp-owner.js"></script><script src="creative-studio.js"></script><script src="social-publishing.js"></script><script src="gbp-publishing.js"></script><script src="growth-goals.js"></script>
   <script type="module" src="auth-client.js"></script>
 </body>
 </html>
