@@ -202,7 +202,7 @@ export async function registerCanvaRoutes(app: FastifyInstance, db: PrismaClient
     if (!business) return reply.code(404).send({ error: "Business not found." });
     const connection = await db.canvaConnection.findUnique({ where: { businessId: business.id }, select: { scopes: true } });
     if (!connection) return reply.code(409).send({ error: "Canva is not connected.", code: "canva_not_connected" });
-    if (!connection.scopes.split(/\\s+/).includes("asset:write")) {
+    if (!connection.scopes.split(/\s+/).includes("asset:write")) {
       return reply.code(409).send({ error: "Canva image generation requires asset:write. Enable this scope in the Canva developer app, then reconnect Canva.", code: "canva_scope_required", requiredScope: "asset:write" });
     }
     try {
