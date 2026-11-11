@@ -129,6 +129,16 @@
         <div class="section-heading"><div><h2>Google Business Profile · Google இணைப்பு</h2><p>பானகம் சுயவிவரத்தை இணைத்து, அறிவிப்புகளை ஒப்புதல் பெற்ற பிறகு வெளியிடுங்கள்.</p></div><span class="tag confirmed">Owner approval required</span></div>
         <div class="notice"><span>ⓘ</span><p><strong>Google API இணைப்பு சரிபார்ப்பு.</strong> முதலில் Google கணக்கையும் பானகம் வணிக இடத்தையும் இணைக்கவும். வரைவு சேமித்தல் மட்டும் Google-ல் வெளியிடாது; உங்கள் ஒப்புதலுக்குப் பிறகே வெளியீடு தொடங்கும்.</p></div>
         <div class="panel">
+          <div class="panel-heading"><div><h3>Google Profile Logo & Cover</h3><p>படத்தைத் தேர்ந்தெடுத்து Preview பார்த்து, உங்கள் உறுதிப்படுத்தலுக்குப் பிறகு Google-க்கு நேரடியாகப் பதிவேற்றலாம்.</p></div><span class="tag pending-tag">உரிமையாளர் உறுதிப்படுத்தல்</span></div>
+          <form id="gbp-media-form" class="gi-form">
+            <label>பட வகை<select id="gbp-media-category"><option value="PROFILE">Logo / Profile Photo</option><option value="COVER">Cover Photo</option></select></label>
+            <label>படத்தைத் தேர்ந்தெடுக்கவும் (JPG / PNG, அதிகபட்சம் 4 MB)<input id="gbp-media-file" type="file" accept="image/jpeg,image/png" required></label>
+            <img id="gbp-media-preview" alt="Google Business Profile image preview" class="creative-image-preview hidden">
+            <button class="primary-button" id="gbp-media-upload" type="submit">Preview பார்த்து Google-ல் பதிவேற்று</button>
+          </form>
+          <p id="gbp-media-status" class="form-message" role="status">முதலில் Google கணக்கையும் பானகம் இடத்தையும் இணைக்கவும்.</p>
+        </div>
+        <div class="panel">
           <div class="panel-heading"><div><h3>Google Business Profile · நேரடி வெளியீடு</h3><p>Google கணக்கையும் பானகம் இடத்தையும் தேர்ந்தெடுத்து, ஒப்புதல் பெற்ற பிறகே வெளியிடலாம்.</p></div><span class="tag pending-tag">ஒப்புதல் அவசியம்</span></div>
           <div class="form-actions">
             <button class="secondary-button" type="button" id="gbp-google-load-accounts">Google கணக்குகளைப் பெறு</button>
@@ -365,6 +375,36 @@ We look forward to welcoming you!</textarea></label>
         '<button type="button" data-gbp-reject="' + id + '">நிராகரி</button></article>';
     }).join("") || '<p class="empty-copy">இன்னும் பதிவுகள் இல்லை.</p>';
   }
+  const mediaFile = $("gbp-media-file"), mediaPreview = $("gbp-media-preview"), mediaStatus = $("gbp-media-status");
+  mediaFile?.addEventListener("change", () => {
+    const file = mediaFile.files?.[0];
+    if (!file) { mediaPreview?.classList.add("hidden"); return; }
+    if (!["image/jpeg", "image/png"].includes(file.type) || file.size > 4 * 1024 * 1024) {
+      mediaFile.value = ""; mediaPreview?.classList.add("hidden");
+      if (mediaStatus) mediaStatus.textContent = "JPG அல்லது PNG மட்டும்; 4 MB-க்குள் இருக்க வேண்டும்.";
+      return;
+    }
+    mediaPreview.src = URL.createObjectURL(file); mediaPreview.classList.remove("hidden");
+    if (mediaStatus) mediaStatus.textContent = "படம் தயார். Preview சரிபார்த்து பதிவேற்றலாம்.";
+  });
+  $("gbp-media-form")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const file = mediaFile?.files?.[0]; if (!file) return;
+    const category = $("gbp-media-category").value;
+    const label = category === "PROFILE" ? "Logo / Profile Photo" : "Cover Photo";
+    if (!confirm("பானகம் Google Business Profile-ல் " + label + " ஆக இந்தப் படத்தைப் பதிவேற்றலாமா?")) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        if (mediaStatus) mediaStatus.textContent = "Google-க்கு படத்தைப் பதிவேற்றுகிறது…";
+        const imageBase64 = String(reader.result).split(",")[1];
+        const result = await api(base() + "/google-media", {method:"POST", body:JSON.stringify({fileName:file.name,mimeType:file.type,imageBase64,category})});
+        if (mediaStatus) mediaStatus.textContent = "Google ஏற்றுக்கொண்டது: " + label + ". Google media: " + result.mediaName;
+      } catch(err) { if (mediaStatus) mediaStatus.textContent = "பதிவேற்றம் தோல்வி: " + err.message; }
+    };
+    reader.onerror = () => { if (mediaStatus) mediaStatus.textContent = "படத்தை வாசிக்க முடியவில்லை."; };
+    reader.readAsDataURL(file);
+  });
   $("gbp-google-load-accounts")?.addEventListener("click", () => loadAccounts().catch(e => status(e.message, true)));
   $("gbp-google-load-locations")?.addEventListener("click", () => loadLocations().catch(e => status(e.message, true)));
   $("gbp-google-import-location")?.addEventListener("click", () => importLocation().catch(e => status(e.message, true)));
