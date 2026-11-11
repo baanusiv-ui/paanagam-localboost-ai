@@ -355,23 +355,7 @@
     }
   }
 
-  async function authenticate(mode) {
-    const email = $("#owner-email").value.trim();
-    const password = $("#owner-password").value;
-    const name = $("#owner-name").value.trim();
-    if (!email || !password) return message("auth-message", "Enter your email and password.", true);
-    if (mode === "register" && (!name || password.length < 12)) return message("auth-message", "Enter your name and a password with at least 12 characters.", true);
-    const path = mode === "register" ? "/v1/auth/register" : "/v1/auth/login";
-    try {
-      const result = await api(path, { method: "POST", body: JSON.stringify({ email, password, ...(mode === "register" ? { name } : {}) }) });
-      sessionStorage.setItem(TOKEN_KEY, result.accessToken);
-      signedIn(result.user);
-      message("auth-message", mode === "register" ? "Account created." : "Signed in successfully.");
-      await refreshBusinesses();
-    } catch (error) {
-      message("auth-message", error.message, true);
-    }
-  }
+  // Neon Auth in auth-client.js exclusively owns sign-in, registration and sign-out.
 
   async function createBusiness(event) {
     event.preventDefault();
