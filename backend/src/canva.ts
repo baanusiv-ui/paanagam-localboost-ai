@@ -277,8 +277,8 @@ export async function registerCanvaRoutes(app: FastifyInstance, db: PrismaClient
     if (!params.success || !body.success) return reply.code(400).send({ error: "Invalid Canva image import request." });
     const business = await findOwnedBusiness(db, req.userId, params.data.businessId);
     if (!business) return reply.code(404).send({ error: "Business not found." });
-    const fileName = "canva-" + params.data.jobId + ".png";
-    const existing = await db.creativeAsset.findFirst({ where: { businessId: business.id, fileName }, select: { id: true, fileName: true, mimeType: true, byteSize: true, altText: true, createdAt: true } });
+    const existingPrefix = "canva-" + params.data.jobId + ".";
+    const existing = await db.creativeAsset.findFirst({ where: { businessId: business.id, fileName: { startsWith: existingPrefix } }, select: { id: true, fileName: true, mimeType: true, byteSize: true, altText: true, createdAt: true } });
     if (existing) return { asset: existing };
     try {
       const response = await fetch(body.data.imageUrl, { redirect: "error" });
@@ -286,6 +286,8 @@ export async function registerCanvaRoutes(app: FastifyInstance, db: PrismaClient
       const mimeType = (response.headers.get("content-type") || "").split(";")[0].toLowerCase();
       if (!["image/png","image/jpeg","image/webp"].includes(mimeType)) return reply.code(415).send({ error: "Canva returned an unsupported image format." });
       const bytes = Buffer.from(await response.arrayBuffer());
+      const extension = mimeType === "image/jpeg" ? "jpg" : mimeType === "image/webp" ? "webp" : "png";
+      const fileName = existingPrefix + extension;
       if (!bytes.length || bytes.length > 4 * 1024 * 1024) return reply.code(413).send({ error: "Generated image exceeds the 4 MB LocalBoost asset limit." });
       const png = mimeType === "image/png" && bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
       const jpeg = mimeType === "image/jpeg" && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
