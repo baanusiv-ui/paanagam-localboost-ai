@@ -29,7 +29,7 @@ import { buildMenuSalesIntelligence } from "./menu-sales-intelligence.js";
 import { registerPosIntegrationRoutes } from "./pos-integration.js";
 import { registerCanvaRoutes } from "./canva.js";
 
-const app = Fastify({ logger: true, bodyLimit: 1024 * 1024 });
+const app = Fastify({ logger: true, bodyLimit: 1024 * 1024, trustProxy: true });
 await app.register(helmet);
 await app.register(cors, {
   origin: (origin, callback) => {
@@ -37,7 +37,7 @@ await app.register(cors, {
     else callback(new Error("Origin not allowed"), false);
   }
 });
-await app.register(rateLimit, { max: 100, timeWindow: "1 minute" });
+await app.register(rateLimit, { max: 300, timeWindow: "1 minute" });
 
 const requireUser = createRequireUser(async (token) => {
   const identity = await verifyAccessToken(token);

@@ -20,4 +20,4 @@ COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=build /app/dist ./dist
 COPY prisma ./prisma
 EXPOSE 4100
-CMD ["sh", "-c", "npx prisma migrate deploy && exec node dist/server.js"]
+CMD ["sh", "-c", "if [ \"${SKIP_PRISMA_MIGRATIONS:-false}\" != \"true\" ]; then npx prisma migrate deploy; fi && exec node dist/server.js"]
