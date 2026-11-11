@@ -10,7 +10,7 @@ import { recordBusinessActivity } from "./modules/activity/record.js";
 const AUTH_URL = "https://www.canva.com/api/oauth/authorize";
 const TOKEN_URL = "https://api.canva.com/rest/v1/oauth/token";
 const API_URL = "https://api.canva.com/rest/v1";
-const DEFAULT_SCOPES = "design:meta:read design:content:read design:content:write asset:read";
+const DEFAULT_SCOPES = "design:meta:read design:content:read design:content:write asset:read asset:write";
 const DESIGN_LIST_SCOPE = "design:meta:read";
 
 const admins = () => env.CREATIVE_STUDIO_ADMIN_EMAILS.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
@@ -273,7 +273,7 @@ export async function registerCanvaRoutes(app: FastifyInstance, db: PrismaClient
   }, async (req: any, reply) => {
     if (!await isAdmin(db, req.userId)) return reply.code(403).send({ error: "Administrator access required." });
     const params = z.object({ businessId: z.string().min(1), jobId: z.string().uuid() }).safeParse(req.params);
-    const body = z.object({ imageUrl: z.string().url().refine(value => { try { return new URL(value).hostname === "document-export.canva.com"; } catch { return false; } }), altText: z.string().trim().max(240).optional() }).safeParse(req.body);
+    const body = z.object({ imageUrl: z.string().url().refine(value => { try { return (new URL(value).hostname === "canva.com" || new URL(value).hostname.endsWith(".canva.com")); } catch { return false; } }), altText: z.string().trim().max(240).optional() }).safeParse(req.body);
     if (!params.success || !body.success) return reply.code(400).send({ error: "Invalid Canva image import request." });
     const business = await findOwnedBusiness(db, req.userId, params.data.businessId);
     if (!business) return reply.code(404).send({ error: "Business not found." });
