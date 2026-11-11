@@ -15,7 +15,7 @@ const contentSchema = z.object({
   creativeBrief: z.string().trim().min(1).max(1200)
 }).strict();
 
-const modelName = () => (process.env.OPENAI_TEXT_MODEL || "gpt-4o-mini").trim();
+const modelName = () => (process.env.GEMINI_TEXT_MODEL || "gemini-2.5-flash").trim();
 
 export function buildContentDraftMessages(input: ContentDraftInput) {
   return [
@@ -45,44 +45,54 @@ export function buildContentDraftMessages(input: ContentDraftInput) {
 }
 
 export function parseContentDraftOutput(raw: string) {
-  return contentSchema.parse(JSON.parse(raw));
+  const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  return contentSchema.parse(JSON.parse(cleaned));
 }
 
 export async function generateLocalContentDraft(input: ContentDraftInput) {
-  const apiKey = process.env.OPENAI_API_KEY?.trim();
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
-    throw new Error("Cloud AI is not configured. Add OPENAI_API_KEY to the LocalBoost API service environment in Render, then redeploy.");
+    throw new Error("Free cloud AI is not configured. Create a Gemini API key in Google AI Studio and add GEMINI_API_KEY to the LocalBoost API environment in Render.");
   }
 
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  const prompt = buildContentDraftMessages(input).map(message => message.role.toUpperCase() + ":\n" + message.content).join("\n\n");
+  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(modelName()) + ":generateContent", {
     method: "POST",
     headers: {
-      authorization: "Bearer " + apiKey,
+      "x-goog-api-key": apiKey,
       "content-type": "application/json"
     },
     body: JSON.stringify({
-      model: modelName(),
-      messages: buildContentDraftMessages(input),
-      response_format: { type: "json_object" },
-      temperature: 0.5,
-      max_tokens: 900
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "OBJECT",
+          properties: {
+            postCopy: { type: "STRING" },
+            creativeBrief: { type: "STRING" }
+          },
+          required: ["postCopy", "creativeBrief"]
+        },
+        temperature: 0.5,
+        maxOutputTokens: 900
+      }
     }),
     signal: AbortSignal.timeout(60000)
   });
 
   const data = await response.json() as {
-    choices?: Array<{ message?: { content?: string | null } }>;
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
     error?: { message?: string };
   };
   if (!response.ok) {
-    const reason = data.error?.message || "OpenAI request failed with HTTP " + response.status;
-    throw new Error("Cloud AI generation failed: " + reason);
+    throw new Error("Gemini cloud AI generation failed: " + (data.error?.message || "HTTP " + response.status));
   }
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) throw new Error("Cloud AI returned an empty content draft. Try again.");
+  const raw = data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("").trim();
+  if (!raw) throw new Error("Gemini returned an empty content draft. Try again later.");
   return {
-    ...parseContentDraftOutput(content),
-    provider: "OPENAI_API",
+    ...parseContentDraftOutput(raw),
+    provider: "GOOGLE_GEMINI",
     model: modelName(),
     language: input.language,
     format: input.format,
