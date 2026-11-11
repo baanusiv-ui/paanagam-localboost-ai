@@ -154,6 +154,24 @@
     if(approve!==undefined){const d=drafts[Number(approve)];if(!d||d.status==="REVIEWED")return;const next={...d,status:"REVIEWED",reviewedAt:new Date().toISOString(),approvalNote:"Marked reviewed in the creative library; this is not publishing approval."};try{await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:d.id,payload:next,recordedAt:next.reviewedAt})});drafts[Number(approve)]=next;render();setMessage("Marked reviewed. Use the separate Approval Centre to approve and manually publish a social post.");}catch(err){setMessage("Approval save failed: "+err.message,true);}}
   });
 
+  async function connectCanva() {
+    const button=$("canva-connect");
+    if(!button) return;
+    button.disabled=true;
+    button.textContent="Connecting…";
+    try {
+      const result=await api(base()+"/canva/connect");
+      if(!result?.authorizationUrl || !result.authorizationUrl.startsWith("https://www.canva.com/")) {
+        throw new Error("Canva did not return a valid authorisation URL.");
+      }
+      window.location.assign(result.authorizationUrl);
+    } catch(err) {
+      setMessage("Canva connection could not start: "+err.message,true);
+      button.disabled=false;
+      button.textContent="Connect Canva";
+    }
+  }
+
   async function loadDesignIntegrations() {
     const panel=$("design-integrations-panel");
     if(!panel) return;
@@ -165,7 +183,14 @@
       if(!status.administrator) return;
       $("design-integrations-access").textContent="Administrator access";
       const canva=status.providers?.canva||{}, adobe=status.providers?.adobeExpress||{};
-      $("canva-integration-status").textContent=canva.configured?"Credentials configured":"Setup required";
+      let canvaConnected=false;
+      if(canva.enabled && businessId()) {
+        try {
+          const connection=await api(base()+"/canva/status");
+          canvaConnected=Boolean(connection.connected);
+        } catch { canvaConnected=false; }
+      }
+      $("canva-integration-status").textContent=canvaConnected?"Connected":(canva.configured?"Credentials configured":"Setup required");
       $("canva-connect").disabled=!canva.enabled;
       $("canva-connect").textContent=canva.enabled?"Connect Canva":"Canva credentials required";
       $("adobe-integration-status").textContent=adobe.configured?"Client ID configured":"Setup / approval required";
@@ -174,6 +199,7 @@
     } catch { panel.hidden=true; }
   }
 
+  $("canva-connect")?.addEventListener("click",connectCanva);
   window.addEventListener("localboost:business-ready",()=>{load();loadDesignIntegrations();});
   window.addEventListener("localboost:signed-out",()=>{drafts=[];current=null;ready=false;render();setMessage("Signed out. Cloud creative library is locked.");});
   if(businessId()) { load(); loadDesignIntegrations(); }

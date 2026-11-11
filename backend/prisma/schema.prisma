@@ -41,6 +41,7 @@ model User {
   businesses   Business[]
   oauthStates  OAuthState[]
   metaOAuthStates MetaOAuthState[]
+  canvaOAuthStates CanvaOAuthState[]
 }
 
 model Business {
@@ -71,6 +72,8 @@ model Business {
   metaOAuthSession MetaOAuthSession?
   socialPosts SocialPost[]
   metaMediaShares MetaMediaShare[]
+  canvaConnection CanvaConnection?
+  canvaOAuthStates CanvaOAuthState[]
   @@index([ownerId, createdAt])
 }
 
@@ -343,3 +346,28 @@ model PosIntegrationConnection {
   updatedAt       DateTime @updatedAt
 }
 
+
+model CanvaOAuthState {
+  id           String   @id @default(cuid())
+  state        String   @unique
+  codeVerifier String
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessId   String
+  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  @@index([expiresAt])
+}
+
+model CanvaConnection {
+  id                    String   @id @default(cuid())
+  businessId            String   @unique
+  business              Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  accessTokenEncrypted  String
+  refreshTokenEncrypted String
+  scopes                String   @default("")
+  expiresAt             DateTime?
+  connectedAt           DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
