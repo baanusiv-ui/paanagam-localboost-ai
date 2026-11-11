@@ -38,7 +38,7 @@ export async function generateCampaignImage(input: ImageDraftInput) {
   const response = await fetch(url, {
     method: "POST",
     headers: { authorization: "Bearer " + apiToken, "content-type": "application/json" },
-    body: JSON.stringify({ prompt, steps: 4, width: formatGuidance[input.format].width, height: formatGuidance[input.format].height }),
+    body: JSON.stringify({ prompt, steps: 4 }),
     signal: AbortSignal.timeout(180000)
   });
   const raw = await response.json() as {
