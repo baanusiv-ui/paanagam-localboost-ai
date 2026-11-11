@@ -183,3 +183,11 @@ footer{padding:36px 0 24px}
 }
 @media(prefers-reduced-motion:reduce){.sidebar,.mobile-nav-backdrop{transition:none}}
 
+
+
+/* Google Business Profile media upload controls */
+#gbp-media-form { display:flex; flex-direction:column; gap:12px; }
+#gbp-media-form label { display:flex; flex-direction:column; gap:7px; font-size:11px; color:var(--muted); }
+#gbp-media-form input, #gbp-media-form select { width:100%; min-height:42px; padding:10px; border:1px solid var(--line); border-radius:8px; background:var(--surface); color:var(--text); }
+#gbp-media-form button.primary-button { display:inline-flex; align-items:center; justify-content:center; width:auto; min-width:190px; min-height:44px; height:auto; padding:12px 18px; border-radius:8px; white-space:normal; }
+#gbp-media-preview { display:block; max-width:220px; max-height:220px; width:auto; height:auto; object-fit:contain; border:1px solid var(--line); border-radius:10px; padding:6px; background:#fff; }
