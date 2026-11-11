@@ -232,7 +232,8 @@
     } finally { if (button) button.disabled = false; }
   }
 
-  let canvaConnected = false;\n  async function loadDesignIntegrations() {
+  let canvaConnected = false;
+  async function loadDesignIntegrations() {
     const panel=$("design-integrations-panel");
     if(!panel) return;
     try {
