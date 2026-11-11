@@ -27,6 +27,7 @@ import { calculateGrowthGoal, buildGrowthGoalHistory } from "./growth-goals.js";
 import { buildGrowthPerformanceReport } from "./growth-performance-report.js";
 import { buildMenuSalesIntelligence } from "./menu-sales-intelligence.js";
 import { registerPosIntegrationRoutes } from "./pos-integration.js";
+import { registerCanvaRoutes } from "./canva.js";
 
 const app = Fastify({ logger: true, bodyLimit: 1024 * 1024 });
 await app.register(helmet);
@@ -78,6 +79,7 @@ const requireUser = createRequireUser(async (token) => {
 
 app.decorateRequest("userId", null);
 await registerPosIntegrationRoutes(app, prisma, requireUser);
+await registerCanvaRoutes(app, prisma, requireUser);
 app.get("/v1/me", { preHandler: requireUser }, async (request, reply) => {
   const user = await prisma.user.findUnique({
     where: { id: request.userId! },
