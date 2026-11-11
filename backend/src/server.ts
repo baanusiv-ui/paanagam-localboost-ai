@@ -779,6 +779,61 @@ app.get("/v1/businesses/:businessId/google/locations", { preHandler: requireUser
   }
 });
 
+
+app.post("/v1/businesses/:businessId/google-media", {
+  preHandler: requireUser,
+  bodyLimit: 6 * 1024 * 1024,
+  config: { rateLimit: { max: 4, timeWindow: "1 minute" } }
+}, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const body = z.object({
+    fileName: z.string().trim().min(1).max(120),
+    mimeType: z.enum(["image/jpeg", "image/png"]),
+    imageBase64: z.string().min(16).max(5_600_000).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/),
+    category: z.enum(["PROFILE", "COVER"])
+  }).safeParse(request.body);
+  if (!params.success || !body.success) return reply.code(400).send({ error: "Choose a valid JPG or PNG image and profile photo category." });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const connection = await prisma.googleConnection.findUnique({ where: { businessId: business.id } });
+  if (!connection?.googleAccountId || !connection.googleLocationResourceName) return reply.code(409).send({ error: "Connect Google and import the selected verified Business Profile location first." });
+  const bytes = Buffer.from(body.data.imageBase64, "base64");
+  if (!bytes.length || bytes.length > 4 * 1024 * 1024 || bytes.toString("base64") !== body.data.imageBase64) return reply.code(413).send({ error: "Image must be valid and no larger than 4 MB." });
+  const jpeg = body.data.mimeType === "image/jpeg" && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
+  const png = body.data.mimeType === "image/png" && bytes.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
+  if (!jpeg && !png) return reply.code(415).send({ error: "Image bytes do not match the selected JPG or PNG format." });
+  try {
+    const accessToken = await googleAccessToken(business.id);
+    const parent = connection.googleAccountId + "/" + connection.googleLocationResourceName;
+    const start = await googlePost<{ resourceName?: string }>(
+      "https://mybusiness.googleapis.com/v4/" + parent + "/media:startUpload", accessToken, {}
+    );
+    if (!start.resourceName) throw new Error("Google did not return an upload resource.");
+    const uploadResponse = await fetch("https://mybusiness.googleapis.com/upload/v1/media/" + encodeURIComponent(start.resourceName) + "?upload_type=media", {
+      method: "POST",
+      headers: { authorization: "Bearer " + accessToken, "content-type": body.data.mimeType },
+      body: new Uint8Array(bytes)
+    });
+    if (!uploadResponse.ok) {
+      const uploadError = await uploadResponse.json().catch(() => ({})) as { error?: { message?: string } };
+      throw new Error(uploadError.error?.message || "Google image upload failed.");
+    }
+    const media = await googlePost<{ name?: string; mediaFormat?: string; googleUrl?: string; locationAssociation?: { category?: string } }>(
+      "https://mybusiness.googleapis.com/v4/" + parent + "/media", accessToken,
+      { mediaFormat: "PHOTO", locationAssociation: { category: body.data.category }, dataRef: { resourceName: start.resourceName } }
+    );
+    const expectedCategory = body.data.category;
+    const confirmedCategory = media.locationAssociation?.category ?? (expectedCategory === "PROFILE" ? "PROFILE" : undefined);
+    if (!media.name || confirmedCategory !== expectedCategory) throw new Error("Google did not confirm the requested profile photo category.");
+    await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: expectedCategory === "PROFILE" ? "GBP_LOGO_UPLOADED" : "GBP_COVER_UPLOADED", entityType: "GBP_MEDIA", entityId: media.name, summary: expectedCategory === "PROFILE" ? "Owner uploaded a Google Business Profile logo/profile photo" : "Owner uploaded a Google Business Profile cover photo", metadata: { category: expectedCategory, fileName: body.data.fileName, mimeType: body.data.mimeType } });
+    return reply.code(201).send({ uploaded: true, category: confirmedCategory, mediaName: media.name, googleUrl: media.googleUrl ?? null, message: "Google accepted the profile image." });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "Google Business Profile image upload failed";
+    request.log.warn({ error: reason }, "Google Business Profile media upload failed");
+    return reply.code(502).send({ error: reason });
+  }
+});
+
 // Google Business Profile posts use a separate approval queue. No Google write occurs before explicit owner approval and publish action.
 app.post("/v1/businesses/:businessId/google-posts/draft", { preHandler: requireUser }, async (request, reply) => {
   const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
