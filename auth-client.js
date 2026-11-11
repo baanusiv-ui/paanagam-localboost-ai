@@ -35,23 +35,12 @@
   async function boot() {
     if (!AUTH_URL) throw new Error("Google owner sign-in is not configured.");
     const { createAuthClient } = await import("https://esm.sh/@neondatabase/auth@0.7.0-beta?bundle");
-    const auth = createAuthClient(AUTH_URL);
+    const auth = createAuthClient(AUTH_URL, { fetchOptions: { credentials: "include" } });
 
     async function currentAccessToken() {
-      // getSession() completes Neon Auth's OAuth callback/verifier exchange after Google redirects back.
+      // Send the Neon Auth HTTP-only session cookie on cross-origin session requests.
       const sessionResult = unwrap(await auth.getSession());
-      let jwt = saveToken(tokenFrom(sessionResult));
-      if (jwt) return jwt;
-
-      // Neon Auth exposes the API-ready JWT through getJWTToken() in supported SDK versions.
-      if (typeof auth.getJWTToken === "function") {
-        const jwtResult = await auth.getJWTToken();
-        jwt = saveToken(tokenFrom(jwtResult));
-        if (jwt) return jwt;
-      }
-
-      // Keep the session cookie as the source of truth; never treat a missing token as signed in.
-      return null;
+      return saveToken(tokenFrom(sessionResult));
     }
 
     document.getElementById("google-owner-login")?.addEventListener("click", async () => {
