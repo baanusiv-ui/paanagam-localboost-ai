@@ -31,7 +31,12 @@ const schema = z.object({
   OPENAI_API_KEY: z.string().optional().default(""),
   OPENAI_TEXT_MODEL: z.string().trim().min(1).default("gpt-4o-mini"),
   CLOUDFLARE_ACCOUNT_ID: z.string().optional().default(""),
-  CLOUDFLARE_API_TOKEN: z.string().optional().default("")
+  CLOUDFLARE_API_TOKEN: z.string().optional().default(""),
+  CREATIVE_STUDIO_ADMIN_EMAILS: z.string().optional().default(""),
+  CANVA_CLIENT_ID: z.string().optional().default(""),
+  CANVA_CLIENT_SECRET: z.string().optional().default(""),
+  CANVA_REDIRECT_URI: z.string().url().optional().default("http://localhost:4100/v1/canva/callback"),
+  ADOBE_EXPRESS_CLIENT_ID: z.string().optional().default("")
 });
 
 export const env = schema.parse(process.env);
