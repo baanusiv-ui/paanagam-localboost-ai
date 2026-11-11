@@ -44,9 +44,15 @@ test("requireUser sets userId after successful token verification", async () => 
 
 test("requireUser rejects invalid or expired tokens", async () => {
   const handler = createRequireUser(async () => { throw new Error("invalid"); });
+  const warnings: Array<{ metadata: unknown; message: string }> = [];
   const request = {
     headers: { authorization: "Bearer expired-token" },
-    userId: null
+    userId: null,
+    log: {
+      warn(metadata: unknown, message: string) {
+        warnings.push({ metadata, message });
+      }
+    }
   } as unknown as FastifyRequest;
   const { reply, result } = makeReply();
 
@@ -54,4 +60,9 @@ test("requireUser rejects invalid or expired tokens", async () => {
 
   assert.equal(result.status, 401);
   assert.deepEqual(result.body, { error: "Invalid or expired access token" });
+  assert.equal(warnings.length, 1);
+  assert.equal(warnings[0].message, "Neon Auth access-token verification failed");
+  assert.deepEqual(warnings[0].metadata, {
+    authFailure: { name: "Error", code: undefined, message: "invalid" }
+  });
 });
