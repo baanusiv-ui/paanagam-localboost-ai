@@ -46,7 +46,8 @@ test("requireUser rejects invalid or expired tokens", async () => {
   const handler = createRequireUser(async () => { throw new Error("invalid"); });
   const request = {
     headers: { authorization: "Bearer expired-token" },
-    userId: null
+    userId: null,
+    log: { warn() {} }
   } as unknown as FastifyRequest;
   const { reply, result } = makeReply();
 
