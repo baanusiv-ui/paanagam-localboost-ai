@@ -78,10 +78,12 @@
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Your browser cannot compose the campaign artwork.");
     ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-    const scale = canvas.width / 1024, margin = 64 * scale, bandTop = canvas.height * 0.66;
-    const gradient = ctx.createLinearGradient(0, bandTop, 0, canvas.height);
-    gradient.addColorStop(0, "rgba(18,22,17,0)"); gradient.addColorStop(0.22, "rgba(18,22,17,.72)"); gradient.addColorStop(1, "rgba(18,22,17,.92)");
-    ctx.fillStyle = gradient; ctx.fillRect(0, bandTop, canvas.width, canvas.height - bandTop);
+    const scale = canvas.width / 1024, margin = 64 * scale, bandTop = canvas.height * 0.46;
+    const solidTop = canvas.height * 0.60;
+    const gradient = ctx.createLinearGradient(0, bandTop, 0, solidTop);
+    gradient.addColorStop(0, "rgba(18,22,17,0)"); gradient.addColorStop(1, "rgba(18,22,17,1)");
+    ctx.fillStyle = gradient; ctx.fillRect(0, bandTop, canvas.width, solidTop - bandTop);
+    ctx.fillStyle = "#121611"; ctx.fillRect(0, solidTop, canvas.width, canvas.height - solidTop);
     const sourceText = [current?.topic || "", current?.offer || "", current?.designerBrief || ""].join(" ");
     const brand = /paanagam|பானகம்/i.test(sourceText) ? "PAANAGAM  ·  பானகம்" : "";
     const dateMatch = sourceText.match(/\b(\d{1,2}\s+[A-Za-z]+\s+20\d{2})\b/);
