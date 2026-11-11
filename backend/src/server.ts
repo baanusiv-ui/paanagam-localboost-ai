@@ -135,6 +135,17 @@ async function googleGet<T>(url: string, accessToken: string): Promise<T> {
   }
   return data;
 }
+async function googlePost<T>(url: string, accessToken: string, body: Record<string, unknown>): Promise<T> {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { authorization: "Bearer " + accessToken, "content-type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  const data = await response.json() as T & { error?: { message?: string; status?: string } };
+  if (!response.ok) throw new Error(data.error?.message || data.error?.status || "Google Business Profile publishing failed");
+  return data;
+}
+
 async function ownedBusiness(userId: string, businessId: string) {
   return findOwnedBusiness(prisma, userId, businessId);
 }
@@ -765,6 +776,114 @@ app.get("/v1/businesses/:businessId/google/locations", { preHandler: requireUser
   } catch (error) {
     request.log.warn({ error: error instanceof Error ? error.message : "unknown" }, "Google locations list failed");
     return reply.code(502).send({ error: error instanceof Error ? error.message : "Could not list Google locations" });
+  }
+});
+
+// Google Business Profile posts use a separate approval queue. No Google write occurs before explicit owner approval and publish action.
+app.post("/v1/businesses/:businessId/google-posts/draft", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const body = z.object({
+    summary: z.string().trim().min(1).max(1500),
+    assetId: z.string().min(1).optional(),
+    languageCode: z.string().trim().min(2).max(12).default("ta")
+  }).safeParse(request.body);
+  if (!params.success || !body.success) return reply.code(400).send({ error: "Enter a valid Google post (maximum 1,500 characters)." });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const connection = await prisma.googleConnection.findUnique({ where: { businessId: business.id } });
+  if (!connection?.googleAccountId || !connection.googleLocationResourceName) return reply.code(409).send({ error: "Connect Google and import the selected verified Business Profile location first." });
+  let assetId: string | null = null;
+  if (body.data.assetId) {
+    const asset = await prisma.creativeAsset.findFirst({ where: { id: body.data.assetId, businessId: business.id }, select: { id: true, mimeType: true } });
+    if (!asset) return reply.code(404).send({ error: "Creative image not found in this business workspace." });
+    if (!["image/jpeg", "image/png"].includes(asset.mimeType)) return reply.code(415).send({ error: "Google post artwork must be JPEG or PNG." });
+    assetId = asset.id;
+  }
+  const id = "gbp-post:" + randomUrlToken(18);
+  const post = await prisma.growthRecord.create({
+    data: { businessId: business.id, recordType: "GOOGLE_CONTENT", externalId: id, source: "OWNER_DRAFT", payload: {
+      kind: "GBP_LOCAL_POST", summary: body.data.summary, languageCode: body.data.languageCode,
+      assetId, status: "DRAFT", createdAt: new Date().toISOString()
+    } }
+  });
+  await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "GBP_POST_DRAFT_CREATED", entityType: "GBP_POST", entityId: post.id, summary: "Google Business Profile post draft created; not published", metadata: { hasImage: Boolean(assetId) } });
+  return reply.code(201).send({ post });
+});
+
+app.get("/v1/businesses/:businessId/google-posts", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const posts = await prisma.growthRecord.findMany({ where: { businessId: business.id, recordType: "GOOGLE_CONTENT", externalId: { startsWith: "gbp-post:" } }, orderBy: { createdAt: "desc" }, take: 50 });
+  return { posts };
+});
+
+app.post("/v1/businesses/:businessId/google-posts/:postId/approve", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1), postId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid Google post identifier" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const post = await prisma.growthRecord.findFirst({ where: { id: params.data.postId, businessId: business.id, recordType: "GOOGLE_CONTENT", externalId: { startsWith: "gbp-post:" } } });
+  if (!post) return reply.code(404).send({ error: "Google post draft not found" });
+  const payload = post.payload as Record<string, unknown>;
+  if (payload.status !== "DRAFT" && payload.status !== "REJECTED" && payload.status !== "FAILED") return reply.code(409).send({ error: "Only draft, rejected or failed Google posts can be approved." });
+  const updated = await prisma.growthRecord.update({ where: { id: post.id }, data: { payload: { ...payload, status: "APPROVED", approvedAt: new Date().toISOString(), approvedByUserId: request.userId } as Prisma.InputJsonValue } });
+  await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "GBP_POST_APPROVED", entityType: "GBP_POST", entityId: post.id, summary: "Owner explicitly approved a Google Business Profile post", metadata: {} });
+  return { post: updated, publishingStarted: false };
+});
+
+app.post("/v1/businesses/:businessId/google-posts/:postId/reject", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1), postId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid Google post identifier" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const post = await prisma.growthRecord.findFirst({ where: { id: params.data.postId, businessId: business.id, recordType: "GOOGLE_CONTENT", externalId: { startsWith: "gbp-post:" } } });
+  if (!post) return reply.code(404).send({ error: "Google post draft not found" });
+  const payload = post.payload as Record<string, unknown>;
+  if (payload.status === "PUBLISHED" || payload.status === "PUBLISHING") return reply.code(409).send({ error: "A published or publishing post cannot be rejected." });
+  const updated = await prisma.growthRecord.update({ where: { id: post.id }, data: { payload: { ...payload, status: "REJECTED", approvedAt: null, approvedByUserId: null } as Prisma.InputJsonValue } });
+  await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "GBP_POST_REJECTED", entityType: "GBP_POST", entityId: post.id, summary: "Owner rejected a Google Business Profile post", metadata: {} });
+  return { post: updated, rejected: true };
+});
+
+app.post("/v1/businesses/:businessId/google-posts/:postId/publish", { preHandler: requireUser, config: { rateLimit: { max: 5, timeWindow: "1 minute" } } }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1), postId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid Google post identifier" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const post = await prisma.growthRecord.findFirst({ where: { id: params.data.postId, businessId: business.id, recordType: "GOOGLE_CONTENT", externalId: { startsWith: "gbp-post:" } } });
+  if (!post) return reply.code(404).send({ error: "Google post draft not found" });
+  const payload = post.payload as Record<string, unknown>;
+  if (payload.status !== "APPROVED" || payload.approvedByUserId !== request.userId) return reply.code(409).send({ error: "Only the exact post approved by this owner can be published." });
+  const connection = await prisma.googleConnection.findUnique({ where: { businessId: business.id } });
+  if (!connection?.googleAccountId || !connection.googleLocationResourceName) return reply.code(409).send({ error: "Select and import the verified Google Business Profile location first." });
+  const claimed = await prisma.growthRecord.updateMany({ where: { id: post.id, businessId: business.id }, data: { payload: { ...payload, status: "PUBLISHING" } as Prisma.InputJsonValue } });
+  if (!claimed.count) return reply.code(409).send({ error: "This post is already being processed." });
+  let shareToken: string | null = null;
+  try {
+    const accessToken = await googleAccessToken(business.id);
+    const body: Record<string, unknown> = { languageCode: String(payload.languageCode || "ta"), summary: String(payload.summary), topicType: "STANDARD" };
+    if (typeof payload.assetId === "string") {
+      const asset = await prisma.creativeAsset.findFirst({ where: { id: payload.assetId, businessId: business.id } });
+      if (!asset) throw new Error("The approved post image is no longer available.");
+      if (!env.META_PUBLIC_API_BASE_URL) throw new Error("Configure the public HTTPS API base URL before publishing an image with a Google post.");
+      shareToken = randomUrlToken(32);
+      await prisma.metaMediaShare.create({ data: { token: shareToken, businessId: business.id, assetId: asset.id, expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000) } });
+      body.media = [{ mediaFormat: "PHOTO", sourceUrl: env.META_PUBLIC_API_BASE_URL.replace(/\/$/, "") + "/v1/meta/media/" + shareToken }];
+    }
+    const resource = connection.googleAccountId + "/" + connection.googleLocationResourceName;
+    const result = await googlePost<{ name?: string; state?: string }>("https://mybusiness.googleapis.com/v4/" + resource + "/localPosts", accessToken, body);
+    const updated = await prisma.growthRecord.update({ where: { id: post.id }, data: { payload: { ...payload, status: "PUBLISHED", googlePostName: result.name ?? null, publishedAt: new Date().toISOString(), publishError: null } as Prisma.InputJsonValue } });
+    await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "GBP_POST_PUBLISHED", entityType: "GBP_POST", entityId: post.id, summary: "Owner-approved Google Business Profile post published", metadata: { googlePostName: result.name ?? null } });
+    return { post: updated, published: true, googlePostName: result.name ?? null };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "Google Business Profile publishing failed";
+    await prisma.growthRecord.update({ where: { id: post.id }, data: { payload: { ...payload, status: "FAILED", publishError: reason.slice(0, 500) } as Prisma.InputJsonValue } });
+    await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "GBP_POST_PUBLISH_FAILED", entityType: "GBP_POST", entityId: post.id, summary: "Google Business Profile publishing failed; owner action is required", metadata: { reason: reason.slice(0, 240) } });
+    return reply.code(502).send({ error: reason });
+  } finally {
+    if (shareToken) await prisma.metaMediaShare.deleteMany({ where: { token: shareToken } });
   }
 });
 
