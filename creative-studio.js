@@ -191,8 +191,11 @@
         } catch { canvaConnected=false; }
       }
       $("canva-integration-status").textContent=canvaConnected?"Connected":(canva.configured?"Credentials configured":"Setup required");
-      $("canva-connect").disabled=!canva.enabled;
-      $("canva-connect").textContent=canva.enabled?"Connect Canva":"Canva credentials required";
+      const connectButton=$("canva-connect"), disconnectButton=$("canva-disconnect");
+      connectButton.hidden=canvaConnected;
+      connectButton.disabled=!canva.enabled;
+      connectButton.textContent=canva.enabled?"Connect Canva":"Canva credentials required";
+      if(disconnectButton) disconnectButton.hidden=!canvaConnected;
       $("adobe-integration-status").textContent=adobe.configured?"Client ID configured":"Setup / approval required";
       $("adobe-open").disabled=!adobe.enabled;
       $("adobe-open").textContent=adobe.enabled?"Open Adobe Express":"Adobe SDK setup required";
@@ -200,6 +203,18 @@
   }
 
   $("canva-connect")?.addEventListener("click",connectCanva);
+  $("canva-disconnect")?.addEventListener("click",async()=>{
+    if(!businessId() || !sessionStorage.getItem(TOKEN)) { setMessage("Sign in and select a business workspace first.",true); return; }
+    if(!window.confirm("Disconnect Canva from this business workspace? Stored Canva tokens will be deleted. Your Canva designs will not be changed.")) return;
+    const button=$("canva-disconnect"); button.disabled=true; button.textContent="Disconnecting…";
+    try {
+      await api(base()+"/canva/disconnect",{method:"DELETE"});
+      setMessage("Canva disconnected from this business workspace.");
+      await loadDesignIntegrations();
+    } catch(err) {
+      setMessage("Canva disconnect failed: "+err.message,true);
+    } finally { button.disabled=false; button.textContent="Disconnect Canva"; }
+  });
   window.addEventListener("localboost:business-ready",()=>{load();loadDesignIntegrations();});
   window.addEventListener("localboost:signed-out",()=>{drafts=[];current=null;ready=false;render();setMessage("Signed out. Cloud creative library is locked.");});
   if(businessId()) { load(); loadDesignIntegrations(); }
