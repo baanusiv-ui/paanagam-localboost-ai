@@ -24,8 +24,8 @@ export async function generateCampaignImage(input: ImageDraftInput) {
   const visualBrief = (input.creativeBrief || "").slice(0, 500);
   const prompt = [
     "Photorealistic commercial food photograph, not a poster, logo, menu, or graphic design.",
-    "PRIMARY SUBJECT: one complete traditional South Indian stainless-steel davara and tumbler filled with freshly brewed dark filter coffee, golden-brown froth, and delicate natural steam. The complete tumbler and davara must be large, sharp, recognizable, centered, and fully visible.",
-    "CAMERA: eye-level three-quarter close-up, 50mm food photography lens, crisp focus on the entire coffee tumbler and davara, warm natural window light, softly blurred authentic South Indian cafe background. Keep the product within the central 65 percent with comfortable empty margins. Do not crop the cup.",
+    "PRIMARY SUBJECT: one complete traditional South Indian stainless-steel davara bowl with matching tumbler filled with freshly brewed dark filter coffee, golden-brown froth, and delicate natural steam. Show BOTH pieces completely, including their bases and rims. Place the complete coffee set in the CENTER of the frame, slightly above the vertical midpoint, never at the bottom or side edge.",
+    "CAMERA: eye-level medium product shot from farther away, 50mm lens, not an extreme close-up. Entire cup and davara fully inside the central 50 percent of the image with at least 18 percent clear margin on every side. Leave the lower 35 percent free of objects for the app text panel. Do not crop, cut off, enlarge beyond the frame, or place the coffee set in the lower-right corner. No hands or people.",
     "COLOR: warm ivory, coffee brown, subtle brass highlights. Bright exposure so coffee and metal reflections are clearly visible.",
     "BACKGROUND PHOTOGRAPH ONLY. No writing, letters, Tamil or English characters, numbers, signage, menus, labels, logos, watermarks, icons, badges, posters, typography, decorative graphics, or packaging.",
     "Do not render the business name, campaign headline, opening date, offer, or designer instructions. The application adds all campaign text after image generation.",
