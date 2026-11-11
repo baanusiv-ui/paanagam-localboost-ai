@@ -56,30 +56,53 @@ export async function generateLocalContentDraft(input: ContentDraftInput) {
   }
 
   const prompt = buildContentDraftMessages(input).map(message => message.role.toUpperCase() + ":\n" + message.content).join("\n\n");
-  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(modelName()) + ":generateContent", {
-    method: "POST",
-    headers: {
-      "x-goog-api-key": apiKey,
-      "content-type": "application/json"
-    },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: "OBJECT",
-          properties: {
-            postCopy: { type: "STRING" },
-            creativeBrief: { type: "STRING" }
-          },
-          required: ["postCopy", "creativeBrief"]
+  const url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(modelName()) + ":generateContent";
+  const requestBody = JSON.stringify({
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: "OBJECT",
+        properties: {
+          postCopy: { type: "STRING" },
+          creativeBrief: { type: "STRING" }
         },
-        thinkingConfig: { thinkingLevel: "LOW" },
-        maxOutputTokens: 900
-      }
-    }),
-    signal: AbortSignal.timeout(60000)
+        required: ["postCopy", "creativeBrief"]
+      },
+      thinkingConfig: { thinkingLevel: "LOW" },
+      maxOutputTokens: 500
+    }
   });
+
+  // Gemini can queue requests during periods of high demand. Allow more time
+  // than the previous 60s deadline and retry one transient failure only.
+  let response: Response | undefined;
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "x-goog-api-key": apiKey,
+          "content-type": "application/json"
+        },
+        body: requestBody,
+        signal: AbortSignal.timeout(120000)
+      });
+      if (response.ok || ![429, 500, 502, 503, 504].includes(response.status) || attempt === 1) break;
+      await response.body?.cancel();
+    } catch (error) {
+      lastError = error;
+      if (attempt === 1) {
+        const detail = error instanceof Error && error.name === "TimeoutError"
+          ? "Gemini did not respond within 120 seconds. Please retry in a minute."
+          : "Gemini connection failed. Please retry in a minute.";
+        throw new Error(detail);
+      }
+    }
+    await new Promise(resolve => setTimeout(resolve, 2500 * (attempt + 1)));
+  }
+  if (!response) throw new Error(lastError instanceof Error ? lastError.message : "Gemini cloud AI is temporarily unavailable.");
 
   const data = await response.json() as {
     candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
