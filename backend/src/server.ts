@@ -146,6 +146,18 @@ async function googlePost<T>(url: string, accessToken: string, body: Record<stri
   return data;
 }
 
+async function googlePatch<T>(url: string, accessToken: string, body: Record<string, unknown>): Promise<T> {
+  const response = await fetch(url, {
+    method: "PATCH",
+    headers: { authorization: "Bearer " + accessToken, "content-type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  const raw = await response.text();
+  const data = raw ? JSON.parse(raw) as T & { error?: { message?: string; status?: string } } : {} as T & { error?: { message?: string; status?: string } };
+  if (!response.ok) throw new Error(data.error?.message || data.error?.status || "Google Business Profile update failed");
+  return data;
+}
+
 async function ownedBusiness(userId: string, businessId: string) {
   return findOwnedBusiness(prisma, userId, businessId);
 }
@@ -830,6 +842,35 @@ app.post("/v1/businesses/:businessId/google-media", {
   } catch (error) {
     const reason = error instanceof Error ? error.message : "Google Business Profile image upload failed";
     request.log.warn({ error: reason }, "Google Business Profile media upload failed");
+    return reply.code(502).send({ error: reason });
+  }
+});
+
+// Owner-approved Google Business Profile description update via Business Information API v1.
+app.post("/v1/businesses/:businessId/google-description", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const body = z.object({ description: z.string().trim().min(20).max(750), confirmed: z.literal(true) }).safeParse(request.body);
+  if (!params.success || !body.success) return reply.code(400).send({ error: "Provide a description between 20 and 750 characters and explicitly confirm the update." });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const connection = await prisma.googleConnection.findUnique({ where: { businessId: business.id } });
+  if (!connection?.googleLocationResourceName) return reply.code(409).send({ error: "Connect Google and import the Paanagam Business Profile location first." });
+  if (!connection.scope.split(" ").includes("https://www.googleapis.com/auth/business.manage")) return reply.code(403).send({ error: "Google Business Profile edit permission is missing. Reconnect Google and grant business.manage access." });
+  try {
+    const accessToken = await googleAccessToken(business.id);
+    const resource = connection.googleLocationResourceName;
+    const updated = await googlePatch<{ name?: string; profile?: { description?: string } }>(
+      "https://mybusinessbusinessinformation.googleapis.com/v1/" + resource + "?updateMask=profile",
+      accessToken,
+      { profile: { description: body.data.description } }
+    );
+    const confirmedDescription = updated.profile?.description;
+    if (confirmedDescription && confirmedDescription !== body.data.description) throw new Error("Google returned a different description. Please verify the profile before retrying.");
+    await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "GBP_DESCRIPTION_UPDATED", entityType: "GBP_LOCATION", entityId: resource, summary: "Owner-approved Google Business Profile description updated", metadata: { characterCount: body.data.description.length } });
+    return { updated: true, description: confirmedDescription ?? body.data.description, message: "Google accepted the Paanagam business description update." };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "Google Business Profile description update failed";
+    request.log.warn({ error: reason }, "Google Business Profile description update failed");
     return reply.code(502).send({ error: reason });
   }
 });
