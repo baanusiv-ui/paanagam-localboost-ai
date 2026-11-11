@@ -87,6 +87,20 @@ app.get("/v1/me", { preHandler: requireUser }, async (request, reply) => {
   return { user };
 });
 
+app.get("/v1/creative-integrations/status", { preHandler: requireUser }, async (request, reply) => {
+  const user = await prisma.user.findUnique({ where: { id: request.userId! }, select: { email: true } });
+  if (!user) return reply.code(401).send({ error: "Verified user session required" });
+  const admins = env.CREATIVE_STUDIO_ADMIN_EMAILS.split(",").map(value => value.trim().toLowerCase()).filter(Boolean);
+  const isAdmin = admins.includes(user.email.trim().toLowerCase());
+  return {
+    administrator: isAdmin,
+    providers: {
+      canva: { enabled: isAdmin && Boolean(env.CANVA_CLIENT_ID && env.CANVA_CLIENT_SECRET && env.CANVA_REDIRECT_URI), configured: Boolean(env.CANVA_CLIENT_ID && env.CANVA_CLIENT_SECRET && env.CANVA_REDIRECT_URI) },
+      adobeExpress: { enabled: isAdmin && Boolean(env.ADOBE_EXPRESS_CLIENT_ID), configured: Boolean(env.ADOBE_EXPRESS_CLIENT_ID) }
+    }
+  };
+});
+
 declare module "fastify" {
   interface FastifyRequest { userId: string | null }
 }
