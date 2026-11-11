@@ -36,7 +36,7 @@ const schema = z.object({
   CANVA_CLIENT_ID: z.string().optional().default(""),
   CANVA_CLIENT_SECRET: z.string().optional().default(""),
   CANVA_REDIRECT_URI: z.string().url().optional().default("http://localhost:4100/v1/canva/callback"),
-  CANVA_SCOPES: z.string().optional().default("design:content:read design:content:write asset:read"),
+  CANVA_SCOPES: z.string().optional().default("design:meta:read design:content:read design:content:write asset:read"),
   ADOBE_EXPRESS_CLIENT_ID: z.string().optional().default("")
 });
 
