@@ -39,7 +39,7 @@ export async function registerCanvaRoutes(app: FastifyInstance, db: PrismaClient
     url.searchParams.set("state", state);
     url.searchParams.set("code_challenge", challenge);
     url.searchParams.set("code_challenge_method", "s256");
-    return reply.redirect(url.toString());
+    return reply.send({ authorizationUrl: url.toString() });
   });
   app.get("/v1/canva/callback", async (req: any, reply) => {
     const q = req.query as { code?: string; state?: string; error?: string };
