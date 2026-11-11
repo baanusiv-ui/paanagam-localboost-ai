@@ -859,7 +859,7 @@ app.post("/v1/businesses/:businessId/google-description", { preHandler: requireU
   try {
     const accessToken = await googleAccessToken(business.id);
     const resource = connection.googleLocationResourceName;
-    if (!/^locations\\/[A-Za-z0-9_-]+$/.test(resource)) {
+    if (!resource.startsWith("locations/") || !/^[A-Za-z0-9_-]+$/.test(resource.slice("locations/".length))) {
       throw new Error("The saved Google location reference is invalid. Re-import the verified Paanagam location in LocalBoost.");
     }
     // Confirm the selected location still exists and is accessible before attempting the write.
