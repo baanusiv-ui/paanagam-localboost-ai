@@ -15,7 +15,7 @@ const contentSchema = z.object({
   creativeBrief: z.string().trim().min(1).max(1200)
 }).strict();
 
-const modelName = () => (process.env.GEMINI_TEXT_MODEL || "gemini-2.5-flash").trim();
+const modelName = () => (process.env.GEMINI_TEXT_MODEL || "gemini-3.8-flash").trim();
 
 export function buildContentDraftMessages(input: ContentDraftInput) {
   return [
@@ -74,7 +74,7 @@ export async function generateLocalContentDraft(input: ContentDraftInput) {
           },
           required: ["postCopy", "creativeBrief"]
         },
-        temperature: 0.5,
+        thinkingConfig: { thinkingLevel: "LOW" },
         maxOutputTokens: 900
       }
     }),
