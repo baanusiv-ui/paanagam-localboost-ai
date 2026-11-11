@@ -70,6 +70,30 @@
     } catch(err){setMessage("Generation failed: "+err.message,true);}
     finally{$("creative-generate").disabled=false;}
   });
+  async function composeCampaignArtwork(sourceUrl) {
+    const image = new Image(); image.src = sourceUrl;
+    await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = () => reject(new Error("Generated image could not be opened for layout.")); });
+    const canvas = document.createElement("canvas");
+    canvas.width = image.naturalWidth || 1024; canvas.height = image.naturalHeight || 1024;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Your browser cannot compose the campaign artwork.");
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const scale = canvas.width / 1024, margin = 64 * scale, bandTop = canvas.height * 0.66;
+    const gradient = ctx.createLinearGradient(0, bandTop, 0, canvas.height);
+    gradient.addColorStop(0, "rgba(18,22,17,0)"); gradient.addColorStop(0.22, "rgba(18,22,17,.72)"); gradient.addColorStop(1, "rgba(18,22,17,.92)");
+    ctx.fillStyle = gradient; ctx.fillRect(0, bandTop, canvas.width, canvas.height - bandTop);
+    const sourceText = [current?.topic || "", current?.offer || "", current?.designerBrief || ""].join(" ");
+    const brand = /paanagam|பானகம்/i.test(sourceText) ? "PAANAGAM  ·  பானகம்" : "";
+    const dateMatch = sourceText.match(/\b(\d{1,2}\s+[A-Za-z]+\s+20\d{2})\b/);
+    let title = (current?.headline || current?.topic || "Campaign").replace(/\s*[–—-]\s*/g, " · ").trim();
+    if (/grand opening/i.test(title)) title = "Grand Opening"; else if (title.length > 48) title = title.slice(0,45).trim() + "…";
+    ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    ctx.font = "700 " + (48 * scale) + "px Arial, sans-serif"; ctx.fillStyle = "#fffaf0"; ctx.shadowColor = "rgba(0,0,0,.3)"; ctx.shadowBlur = 8 * scale;
+    ctx.fillText(title, margin, canvas.height - margin - (dateMatch ? 42 : 18) * scale, canvas.width - margin * 2); ctx.shadowBlur = 0;
+    if (dateMatch) { ctx.font = "600 " + (22 * scale) + "px Arial, sans-serif"; ctx.fillStyle = "#f2c66d"; ctx.fillText(dateMatch[1].toUpperCase(), margin, canvas.height - margin - 92 * scale); }
+    if (brand) { ctx.font = "600 " + (20 * scale) + "px Arial, sans-serif"; ctx.fillStyle = "#f4d99d"; ctx.fillText(brand, margin, canvas.height - margin + 28 * scale); }
+    return canvas.toDataURL("image/jpeg", 0.94);
+  }
   $("creative-image-generate")?.addEventListener("click",async()=>{
     if(!ready||!current){setMessage("Generate campaign copy first, then create its artwork.",true);return;}
     const button=$("creative-image-generate"); button.disabled=true;
@@ -79,11 +103,12 @@
         topic:current.topic,offer:current.offer,creativeBrief:current.designerBrief,
         language:current.language,format:({feed:"SQUARE",portrait:"PORTRAIT",story:"STORY"})[$("creative-format").value]
       })});
-      generatedImageDataUrl=result.imageDataUrl||"";
-      if(!generatedImageDataUrl) throw new Error("Image provider returned no preview.");
+      const sourceImage=result.imageDataUrl||"";
+      if(!sourceImage) throw new Error("Image provider returned no preview.");
+      generatedImageDataUrl=await composeCampaignArtwork(sourceImage);
       const preview=$("creative-image-preview"); preview.src=generatedImageDataUrl; preview.classList.remove("hidden");
       $("creative-image-download").disabled=false; $("creative-image-save").disabled=false;
-      setMessage("Artwork generated · "+result.model+". Save it to the selected business library to keep it in the cloud.");
+      setMessage("Artwork generated · clean text layout added by LocalBoost · "+result.model+". Save it to the selected business library to keep it in the cloud.");
     }catch(err){setMessage("Image generation failed: "+err.message,true);}
     finally{button.disabled=false;}
   });
