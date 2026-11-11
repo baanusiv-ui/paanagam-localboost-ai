@@ -35,7 +35,7 @@ export async function registerCanvaRoutes(app: FastifyInstance, db: PrismaClient
     url.searchParams.set("client_id", env.CANVA_CLIENT_ID);
     url.searchParams.set("response_type", "code");
     url.searchParams.set("redirect_uri", env.CANVA_REDIRECT_URI);
-    url.searchParams.set("scope", process.env.CANVA_SCOPES?.trim() || DEFAULT_SCOPES);
+    url.searchParams.set("scope", env.CANVA_SCOPES.trim() || DEFAULT_SCOPES);
     url.searchParams.set("state", state);
     url.searchParams.set("code_challenge", challenge);
     url.searchParams.set("code_challenge_method", "s256");
