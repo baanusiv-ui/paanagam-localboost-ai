@@ -15,7 +15,7 @@ const contentSchema = z.object({
   creativeBrief: z.string().trim().min(1).max(1200)
 }).strict();
 
-const modelName = () => (process.env.GEMINI_TEXT_MODEL || "gemini-3.8-flash").trim();
+const modelName = () => (process.env.GEMINI_TEXT_MODEL || "gemini-3.1-flash-lite").trim();
 
 export function buildContentDraftMessages(input: ContentDraftInput) {
   return [
@@ -78,6 +78,7 @@ export async function generateLocalContentDraft(input: ContentDraftInput) {
   // than the previous 60s deadline and retry one transient failure only.
   let response: Response | undefined;
   let lastError: unknown;
+  const startedAt = Date.now();
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       response = await fetch(url, {
@@ -89,10 +90,12 @@ export async function generateLocalContentDraft(input: ContentDraftInput) {
         body: requestBody,
         signal: AbortSignal.timeout(120000)
       });
+      console.info("[content-draft] Gemini response", { model: modelName(), attempt: attempt + 1, status: response.status, elapsedMs: Date.now() - startedAt });
       if (response.ok || ![429, 500, 502, 503, 504].includes(response.status) || attempt === 1) break;
       await response.body?.cancel();
     } catch (error) {
       lastError = error;
+      console.warn("[content-draft] Gemini request failed", { model: modelName(), attempt: attempt + 1, elapsedMs: Date.now() - startedAt, errorName: error instanceof Error ? error.name : "UnknownError" });
       if (attempt === 1) {
         const detail = error instanceof Error && error.name === "TimeoutError"
           ? "Gemini did not respond within 120 seconds. Please retry in a minute."
