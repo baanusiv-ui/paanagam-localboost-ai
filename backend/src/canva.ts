@@ -308,7 +308,24 @@ export async function registerCanvaRoutes(app: FastifyInstance, db: PrismaClient
     if (!await isAdmin(db, req.userId)) return reply.code(403).send({ error: "Administrator access required." });
     const business = await findOwnedBusiness(db, req.userId, String(req.params.businessId));
     if (!business) return reply.code(404).send({ error: "Business not found." });
-    await db.canvaConnection.deleteMany({ where: { businessId: business.id } });
-    return reply.code(204).send();
+    try {
+      const deleted = await db.canvaConnection.deleteMany({ where: { businessId: business.id } });
+      refreshes.delete(business.id);
+      req.log.info({ businessId: business.id, deletedCount: deleted.count }, "Canva connection disconnected");
+      return reply.code(200).send({ disconnected: true, deleted: deleted.count > 0 });
+    } catch (error) {
+      const prismaError = error as Error & { code?: string; name?: string; meta?: unknown };
+      req.log.error({
+        businessId: business.id,
+        errorName: prismaError.name,
+        errorCode: prismaError.code,
+        errorMessage: prismaError.message,
+        errorMeta: prismaError.meta
+      }, "Canva disconnect failed");
+      return reply.code(500).send({
+        error: "Unable to disconnect Canva right now.",
+        code: "canva_disconnect_failed"
+      });
+    }
   });
 }
