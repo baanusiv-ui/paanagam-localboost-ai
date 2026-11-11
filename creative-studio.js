@@ -9,7 +9,9 @@
   async function api(path, options = {}) {
     const token = sessionStorage.getItem(TOKEN);
     if (!token || !businessId()) throw new Error("Sign in and select a business workspace first.");
-    const response = await fetch(API() + path, { ...options, headers: { "content-type":"application/json", authorization:"Bearer " + token, ...(options.headers || {}) } });
+    const headers = { authorization:"Bearer " + token, ...(options.headers || {}) };
+    if (options.body !== undefined && !headers["content-type"]) headers["content-type"] = "application/json";
+    const response = await fetch(API() + path, { ...options, headers });
     const payload = await response.json().catch(() => null);
     if (!response.ok) throw new Error(payload?.error || "Request failed (" + response.status + ")");
     return payload;
