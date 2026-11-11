@@ -30,7 +30,8 @@ const schema = z.object({
   GEMINI_TEXT_MODEL: z.string().trim().min(1).default("gemini-3.8-flash"),
   OPENAI_API_KEY: z.string().optional().default(""),
   OPENAI_TEXT_MODEL: z.string().trim().min(1).default("gpt-4o-mini"),
-  OPENAI_IMAGE_MODEL: z.string().trim().min(1).default("gpt-image-2.5-flare")
+  CLOUDFLARE_ACCOUNT_ID: z.string().optional().default(""),
+  CLOUDFLARE_API_TOKEN: z.string().optional().default("")
 });
 
 export const env = schema.parse(process.env);
