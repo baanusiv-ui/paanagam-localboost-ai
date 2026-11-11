@@ -62,6 +62,8 @@
   }
 
   function signOut(showMessage = true) {
+    $("#connection-setup").hidden = false;
+    $("#logout-button").hidden = true;
     sessionStorage.removeItem(TOKEN_KEY);
     sessionStorage.removeItem(BUSINESS_KEY);
     activeBusiness = null;
@@ -80,6 +82,7 @@
   }
 
   function signedIn(user) {
+    $("#connection-setup").hidden = true;
     $("#logout-button").hidden = false;
     $("#login-button").hidden = true;
     $("#register-button").hidden = true;
