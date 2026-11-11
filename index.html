@@ -283,6 +283,13 @@
 </main>
   </div>
   <script src="config.js"></script>
+  <script>
+    // PR #13 preview must use isolated staging services, never production data.
+    if (window.location.hostname === "paanagam-localboost-dashboard-pr-13.onrender.com") {
+      window.LOCALBOOST_API_BASE = "https://paanagam-localboost-staging-api.onrender.com";
+      window.LOCALBOOST_NEON_AUTH_URL = "https://ep-tiny-credit-az25azf0.neonauth.c-3.ap-southeast-1.aws.neon.tech/localboost_staging/auth";
+    }
+  </script>
   <script src="app.js"></script><script src="growth.js"></script><script src="growth-intelligence.js"></script><script src="gbp-owner.js"></script><script src="creative-studio.js"></script><script src="social-publishing.js"></script><script src="growth-goals.js"></script>
   <script type="module" src="auth-client.js"></script>
 </body>
