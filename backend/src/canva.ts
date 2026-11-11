@@ -283,7 +283,7 @@ export async function registerCanvaRoutes(app: FastifyInstance, db: PrismaClient
     try {
       const response = await fetch(body.data.imageUrl, { redirect: "error" });
       if (!response.ok) return reply.code(502).send({ error: "Canva's generated image download is not available yet. Please retry." });
-      const mimeType = (response.headers.get("content-type") || "").split(";")[0].toLowerCase();
+      const mimeType = ((response.headers.get("content-type") || "").split(";")[0] ?? "").toLowerCase();
       if (!["image/png","image/jpeg","image/webp"].includes(mimeType)) return reply.code(415).send({ error: "Canva returned an unsupported image format." });
       const bytes = Buffer.from(await response.arrayBuffer());
       const extension = mimeType === "image/jpeg" ? "jpg" : mimeType === "image/webp" ? "webp" : "png";
