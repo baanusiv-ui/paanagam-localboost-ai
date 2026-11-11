@@ -5,6 +5,7 @@ import { z } from "zod";
 import { env } from "./env.js";
 import { decryptSecret, encryptSecret, randomUrlToken } from "./security.js";
 import { findOwnedBusiness } from "./modules/businesses/access.js";
+import { recordBusinessActivity } from "./modules/activity/record.js";
 
 const AUTH_URL = "https://www.canva.com/api/oauth/authorize";
 const TOKEN_URL = "https://api.canva.com/rest/v1/oauth/token";
