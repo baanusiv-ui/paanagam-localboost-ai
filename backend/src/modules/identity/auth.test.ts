@@ -61,8 +61,10 @@ test("requireUser rejects invalid or expired tokens", async () => {
   assert.equal(result.status, 401);
   assert.deepEqual(result.body, { error: "Invalid or expired access token" });
   assert.equal(warnings.length, 1);
-  assert.equal(warnings[0].message, "Neon Auth access-token verification failed");
-  assert.deepEqual(warnings[0].metadata, {
+  const warning = warnings[0];
+  assert.ok(warning);
+  assert.equal(warning.message, "Neon Auth access-token verification failed");
+  assert.deepEqual(warning.metadata, {
     authFailure: { name: "Error", code: undefined, message: "invalid" }
   });
 });
