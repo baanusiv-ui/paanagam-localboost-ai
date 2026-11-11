@@ -882,8 +882,6 @@ app.post("/v1/businesses/:businessId/google-posts/:postId/publish", { preHandler
     await prisma.growthRecord.update({ where: { id: post.id }, data: { payload: { ...payload, status: "FAILED", publishError: reason.slice(0, 500) } as Prisma.InputJsonValue } });
     await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "GBP_POST_PUBLISH_FAILED", entityType: "GBP_POST", entityId: post.id, summary: "Google Business Profile publishing failed; owner action is required", metadata: { reason: reason.slice(0, 240) } });
     return reply.code(502).send({ error: reason });
-  } finally {
-    if (shareToken) await prisma.metaMediaShare.deleteMany({ where: { token: shareToken } });
   }
 });
 
