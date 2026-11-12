@@ -34,7 +34,7 @@ const schema = z.object({
   CLOUDFLARE_ACCOUNT_ID: z.string().optional().default(""),
   CLOUDFLARE_API_TOKEN: z.string().optional().default(""),
   CREATIVE_STUDIO_ADMIN_EMAILS: z.string().optional().default(""),
-  POYO_ENABLED: z.coerce.boolean().default(false),
+  POYO_ENABLED: z.enum(["true", "false"]).default("false").transform(value => value === "true"),
   POYO_API_KEY: z.string().optional().default(""),
   POYO_API_BASE_URL: z.string().url().default("https://api.poyo.ai"),
   POYO_WEBHOOK_HMAC_KEY: z.string().optional().default(""),
