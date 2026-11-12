@@ -99,7 +99,7 @@ app.get("/v1/creative-integrations/poyo/models", { preHandler: requireUser }, as
   return {
     provider: "poyo",
     source: "documentation",
-    generationEnabled: false,
+    generationEnabled: env.POYO_ENABLED && Boolean(env.POYO_API_KEY),
     models: listPoyoModels(query.data.mediaType)
   };
 });

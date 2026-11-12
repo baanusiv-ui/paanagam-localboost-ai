@@ -265,21 +265,24 @@ We look forward to welcoming you!</textarea></label>
         </div>
 
         <div class="panel" id="poyo-creative-panel" style="margin-top:16px">
-          <div class="panel-heading"><div><h3>PoYo Creative Engine</h3><p>Explore image and video models and save a creative brief to this business workspace.</p></div><span class="tag pending-tag">Draft mode</span></div>
-          <p id="poyo-generation-state" class="footnote">Loading provider catalogue…</p>
-          <div id="poyo-model-list" class="content-grid"><p class="empty-copy">Loading PoYo models…</p></div>
+          <div class="panel-heading"><div><h3>PoYo WAN 2.2 Fast Video Engine</h3><p>Create vertical campaign clips from a text brief or animate an existing image inside LocalBoost.</p></div><span class="tag pending-tag">Owner approval required</span></div>
+          <p id="poyo-generation-state" class="footnote">Checking PoYo configuration…</p>
+          <div id="poyo-model-list" class="content-grid"><p class="empty-copy">Loading Wan 2.2 models…</p></div>
           <div class="panel" style="margin-top:14px">
-            <h3>Save a PoYo creative brief</h3>
+            <h3>Create a video draft</h3>
             <form id="poyo-draft-form" class="creative-form">
-              <label for="poyo-media-type">Media type<select id="poyo-media-type"><option value="VIDEO">Video</option><option value="IMAGE">Image</option></select></label>
-              <label for="poyo-model-id">Model<select id="poyo-model-id"><option value="">Loading models…</option></select></label>
-              <label for="poyo-prompt">Creative brief<textarea id="poyo-prompt" rows="4" maxlength="12000" required placeholder="Describe the campaign, audience, visual direction and language. Use verified Paanagam menu and recipe facts only."></textarea></label>
-              <div class="form-actions"><button id="poyo-save-draft" class="secondary-button" type="submit">Save draft only</button></div>
+              <label for="poyo-video-mode">Generation mode<select id="poyo-video-mode"><option value="TEXT_TO_VIDEO">Text to video</option><option value="IMAGE_TO_VIDEO">Image to video</option></select></label>
+              <label for="poyo-model-id">WAN model<select id="poyo-model-id"><option value="">Loading models…</option></select></label>
+              <label for="poyo-prompt">Creative prompt<textarea id="poyo-prompt" rows="4" maxlength="800" required placeholder="Describe the scene, camera movement, lighting and mood. Keep factual menu and price text out of AI-generated footage."></textarea></label>
+              <label id="poyo-image-urls-wrap" for="poyo-image-urls" hidden>Public image URL(s) · one or two<textarea id="poyo-image-urls" rows="2" placeholder="https://… (one HTTPS image URL per line)"></textarea></label>
+              <label id="poyo-aspect-wrap" for="poyo-aspect-ratio">Video aspect ratio<select id="poyo-aspect-ratio"><option value="9:16">Vertical · 9:16</option><option value="16:9">Landscape · 16:9</option></select></label>
+              <p class="footnote">Resolution is fixed at 480p for the pilot · 6 PoYo credits per generation. Image-to-video accepts one or two publicly accessible HTTPS image URLs.</p>
+              <div class="form-actions"><button id="poyo-save-draft" class="secondary-button" type="submit">Save video draft</button></div>
             </form>
-            <p id="poyo-studio-message" class="creative-message" role="status">No provider generation or credit charge occurs when saving a draft.</p>
+            <p id="poyo-studio-message" class="creative-message" role="status">Saving a draft does not call PoYo or use credits. Paid generation remains paused until explicitly enabled.</p>
           </div>
-          <div class="panel" style="margin-top:14px"><div class="panel-heading"><div><h3>PoYo draft history</h3><p>Business-scoped creative briefs. Generation and publishing are not active.</p></div></div><div id="poyo-task-list" class="creative-library"><p class="empty-copy">Loading drafts…</p></div></div>
-          <p class="footnote">Paid generation is intentionally disabled until the exact model input schemas, live account availability and pricing are verified. Generated assets will require separate owner approval before publishing.</p>
+          <div class="panel" style="margin-top:14px"><div class="panel-heading"><div><h3>Video jobs and previews</h3><p>Private to this business workspace. Approving a video does not publish it.</p></div><button id="poyo-refresh" class="secondary-button" type="button">Refresh</button></div><div id="poyo-task-list" class="creative-library"><p class="empty-copy">Loading video jobs…</p></div></div>
+          <p class="footnote">Every generated video is stored in the selected business library, previewed here and requires a separate owner approval. Publishing remains a separate action.</p>
         </div>
         <div class="panel" id="design-integrations-panel" hidden style="margin-top:16px">
           <div class="panel-heading"><div><h3>External design tools · Administrator</h3><p>Connect Canva to generate complete campaign images from your LocalBoost brief, then save the finished artwork to the business library.</p></div><span class="tag pending-tag" id="design-integrations-access">Checking access…</span></div>
