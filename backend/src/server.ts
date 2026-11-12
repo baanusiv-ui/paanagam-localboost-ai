@@ -30,6 +30,7 @@ import { registerPosIntegrationRoutes } from "./pos-integration.js";
 import { registerCanvaRoutes } from "./canva.js";
 import { registerPoyoRoutes } from "./poyo-routes.js";
 import { getPoyoBalance } from "./poyo.js";
+import { listPoyoModels } from "./poyo-catalogue.js";
 
 const app = Fastify({ logger: true, bodyLimit: 1024 * 1024, trustProxy: true });
 await app.register(helmet);
@@ -90,6 +91,17 @@ app.get("/v1/me", { preHandler: requireUser }, async (request, reply) => {
   });
   if (!user) return reply.code(404).send({ error: "User not found" });
   return { user };
+});
+
+app.get("/v1/creative-integrations/poyo/models", { preHandler: requireUser }, async (request, reply) => {
+  const query = z.object({ mediaType: z.enum(["IMAGE", "VIDEO"]).optional() }).safeParse(request.query);
+  if (!query.success) return reply.code(400).send({ error: "mediaType must be IMAGE or VIDEO." });
+  return {
+    provider: "poyo",
+    source: "documentation",
+    generationEnabled: false,
+    models: listPoyoModels(query.data.mediaType)
+  };
 });
 
 app.get("/v1/creative-integrations/poyo/balance", { preHandler: requireUser, config: { rateLimit: { max: 6, timeWindow: "1 minute" } } }, async (request, reply) => {
