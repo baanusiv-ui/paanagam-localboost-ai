@@ -43,6 +43,27 @@
       return saveToken(tokenFrom(sessionResult));
     }
 
+    const wait = ms => new Promise(resolve => window.setTimeout(resolve, ms));
+    let authReadyDispatched = false;
+    async function restoreOwnerSession({ attempts = 1, delayMs = 650 } = {}) {
+      for (let attempt = 0; attempt < attempts; attempt += 1) {
+        try {
+          const token = await currentAccessToken();
+          if (token) {
+            if (!authReadyDispatched) {
+              authReadyDispatched = true;
+              window.dispatchEvent(new Event("localboost:auth-ready"));
+            }
+            return token;
+          }
+        } catch (error) {
+          console.warn("LocalBoost owner session restoration attempt failed.", error);
+        }
+        if (attempt + 1 < attempts) await wait(delayMs);
+      }
+      return null;
+    }
+
     document.getElementById("google-owner-login")?.addEventListener("click", async () => {
       const button = document.getElementById("google-owner-login");
       button.disabled = true;
@@ -93,16 +114,34 @@
       return nativeFetch(input, init);
     };
 
-    let existingToken = null;
-    try {
-      existingToken = await currentAccessToken();
-    } catch (error) {
-      const detail = error?.message || "";
-      if (!/401|unauthorized|unauthori[sz]ed/i.test(detail)) throw error;
-      console.info("No Google owner session; Google sign-in is ready.");
+    // OAuth can return to the dashboard before the browser exposes the new
+    // cross-origin HTTP-only session cookie to the first session request.
+    // Retry briefly so the first Google authorisation completes the login.
+    const existingToken = await restoreOwnerSession({
+      attempts: 8,
+      delayMs: 600
+    });
+    if (!existingToken) {
+      console.info("No Google owner session found; Google sign-in is ready.");
     }
-    if (existingToken) window.dispatchEvent(new Event("localboost:auth-ready"));
     window.dispatchEvent(new Event("localboost:auth-client-ready"));
+
+    // Re-check when the browser returns from an OAuth tab or restores a tab
+    // from the background. This is safe to call repeatedly and won't reload
+    // or start another sign-in flow.
+    let focusCheckRunning = false;
+    const checkSessionOnReturn = async () => {
+      if (focusCheckRunning || document.visibilityState === "hidden") return;
+      focusCheckRunning = true;
+      try {
+        await restoreOwnerSession({ attempts: 3, delayMs: 500 });
+      } finally {
+        focusCheckRunning = false;
+      }
+    };
+    window.addEventListener("focus", checkSessionOnReturn);
+    window.addEventListener("pageshow", checkSessionOnReturn);
+    document.addEventListener("visibilitychange", checkSessionOnReturn);
   }
 
   boot().catch(error => {
