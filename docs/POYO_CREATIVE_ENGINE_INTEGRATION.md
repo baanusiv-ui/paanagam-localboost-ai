@@ -73,12 +73,13 @@ Use a unique provider task ID and idempotent webhook processing. Verify business
 
 ### Initial delivery slices
 
-**Slice A — provider foundation**
-- Feature flag and secure configuration
-- PoYo client with timeout, safe error mapping and redacted logging
-- Admin-only provider connection/status diagnostics
-- Live catalogue/schema/price discovery
-- No generation until model schema and price are available
+**Slice A — provider foundation (initial code committed)**
+- Added server-only `POYO_ENABLED`, `POYO_API_KEY`, `POYO_API_BASE_URL` and `POYO_WEBHOOK_HMAC_KEY` configuration.
+- Added a PoYo submission client with timeout, HTTPS callback validation and safe error messages.
+- Added an admin-gated provider readiness indicator to the existing creative-integration status response.
+- Added HMAC webhook signature verification with a five-minute timestamp window and constant-time comparison, plus unit tests.
+- Still pending: live catalogue/schema/price discovery and verification against the account's actual API key.
+- Generation is not exposed to the UI and no paid generation can be initiated yet; do not enable the feature flag until live account checks and cost confirmation are implemented.
 
 **Slice B — task lifecycle**
 - Tenant-scoped task persistence and migrations
