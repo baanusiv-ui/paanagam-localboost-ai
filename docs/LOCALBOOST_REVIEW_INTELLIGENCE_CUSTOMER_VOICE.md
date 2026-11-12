@@ -216,3 +216,29 @@ Generate editable concepts and scripts such as:
 - Video generation cost and provider are shown before any paid generation, with explicit per-job approval.
 - No video is published without approval of the exact video, script, caption, channel and schedule.
 - Performance reporting separates educational engagement from direct sales attribution; do not claim causality without evidence.
+
+
+### Ingredient literacy: coffee, chicory and tea
+
+Include a dedicated **Ingredient Knowledge** track in Customer Education so customers understand what goes into each cup, why an ingredient is used, and how ingredient quality and preparation influence flavour, aroma, colour, body and consistency. This is educational content, not a claim that one ingredient or grade is universally superior.
+
+Build owner-reviewed explainers around:
+
+- **Coffee beans:** explain Arabica, Robusta and blends only where they are actually used; show the owner-confirmed origin, roast level, roast/freshness information, grind size and storage practices when known. Explain how bean selection and roast influence aroma, bitterness, body and flavour. Do not invent farm, estate, origin, grade or freshness claims.
+- **Chicory:** explain what chicory is, why it may be blended with coffee, and how the owner-approved blend proportion and preparation affect body, colour and flavour. State clearly whether a product contains chicory and use the actual approved blend information; never imply a coffee is 100% coffee if chicory is included.
+- **Tea dust:** explain what the term means in the business's sourcing and menu context, how smaller leaf particles can influence infusion speed, colour and strength, and why measured brewing time and quantity matter. Avoid treating all tea dust as low quality or making unsupported grade claims.
+- **CTC leaf:** explain the Crush–Tear–Curl process in simple terms, the characteristics commonly associated with CTC tea, and how leaf grade, quantity, water, temperature and brewing time affect the cup. Do not imply that every CTC tea has the same quality or flavour.
+- **Premium tea liquor:** explain *tea liquor* as the brewed tea infusion in the cup—not alcoholic liqueur. Teach customers how colour, aroma, briskness, strength, body and clarity can be assessed, while making clear that a darker or stronger liquor is not automatically a better-quality tea. Use the actual tea supplier/grade and tasting notes only when verified by the owner.
+
+### Ingredient education content formats
+
+- Bean-to-cup journey: bean selection, roasting, grinding, decoction and final serving, using Paanagam's real approved process.
+- Coffee blend explainer: coffee and chicory roles, actual blend ratio and how the blend changes the cup.
+- Tea comparison: tea dust and CTC leaf explained fairly, including what each is suited for in the approved menu.
+- Brewing science made simple: how quantity, water quality, temperature, time and freshness affect extraction and consistency.
+- Tea liquor tasting guide: aroma, colour, briskness, body and finish, without unsupported superiority claims.
+- Ingredient transparency card/video: owner-approved ingredient list and clear disclosure of chicory or other blend components where applicable.
+
+For every ingredient video, retain a structured fact sheet containing ingredient name, supplier/source where approved for disclosure, actual grade or variety, blend percentage where relevant, preparation context, evidence/source, last owner verification date and claims that must not be made. If the business has not confirmed a detail, omit it or label it as unavailable; never fill gaps with model-generated assumptions.
+
+Scripts must distinguish general food knowledge from facts about Paanagam's own recipe and sourcing. The owner must approve all Paanagam-specific statements before generation and publishing. Do not make health, medicinal, energy, weight-loss or disease-prevention claims about coffee, chicory or tea. Do not disclose confidential recipes or supplier commercial terms.
