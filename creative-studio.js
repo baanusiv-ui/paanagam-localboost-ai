@@ -156,11 +156,11 @@
     if(!ready||!current){setMessage("Generate campaign copy first, then create its artwork.",true);return;}
     const button=$("creative-image-gemini"), preview=$("creative-gemini-preview"), startedAt=Date.now();
     button.disabled=true; $("creative-gemini-download").disabled=true; preview.src=""; preview.classList.add("hidden");
-    setMessage("Generating the matching campaign background with Gemini 3.1 Flash Image…");
+    setMessage("Generating campaign artwork with Meta Muse Image…");
     try{
       const formatMap={feed:"SQUARE",portrait:"PORTRAIT",story:"STORY"};
       const result=await api(base()+"/creative/image",{method:"POST",body:JSON.stringify({
-        provider:"GEMINI",topic:current.topic,offer:current.offer,creativeBrief:current.designerBrief,
+        provider:"META",topic:current.topic,offer:current.offer,creativeBrief:current.designerBrief,
         language:current.language,format:formatMap[$("creative-format").value]||"SQUARE"
       })});
       const composed=await composeCampaignArtwork(result.imageDataUrl);
@@ -168,9 +168,9 @@
       $("creative-gemini-download").disabled=false;
       const seconds=((Date.now()-startedAt)/1000).toFixed(1);
       const metrics=$("creative-provider-metrics");
-      if(metrics) metrics.textContent="Gemini · "+result.model+" · "+seconds+" s · "+result.mimeType+" · preview only. Canva result is shown alongside for comparison.";
-      setMessage("Gemini artwork generated and branded locally. Compare it with Canva; nothing has been saved or published.");
-    }catch(err){setMessage("Gemini artwork generation failed: "+err.message,true);}
+      if(metrics) metrics.textContent="Meta Muse Image · "+result.model+" · "+seconds+" s · "+result.mimeType+" · temporary preview.";
+      setMessage("Meta Muse artwork generated and branded locally. Review and download it; nothing has been saved or published.");
+    }catch(err){setMessage("Meta Muse artwork generation failed: "+err.message,true);}
     finally{button.disabled=false;}
   });
   $("creative-gemini-download")?.addEventListener("click",()=>{
