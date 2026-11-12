@@ -73,30 +73,44 @@
     finally{$("creative-generate").disabled=false;}
   });
   async function composeCampaignArtwork(sourceUrl) {
-    const image = new Image(); image.src = sourceUrl;
+    const image = new Image(); image.crossOrigin = "anonymous"; image.src = sourceUrl;
     await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = () => reject(new Error("Generated image could not be opened for layout.")); });
     const canvas = document.createElement("canvas");
     canvas.width = image.naturalWidth || 1024; canvas.height = image.naturalHeight || 1024;
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Your browser cannot compose the campaign artwork.");
+    const scale = canvas.width / 1024, margin = 58 * scale;
     ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-    const scale = canvas.width / 1024, margin = 64 * scale, bandTop = canvas.height * 0.46;
-    const solidTop = canvas.height * 0.60;
-    const gradient = ctx.createLinearGradient(0, bandTop, 0, solidTop);
-    gradient.addColorStop(0, "rgba(18,22,17,0)"); gradient.addColorStop(1, "rgba(18,22,17,1)");
-    ctx.fillStyle = gradient; ctx.fillRect(0, bandTop, canvas.width, solidTop - bandTop);
-    ctx.fillStyle = "#121611"; ctx.fillRect(0, solidTop, canvas.width, canvas.height - solidTop);
-    const sourceText = [current?.topic || "", current?.offer || "", current?.designerBrief || ""].join(" ");
-    const brand = /paanagam|பானகம்/i.test(sourceText) ? "PAANAGAM  ·  பானகம்" : "";
-    const dateMatch = sourceText.match(/\b(\d{1,2}\s+[A-Za-z]+\s+20\d{2})\b/);
-    let title = (current?.headline || current?.topic || "Campaign").replace(/\s*[–—-]\s*/g, " · ").trim();
-    if (/grand opening/i.test(title)) title = "Grand Opening"; else if (title.length > 48) title = title.slice(0,45).trim() + "…";
+    // A clean top-left brand lockup is rendered locally; Canva is instructed
+    // to generate photography only, so it cannot corrupt the Tamil wordmark.
+    const panelW = Math.min(canvas.width * .56, 520 * scale), panelH = 166 * scale;
+    ctx.fillStyle = "rgba(38,20,12,.72)";
+    ctx.beginPath(); ctx.roundRect(margin * .55, margin * .55, panelW, panelH, 18 * scale); ctx.fill();
     ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-    ctx.font = "700 " + (48 * scale) + "px Arial, sans-serif"; ctx.fillStyle = "#fffaf0"; ctx.shadowColor = "rgba(0,0,0,.3)"; ctx.shadowBlur = 8 * scale;
-    ctx.fillText(title, margin, canvas.height - margin - (dateMatch ? 42 : 18) * scale, canvas.width - margin * 2); ctx.shadowBlur = 0;
-    if (dateMatch) { ctx.font = "600 " + (22 * scale) + "px Arial, sans-serif"; ctx.fillStyle = "#f2c66d"; ctx.fillText(dateMatch[1].toUpperCase(), margin, canvas.height - margin - 92 * scale); }
-    if (brand) { ctx.font = "600 " + (20 * scale) + "px Arial, sans-serif"; ctx.fillStyle = "#f4d99d"; ctx.fillText(brand, margin, canvas.height - margin + 28 * scale); }
-    return canvas.toDataURL("image/jpeg", 0.94);
+    ctx.fillStyle = "#f3a044"; ctx.font = "600 " + (36 * scale) + "px Georgia, serif";
+    ctx.fillText("✿", margin, margin + 47 * scale);
+    ctx.fillStyle = "#fff7e9"; ctx.font = "700 " + (62 * scale) + "px Georgia, serif";
+    ctx.fillText("பானகம்", margin, margin + 111 * scale, panelW - margin);
+    ctx.fillStyle = "#f6d4a3"; ctx.font = "500 " + (27 * scale) + "px Georgia, serif";
+    ctx.fillText("காபியும் கதையும்", margin + 3 * scale, margin + 151 * scale, panelW - margin);
+    const bandTop = canvas.height * .76;
+    const gradient = ctx.createLinearGradient(0, bandTop, 0, canvas.height);
+    gradient.addColorStop(0, "rgba(28,17,11,0)");
+    gradient.addColorStop(.28, "rgba(28,17,11,.82)");
+    gradient.addColorStop(1, "rgba(28,17,11,.94)");
+    ctx.fillStyle = gradient; ctx.fillRect(0, bandTop, canvas.width, canvas.height - bandTop);
+    let title = (current?.headline || current?.topic || "Campaign").replace(/\\s*[–—-]\\s*/g, " · ").trim();
+    if (/grand opening/i.test(title)) title = "Grand Opening";
+    if (title.length > 48) title = title.slice(0,45).trim() + "…";
+    ctx.fillStyle = "#fffaf0"; ctx.font = "700 " + (42 * scale) + "px Arial, sans-serif";
+    ctx.shadowColor = "rgba(0,0,0,.35)"; ctx.shadowBlur = 7 * scale;
+    ctx.fillText(title, margin, canvas.height - margin - 18 * scale, canvas.width - margin * 2);
+    ctx.shadowBlur = 0;
+    if (current?.offer) {
+      ctx.fillStyle = "#f2c66d"; ctx.font = "600 " + (23 * scale) + "px Arial, sans-serif";
+      ctx.fillText(current.offer.slice(0, 72), margin, canvas.height - margin + 20 * scale, canvas.width - margin * 2);
+    }
+    return canvas.toDataURL("image/jpeg", .94);
   }
   $("creative-image-generate")?.addEventListener("click",async()=>{
     if(!ready||!current){setMessage("Generate campaign copy first, then create its artwork.",true);return;}
