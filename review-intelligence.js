@@ -98,14 +98,31 @@
       status(reviews.length ? "Loaded "+reviews.length+" saved feedback item(s). Review every evidence item before deciding what to change." : "No imported reviews yet. Connect an authorised Google Business Profile or supply eligible feedback.");
     } catch (error) { status(error.message, true); }
   }
-  async function importGoogle() {
-    const button=$("ri-import-google"); button.disabled=true; status("Importing authorised Google Business Profile reviews…");
+  let autoSyncTimer = null, syncInProgress = false;
+  async function importGoogle(silent = false) {
+    if (!businessId || syncInProgress) return;
+    const button=$("ri-import-google");
+    syncInProgress = true;
+    if (button) button.disabled = true;
+    if (!silent) status("Importing authorised Google Business Profile reviews…");
     try {
       const result=await api(base()+"/google/reviews/import",{method:"POST",body:"{}"});
-      status("Google import complete: "+(result.importedCount ?? 0)+" imported. "+(result.totalReviewCount ?? "Unknown")+" total at source.");
+      if (!silent) status("Google import complete: "+(result.importedCount ?? 0)+" imported or updated. "+(result.totalReviewCount ?? "Unknown")+" total at source.");
       await refresh();
-    } catch(error) { status(error.message,true); }
-    finally { button.disabled=false; }
+    } catch(error) {
+      status("Google review sync needs attention: "+error.message,true);
+    } finally {
+      syncInProgress = false;
+      if (button) button.disabled = false;
+    }
+  }
+  function startAutoSync() {
+    if (autoSyncTimer) clearInterval(autoSyncTimer);
+    if (!businessId) return;
+    importGoogle(true);
+    autoSyncTimer = setInterval(() => {
+      if (document.visibilityState === "visible" && businessId) importGoogle(true);
+    }, 30 * 60 * 1000);
   }
   function install() {
     const section=$("reviews-view");
@@ -143,8 +160,8 @@
     });
     $("ri-search").addEventListener("input",render);
     $("ri-source-filter").addEventListener("change",render);
-    window.addEventListener("localboost:business-ready",event=>{businessId=event.detail?.businessId||sessionStorage.getItem(BUSINESS);if(!section.classList.contains("hidden"))refresh();});
-    window.addEventListener("localboost:signed-out",()=>{businessId=null;reviews=[];analysis=null;sourceStatus=null;if($("ri-evidence")){render();status("Signed out · private review evidence cleared.");}});
+    window.addEventListener("localboost:business-ready",event=>{businessId=event.detail?.businessId||sessionStorage.getItem(BUSINESS);if(!section.classList.contains("hidden")){refresh();startAutoSync();}});
+    window.addEventListener("localboost:signed-out",()=>{businessId=null;if(autoSyncTimer)clearInterval(autoSyncTimer);autoSyncTimer=null;reviews=[];analysis=null;sourceStatus=null;if($("ri-evidence")){render();status("Signed out · private review evidence cleared.");}});
     businessId=sessionStorage.getItem(BUSINESS);
   }
   function safeInstall() {
@@ -162,5 +179,5 @@
   }
   safeInstall();
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", safeInstall, { once: true });
-  window.LocalBoostReviewIntelligence = { refresh: () => { businessId = sessionStorage.getItem(BUSINESS); return refresh(); }, install: safeInstall };
+  window.LocalBoostReviewIntelligence = { refresh: () => { businessId = sessionStorage.getItem(BUSINESS); return refresh(); }, syncNow: () => { businessId = sessionStorage.getItem(BUSINESS); return importGoogle(true); }, install: safeInstall };
 })();
