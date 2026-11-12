@@ -12,10 +12,7 @@ on:
       - "styles.css"
       - "growth-intelligence.js"
       - "review-intelligence.js"
-      - "paanagam-education.js"
-      - "paanagam-education.js"
       - "review-intelligence.css"
-      - "paanagam-education.css"
       - "paanagam-education.js"
       - "paanagam-education.css"
       - "growth.js"
@@ -31,22 +28,27 @@ on:
   pull_request:
     paths:
       - "backend/**"
-      - "review-intelligence.js"
-      - "review-intelligence.css"
+      - "docs/**"
       - "app.js"
+      - "auth-client.js"
       - "config.js"
       - "index.html"
       - "styles.css"
       - "growth-intelligence.js"
+      - "review-intelligence.js"
+      - "review-intelligence.css"
+      - "paanagam-education.js"
+      - "paanagam-education.css"
+      - "growth.js"
       - "growth-intelligence.css"
       - "gbp-owner.css"
       - "gbp-owner.js"
       - "creative-studio.js"
+      - "social-publishing.js"
       - "growth-goals.js"
       - "growth-goals.css"
       - "render.yaml"
       - ".github/workflows/backend-ci.yml"
-
 jobs:
   validate-and-build:
     runs-on: ubuntu-latest
