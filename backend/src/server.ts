@@ -29,6 +29,7 @@ import { buildMenuSalesIntelligence } from "./menu-sales-intelligence.js";
 import { registerPosIntegrationRoutes } from "./pos-integration.js";
 import { registerCanvaRoutes } from "./canva.js";
 import { registerPoyoRoutes } from "./poyo-routes.js";
+import { getPoyoBalance } from "./poyo.js";
 
 const app = Fastify({ logger: true, bodyLimit: 1024 * 1024, trustProxy: true });
 await app.register(helmet);
@@ -89,6 +90,21 @@ app.get("/v1/me", { preHandler: requireUser }, async (request, reply) => {
   });
   if (!user) return reply.code(404).send({ error: "User not found" });
   return { user };
+});
+
+app.get("/v1/creative-integrations/poyo/balance", { preHandler: requireUser, config: { rateLimit: { max: 6, timeWindow: "1 minute" } } }, async (request, reply) => {
+  const user = await prisma.user.findUnique({ where: { id: request.userId! }, select: { email: true } });
+  if (!user) return reply.code(401).send({ error: "Verified user session required" });
+  const admins = env.CREATIVE_STUDIO_ADMIN_EMAILS.split(",").map(value => value.trim().toLowerCase()).filter(Boolean);
+  if (!admins.includes(user.email.trim().toLowerCase())) return reply.code(404).send({ error: "Not found" });
+  if (!env.POYO_API_KEY) return reply.code(503).send({ error: "PoYo API key is not configured" });
+  try {
+    const balance = await getPoyoBalance();
+    return { provider: "poyo", email: balance.email, creditsAmount: balance.creditsAmount, checkedAt: new Date().toISOString() };
+  } catch (error) {
+    request.log.warn({ error: error instanceof Error ? error.message : "unknown" }, "PoYo balance check failed");
+    return reply.code(502).send({ error: "PoYo account balance could not be verified" });
+  }
 });
 
 app.get("/v1/creative-integrations/status", { preHandler: requireUser }, async (request, reply) => {
