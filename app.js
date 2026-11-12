@@ -11,6 +11,7 @@
   };
   let activeBusiness = null;
   let googleConnected = false;
+  let googleSelectedLocationId = null;
 
   const $ = (selector) => document.querySelector(selector);
   const token = () => sessionStorage.getItem(TOKEN_KEY);
@@ -145,7 +146,12 @@
         option.textContent = (account.accountName || account.name || "Google account") + " · " + (account.role || account.type || "Access");
         select.append(option);
       });
-      message("google-import-message", "Choose the account that manages Paanagam.");
+      if (googleSelectedLocationId !== "13677234647182178607") {
+        message("google-import-message", "Checking authorised accounts for the saved Paanagam location…");
+        await autoSelectPaanagamLocation(result.accounts);
+      } else {
+        message("google-import-message", "Paanagam listing is already linked. Review auto-sync is ready.");
+      }
     } catch (error) {
       select.innerHTML = "";
       const option = document.createElement("option");
@@ -154,6 +160,35 @@
       select.append(option);
       message("google-import-message", error.message, true);
     }
+  }
+
+  async function autoSelectPaanagamLocation(accounts) {
+    const targetLocationId = "13677234647182178607";
+    const locationSelect = $("#google-location-select");
+    for (const account of accounts || []) {
+      if (!account.name) continue;
+      try {
+        const result = await api("/v1/businesses/" + encodeURIComponent(activeBusiness.id) + "/google/locations?accountName=" + encodeURIComponent(account.name));
+        const match = (result.locations || []).find(location => String(location.name || "").split("/").pop() === targetLocationId);
+        if (!match) continue;
+        $("#google-account-select").value = account.name;
+        locationSelect.innerHTML = "";
+        const option = document.createElement("option");
+        option.value = match.name;
+        option.textContent = (match.title || "Paanagam") + " · verified saved location";
+        locationSelect.append(option);
+        locationSelect.value = match.name;
+        $("#import-google-location").disabled = false;
+        message("google-import-message", "Paanagam location verified. Saving the selected location for review auto-sync…");
+        await importGoogleLocation();
+        window.LocalBoostReviewIntelligence?.syncNow?.();
+        return true;
+      } catch (error) {
+        message("google-import-message", "Could not verify Paanagam location: " + error.message, true);
+      }
+    }
+    message("google-import-message", "Paanagam location ID was not found in the authorised Google accounts. Choose the correct account and listing manually.");
+    return false;
   }
 
   async function loadGoogleLocations() {
@@ -213,6 +248,7 @@
     if (!activeBusiness) return;
     const result = await api("/v1/businesses/" + encodeURIComponent(activeBusiness.id) + "/google");
     setConnectionState(result.connected, result.connected ? "Authorised connection" : "Not connected");
+    googleSelectedLocationId = result.selectedLocationId || null;
     $("#google-picker").classList.toggle("hidden", !result.connected);
     if (result.connected) await loadGoogleAccounts();
   }

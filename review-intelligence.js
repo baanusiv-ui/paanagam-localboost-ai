@@ -98,14 +98,31 @@
       status(reviews.length ? "Loaded "+reviews.length+" saved feedback item(s). Review every evidence item before deciding what to change." : "No imported reviews yet. Connect an authorised Google Business Profile or supply eligible feedback.");
     } catch (error) { status(error.message, true); }
   }
-  async function importGoogle() {
-    const button=$("ri-import-google"); button.disabled=true; status("Importing authorised Google Business Profile reviews…");
+  let autoSyncTimer = null, syncInProgress = false;
+  async function importGoogle(silent = false) {
+    if (!businessId || syncInProgress) return;
+    const button=$("ri-import-google");
+    syncInProgress = true;
+    if (button) button.disabled = true;
+    if (!silent) status("Importing authorised Google Business Profile reviews…");
     try {
       const result=await api(base()+"/google/reviews/import",{method:"POST",body:"{}"});
-      status("Google import complete: "+(result.importedCount ?? 0)+" imported. "+(result.totalReviewCount ?? "Unknown")+" total at source.");
+      if (!silent) status("Google import complete: "+(result.importedCount ?? 0)+" imported or updated. "+(result.totalReviewCount ?? "Unknown")+" total at source.");
       await refresh();
-    } catch(error) { status(error.message,true); }
-    finally { button.disabled=false; }
+    } catch(error) {
+      status("Google review sync needs attention: "+error.message,true);
+    } finally {
+      syncInProgress = false;
+      if (button) button.disabled = false;
+    }
+  }
+  function startAutoSync() {
+    if (autoSyncTimer) clearInterval(autoSyncTimer);
+    if (!businessId) return;
+    importGoogle(true);
+    autoSyncTimer = setInterval(() => {
+      if (document.visibilityState === "visible" && businessId) importGoogle(true);
+    }, 30 * 60 * 1000);
   }
   function install() {
     const section=$("reviews-view");
@@ -121,7 +138,7 @@
       <article class="panel"><div class="panel-heading"><div><h3>Customer evidence & owner validation</h3><p>Review each item, confirm whether it reflects a real issue, and record the next action. AI labels are not proof.</p></div><div class="ri-filters"><input id="ri-search" type="search" placeholder="Search feedback"><select id="ri-source-filter"><option value="all">All sources</option><option value="google">Google</option><option value="meta">Meta</option></select></div></div><div id="ri-evidence" class="ri-evidence-list"></div></article>
       <article class="panel"><div class="panel-heading"><div><h3>Customer education opportunities</h3><p>Topics only; scripts must use approved Paanagam menu and recipe facts.</p></div></div><div id="ri-education" class="ri-education-list"></div></article>
       <details class="panel ri-method"><summary>Analysis method and limitations</summary><p id="ri-method"></p><ul id="ri-caveats"></ul></details>`;
-    reviewNav.addEventListener("click",()=>{businessId=sessionStorage.getItem(BUSINESS);if(businessId)refresh();});
+    reviewNav.addEventListener("click",()=>{businessId=sessionStorage.getItem(BUSINESS);if(businessId){refresh();startAutoSync();}});
     $("ri-refresh").addEventListener("click",refresh);
     $("ri-import-google").addEventListener("click",importGoogle);
     $("ri-evidence").addEventListener("click",async event=>{
@@ -143,8 +160,8 @@
     });
     $("ri-search").addEventListener("input",render);
     $("ri-source-filter").addEventListener("change",render);
-    window.addEventListener("localboost:business-ready",event=>{businessId=event.detail?.businessId||sessionStorage.getItem(BUSINESS);if(!section.classList.contains("hidden"))refresh();});
-    window.addEventListener("localboost:signed-out",()=>{businessId=null;reviews=[];analysis=null;sourceStatus=null;if($("ri-evidence")){render();status("Signed out · private review evidence cleared.");}});
+    window.addEventListener("localboost:business-ready",event=>{businessId=event.detail?.businessId||sessionStorage.getItem(BUSINESS);if(!section.classList.contains("hidden")){refresh();startAutoSync();}});
+    window.addEventListener("localboost:signed-out",()=>{businessId=null;if(autoSyncTimer)clearInterval(autoSyncTimer);autoSyncTimer=null;reviews=[];analysis=null;sourceStatus=null;if($("ri-evidence")){render();status("Signed out · private review evidence cleared.");}});
     businessId=sessionStorage.getItem(BUSINESS);
   }
   function safeInstall() {
@@ -162,5 +179,5 @@
   }
   safeInstall();
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", safeInstall, { once: true });
-  window.LocalBoostReviewIntelligence = { refresh: () => { businessId = sessionStorage.getItem(BUSINESS); return refresh(); }, install: safeInstall };
+  window.LocalBoostReviewIntelligence = { refresh: () => { businessId = sessionStorage.getItem(BUSINESS); return refresh(); }, syncNow: () => { businessId = sessionStorage.getItem(BUSINESS); return importGoogle(true); }, install: safeInstall };
 })();

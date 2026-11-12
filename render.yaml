@@ -59,3 +59,23 @@ services:
         name: Referrer-Policy
         value: strict-origin-when-cross-origin
 
+  - type: cron
+    name: paanagam-localboost-google-review-autosync
+    runtime: docker
+    region: singapore
+    plan: starter
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    dockerCommand: node dist/google-review-autosync.js
+    schedule: "*/30 * * * *"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: TOKEN_ENCRYPTION_KEY_BASE64
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false

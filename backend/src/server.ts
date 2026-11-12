@@ -725,9 +725,9 @@ app.get("/v1/businesses/:businessId/google", { preHandler: requireUser }, async 
   if (!(await ownedBusiness(request.userId!, params.data.businessId))) return reply.code(404).send({ error: "Business not found" });
   const connection = await prisma.googleConnection.findUnique({
     where: { businessId: params.data.businessId },
-    select: { scope: true, connectedAt: true, expiresAt: true, updatedAt: true }
+    select: { scope: true, connectedAt: true, expiresAt: true, updatedAt: true, googleLocationResourceName: true }
   });
-  return { connected: Boolean(connection), connection };
+  return { connected: Boolean(connection), locationSelected: Boolean(connection?.googleLocationResourceName), selectedLocationId: connection?.googleLocationResourceName?.split("/").pop() ?? null, connection };
 });
 
 app.post("/v1/google/connect/:businessId/url", { preHandler: requireUser }, async (request, reply) => {
