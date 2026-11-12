@@ -8,7 +8,22 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-enum PoyoCreativeStatus {\n  DRAFT\n  SUBMITTED\n  PROCESSING\n  SUCCEEDED\n  FAILED\n  CANCELLED\n}\n\nenum PoyoMediaType {\n  IMAGE\n  VIDEO\n  AUDIO\n}\n\nenum EvidenceSource {
+enum PoyoCreativeStatus {
+  DRAFT
+  SUBMITTED
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum PoyoMediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+}
+
+enum EvidenceSource {
   OWNER_CONFIRMED
   GOOGLE_API
   PUBLIC_OBSERVATION
