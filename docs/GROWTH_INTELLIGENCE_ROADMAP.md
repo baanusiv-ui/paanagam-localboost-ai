@@ -198,3 +198,16 @@ Approval is required separately for each profile edit, review reply, post, messa
 - Every customer-facing factual claim must cite an approved menu, recipe or ingredient source. Unsupported questions are returned as unconfirmed and routed to the owner.
 - The only existing process detail suitable for a draft seed is the filter-coffee decoction SOP; it remains pending owner verification. Other menu names are not recipe records until current status and recipes are confirmed.
 - Next implementation stage: tenant-scoped schema, CRUD, recipe revisioning, approval/audit trail and cross-tenant tests. No production migration, paid generation or publishing is included in this specification.
+
+
+## Menu & Recipe Knowledge API foundation (implemented on feature branch; migration pending)
+
+- Added tenant-scoped Prisma models for menu knowledge items, recipes, immutable recipe revisions and approved factual claims.
+- Added authenticated owner-scoped APIs to list/create menu items, create recipes and draft revisions, approve a revision, create/approve claims, and search current menu items plus approved claims.
+- Recipe facts are stored as structured ingredient and preparation-step JSON. Preparation steps distinguish CUSTOMER_SAFE from INTERNAL_ONLY.
+- Approving a new recipe revision supersedes the prior current revision and updates the recipe's current revision pointer in a transaction. Only draft/in-review revisions can be approved.
+- Claims are separate from recipes, require source references, and remain unapproved until the owner explicitly approves them. Recipe-linked claims require an approved recipe revision.
+- Knowledge mutations write to the existing business activity history. All routes use the existing authenticated business ownership guard.
+- Added migration `20261112100000_menu_recipe_knowledge`; it has not been applied to any environment. Generate Prisma Client and run migration/tests in a non-production preview before considering deployment.
+- No recipe content has been auto-imported from MENU_ITEM records. Paanagam recipe curation and verification remains an owner task; the known coffee-decoction process is not approved as a live recipe.
+- Remaining implementation gaps: cross-tenant and revision-immutability automated tests; recipe dependency tracking for old claims/content; source-cited answer drafting; ingredient master/facts; dashboard UI and review-required state propagation.
