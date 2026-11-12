@@ -14,15 +14,24 @@
     return data;
   }
   function message(text,error=false){const el=$("poyo-studio-message");if(el){el.textContent=text;el.classList.toggle("error",error);}}
+  let modelCatalogue = [];
+  function renderModelOptions(){
+    const select=$("poyo-model-id");
+    if(!select) return;
+    const mediaType=$("poyo-media-type")?.value || "VIDEO";
+    const available=modelCatalogue.filter(m=>m.mediaType===mediaType);
+    const previous=select.value;
+    select.innerHTML=available.map(m=>'<option value="'+esc(m.id)+'">'+esc(m.name)+'</option>').join("") || '<option value="">No '+esc(mediaType.toLowerCase())+' models available</option>';
+    if(previous&&available.some(m=>m.id===previous)) select.value=previous;
+  }
   async function loadModels(){
     if(!businessId()||!token()) return;
     try{
       const result=await api("/v1/creative-integrations/poyo/models");
-      const models=result.models||[];
+      modelCatalogue=result.models||[];
       const root=$("poyo-model-list");
-      if(root) root.innerHTML=models.map(m=>'<article class="metric-card"><div class="metric-top"><strong>'+esc(m.name)+'</strong><span class="tag pending-tag">Not enabled</span></div><p>'+esc(m.mediaType)+' · '+esc(m.provider)+'</p><p>'+esc((m.useCases||[]).join(" · "))+'</p><small>Schema '+(m.schemaVerified?"verified":"pending")+' · Price '+(m.priceVerified?"verified":"pending")+'</small><p><a href="'+esc(m.documentationUrl)+'" target="_blank" rel="noopener noreferrer">Model documentation</a></p></article>').join("")||'<p class="empty-copy">No model catalogue entries.</p>';
-      const select=$("poyo-model-id"), previous=select?.value;
-      if(select){select.innerHTML=models.map(m=>'<option value="'+esc(m.id)+'">'+esc(m.name)+' · '+esc(m.mediaType)+'</option>').join("");if(previous&&models.some(m=>m.id===previous))select.value=previous;}
+      if(root) root.innerHTML=modelCatalogue.map(m=>'<article class="metric-card"><div class="metric-top"><strong>'+esc(m.name)+'</strong><span class="tag pending-tag">Not enabled</span></div><p>'+esc(m.mediaType)+' · '+esc(m.provider)+'</p><p>'+esc((m.useCases||[]).join(" · "))+'</p><small>Schema '+(m.schemaVerified?"verified":"pending")+' · Price '+(m.priceVerified?"verified":"pending")+'</small><p><a href="'+esc(m.documentationUrl)+'" target="_blank" rel="noopener noreferrer">Model documentation</a></p></article>').join("")||'<p class="empty-copy">No model catalogue entries.</p>';
+      renderModelOptions();
       const banner=$("poyo-generation-state");
       if(banner) banner.textContent="Catalogue loaded from documentation. Paid generation is disabled until live model schemas, account availability and prices are verified.";
     }catch(e){message("PoYo model catalogue unavailable: "+e.message,true);}
@@ -35,6 +44,7 @@
       if(root) root.innerHTML=(result.tasks||[]).map(t=>'<article class="social-post-card"><div class="social-post-head"><strong>'+esc(t.modelId)+'</strong><span class="tag pending-tag">'+esc(t.status)+'</span></div><p>'+esc(t.prompt)+'</p><small>'+esc(t.mediaType)+' · '+esc(new Date(t.createdAt).toLocaleString())+'</small></article>').join("")||'<p class="empty-copy">No PoYo drafts yet.</p>';
     }catch(e){message("PoYo task list unavailable: "+e.message,true);}
   }
+  $("poyo-media-type")?.addEventListener("change",renderModelOptions);
   $("poyo-draft-form")?.addEventListener("submit",async e=>{
     e.preventDefault();
     const button=$("poyo-save-draft");button.disabled=true;
