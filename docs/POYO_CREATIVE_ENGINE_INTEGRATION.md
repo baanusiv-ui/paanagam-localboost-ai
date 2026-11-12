@@ -81,12 +81,14 @@ Use a unique provider task ID and idempotent webhook processing. Verify business
 - Still pending: live catalogue/schema/price discovery and verification against the account's actual API key.
 - Generation is not exposed to the UI and no paid generation can be initiated yet; do not enable the feature flag until live account checks and cost confirmation are implemented.
 
-**Slice B — task lifecycle**
-- Tenant-scoped task persistence and migrations
-- Paid-generation confirmation
-- Submit/status/polling
-- Signed webhook verification, replay tolerance and idempotency
-- Output download and asset persistence
+**Slice B — task lifecycle (draft persistence implemented)**
+- Added tenant-scoped `PoyoCreativeTask` records and a Prisma migration.
+- Added authenticated, business-owner-scoped draft create/list/detail endpoints:
+  - `POST /v1/businesses/:businessId/poyo/tasks`
+  - `GET /v1/businesses/:businessId/poyo/tasks`
+  - `GET /v1/businesses/:businessId/poyo/tasks/:taskId`
+- Draft creation does not call PoYo and does not consume credits.
+- Still pending: live price confirmation, paid-generation confirmation, provider submission/status polling, webhook route/idempotency, output download and asset persistence.
 
 **Slice C — LocalBoost Creative Studio**
 - Creative brief and storyboard records
