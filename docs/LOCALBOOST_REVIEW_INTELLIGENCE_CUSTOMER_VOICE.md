@@ -167,3 +167,52 @@ Each phase requires tests, security review and owner acceptance before progressi
 - Automatic service changes, discounts, refunds or compensation.
 - Claims of causal impact from content on ratings or review volume.
 - Production deployment or database migration before review and explicit approval.
+
+
+## Customer-understanding educational video engine
+
+Add a dedicated **Customer Education** content type to LocalBoost, alongside pain-point response posts. Its purpose is to help customers understand products, ingredients, preparation, menu choices and how to get the best experience at Paanagam—not simply to promote offers.
+
+### Evidence-led topic discovery
+- Discover recurring customer questions, misunderstandings and information gaps from eligible Google and Meta feedback, comments and owner-approved FAQs.
+- Combine those signals with owner-provided menu, recipe, ingredient, preparation and service information.
+- Rank topics by frequency, recency, customer usefulness and confidence; show the underlying evidence and sample size.
+- Distinguish an observed customer question from a hypothesised knowledge gap. Never assume every customer is confused.
+- Do not infer personal attributes or create individual audience profiles. Use broad, non-sensitive topic interests only.
+
+### Educational video formats
+Generate editable concepts and scripts such as:
+- **Product explainers:** what traditional filter coffee is and what makes its preparation distinctive.
+- **Ingredient explainers:** explain ingredients or choices only from owner-verified product information.
+- **How it's made:** show approved preparation steps, equipment and hygiene practices without revealing confidential SOPs.
+- **Menu guides:** explain available choices, serving styles, portions or how to order, using current approved menu facts.
+- **Myth vs fact:** correct a recurring misconception respectfully, with evidence and no exaggerated health or nutrition claims.
+- **Frequently asked questions:** answer common questions in concise Tamil-first videos, with English or bilingual variants.
+- **Experience guides:** explain ordering, service flow or practical visit information when verified by the owner.
+
+### Video creation workflow
+1. LocalBoost proposes an educational topic with customer evidence, why it matters and the factual sources needed.
+2. Gemini creates a short, structured script and storyboard: hook, simple explanation, visual demonstration, takeaway and optional owner-approved CTA.
+3. The owner checks factual accuracy, especially ingredients, preparation, pricing, availability, nutrition, allergens, hygiene and operating details.
+4. Use the existing LocalBoost creative pipeline and approved video provider (including WAN where configured) to create footage. Add exact Tamil/English text, subtitles, logo and voiceover through the brand-safe composition workflow.
+5. Generate previewed platform variants for Instagram Reels, Facebook, YouTube Shorts and Google-supported video placements where available. Respect each placement's current format and duration limits.
+6. Preview pronunciation, subtitles, factual claims, accessibility and brand consistency. Owner approval is required for the exact final asset and caption before publishing.
+7. Track watch time, completion, saves, shares, comments and follow-up questions where platform APIs expose them. Feed new questions back into topic discovery.
+
+### Editorial and safety rules
+- Teach first; sell second. Do not turn every educational video into an advertisement.
+- Keep scripts simple, useful, culturally natural and Tamil-first when appropriate; support English and bilingual adaptations.
+- Never invent ingredients, sourcing, preparation methods, nutrition/health benefits, allergen status, certifications, prices, offers, availability or business practices.
+- Do not provide medical or dietary advice. For allergen or health-related questions, use only verified business information and recommend customers confirm directly with staff where details are uncertain.
+- Do not use a customer's name, face, voice, review text or identifiable story without explicit permission.
+- Do not publish unverified claims or imply a process has changed until the owner confirms it.
+- Each video draft must retain its topic evidence, approved fact sources, script revision, generated asset IDs and approval record.
+
+### Acceptance criteria
+- The owner can distinguish pain-point response content from educational content.
+- Every proposed topic includes a clear customer-learning objective and evidence or is explicitly labelled as an owner-suggested topic.
+- Every factual statement in a script is traceable to owner-approved business information.
+- Tamil-first scripts have editable subtitles and a voiceover preview; uncertain pronunciation is flagged for review.
+- Video generation cost and provider are shown before any paid generation, with explicit per-job approval.
+- No video is published without approval of the exact video, script, caption, channel and schedule.
+- Performance reporting separates educational engagement from direct sales attribution; do not claim causality without evidence.
