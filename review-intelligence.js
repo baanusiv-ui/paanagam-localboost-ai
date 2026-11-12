@@ -147,5 +147,20 @@
     window.addEventListener("localboost:signed-out",()=>{businessId=null;reviews=[];analysis=null;sourceStatus=null;if($("ri-evidence")){render();status("Signed out · private review evidence cleared.");}});
     businessId=sessionStorage.getItem(BUSINESS);
   }
-  install();
+  function safeInstall() {
+    try {
+      install();
+      const section = $("reviews-view");
+      if (section && section.dataset.reviewIntelligenceInstalled !== "true") {
+        console.error("LocalBoost Review Intelligence could not attach to the Reviews page.");
+      }
+    } catch (error) {
+      console.error("LocalBoost Review Intelligence initialisation failed:", error);
+      const section = $("reviews-view");
+      if (section) section.innerHTML = "<div class='empty-state'><h2>Review Intelligence could not initialise</h2><p>Reload this page. If the issue continues, share the browser console error with LocalBoost support.</p></div>";
+    }
+  }
+  safeInstall();
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", safeInstall, { once: true });
+  window.LocalBoostReviewIntelligence = { refresh: () => { businessId = sessionStorage.getItem(BUSINESS); return refresh(); }, install: safeInstall };
 })();
