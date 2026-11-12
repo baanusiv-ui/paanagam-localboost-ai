@@ -100,7 +100,7 @@
     const button=$("ri-import-google"); button.disabled=true; status("Importing authorised Google Business Profile reviews…");
     try {
       const result=await api(base()+"/google/reviews/import",{method:"POST",body:"{}"});
-      status("Google import complete: "+(result.imported ?? 0)+" new, "+(result.updated ?? 0)+" updated. "+(result.totalReviewCount ?? "Unknown")+" total at source.");
+      status("Google import complete: "+(result.importedCount ?? 0)+" imported. "+(result.totalReviewCount ?? "Unknown")+" total at source.");
       await refresh();
     } catch(error) { status(error.message,true); }
     finally { button.disabled=false; }
