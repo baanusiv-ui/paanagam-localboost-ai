@@ -10,8 +10,10 @@ import { recordBusinessActivity } from "./modules/activity/record.js";
 const AUTH_URL = "https://www.canva.com/api/oauth/authorize";
 const TOKEN_URL = "https://api.canva.com/rest/v1/oauth/token";
 const API_URL = "https://api.canva.com/rest/v1";
-const DEFAULT_SCOPES = "design:meta:read design:content:read design:content:write asset:read asset:write";
+const DEFAULT_SCOPES = "design:meta:read design:content:read design:content:write asset:read asset:write profile:read";
 const DESIGN_LIST_SCOPE = "design:meta:read";
+const CAPABILITIES_SCOPE = "profile:read";
+const IMAGE_GENERATION_CAPABILITY = "image_generation";
 
 const admins = () => env.CREATIVE_STUDIO_ADMIN_EMAILS.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
 async function isAdmin(db: PrismaClient, userId: string) {
@@ -89,7 +91,13 @@ export async function registerCanvaRoutes(app: FastifyInstance, db: PrismaClient
     url.searchParams.set("client_id", env.CANVA_CLIENT_ID);
     url.searchParams.set("response_type", "code");
     url.searchParams.set("redirect_uri", env.CANVA_REDIRECT_URI);
-    url.searchParams.set("scope", env.CANVA_SCOPES.trim() || DEFAULT_SCOPES);
+    const requestedScopes = (env.CANVA_SCOPES.trim() || DEFAULT_SCOPES).split(/\s+/).filter(Boolean);
+    // Image generation and capability diagnostics require these scopes even
+    // when deployments provide a custom CANVA_SCOPES allow-list.
+    for (const requiredScope of ["asset:write", CAPABILITIES_SCOPE]) {
+      if (!requestedScopes.includes(requiredScope)) requestedScopes.push(requiredScope);
+    }
+    url.searchParams.set("scope", requestedScopes.join(" "));
     url.searchParams.set("state", state);
     url.searchParams.set("code_challenge", challenge);
     url.searchParams.set("code_challenge_method", "s256");
@@ -184,6 +192,42 @@ export async function registerCanvaRoutes(app: FastifyInstance, db: PrismaClient
     }
   });
 
+  app.get("/v1/businesses/:businessId/canva/capabilities", { preHandler: requireUser }, async (req: any, reply) => {
+    if (!await isAdmin(db, req.userId)) return reply.code(403).send({ error: "Administrator access required." });
+    const business = await findOwnedBusiness(db, req.userId, String(req.params.businessId));
+    if (!business) return reply.code(404).send({ error: "Business not found." });
+    const connection = await db.canvaConnection.findUnique({ where: { businessId: business.id }, select: { scopes: true } });
+    if (!connection) return reply.code(409).send({ error: "Canva is not connected.", code: "canva_not_connected" });
+    const scopes = connection.scopes.split(/\s+/).filter(Boolean);
+    if (!scopes.includes(CAPABILITIES_SCOPE)) return reply.code(409).send({ error: "Canva capability checks require Profile → Read (profile:read). Enable it in the Canva developer app, then reconnect Canva.", code: "canva_scope_required", requiredScope: CAPABILITIES_SCOPE });
+    try {
+      let token = await getCanvaAccessToken(db, business.id);
+      const readCapabilities = async (accessToken: string) => {
+        const response = await fetch(API_URL + "/users/me/capabilities", { headers: { authorization: "Bearer " + accessToken, accept: "application/json" } });
+        const data = await response.json() as { capabilities?: string[]; code?: string; message?: string };
+        if (!response.ok) {
+          const error = new Error(data.message || data.code || "Canva capability check failed") as Error & { statusCode?: number; canvaCode?: string };
+          error.statusCode = response.status; error.canvaCode = data.code; throw error;
+        }
+        return data.capabilities || [];
+      };
+      let capabilities: string[];
+      try { capabilities = await readCapabilities(token); }
+      catch (error) {
+        if ((error as Error & { statusCode?: number }).statusCode !== 401) throw error;
+        token = await getCanvaAccessToken(db, business.id, true);
+        capabilities = await readCapabilities(token);
+      }
+      return { capabilities, imageGeneration: capabilities.includes(IMAGE_GENERATION_CAPABILITY) };
+    } catch (error) {
+      const apiError = error as Error & { statusCode?: number; canvaCode?: string };
+      req.log.error({ statusCode: apiError.statusCode, code: apiError.canvaCode }, "Canva capability check failed");
+      if (apiError.canvaCode === "missing_scope") return reply.code(409).send({ error: "Canva capability check needs Profile → Read (profile:read). Enable it in the Canva developer app and reconnect.", code: "canva_scope_required", requiredScope: CAPABILITIES_SCOPE });
+      if (apiError.statusCode === 401) return reply.code(401).send({ error: "Canva authorisation expired. Reconnect Canva.", code: "canva_reconnect_required" });
+      return reply.code(apiError.statusCode === 403 ? 403 : 502).send({ error: apiError.message || "Canva could not verify this user's capabilities.", code: apiError.canvaCode || "canva_capability_check_failed" });
+    }
+  });
+
   // Canva AI image generation (preview API). Images are saved to the LocalBoost
   // business library only after the job completes and the owner chooses Save.
   app.post("/v1/businesses/:businessId/canva/image-generations", {
@@ -202,31 +246,50 @@ export async function registerCanvaRoutes(app: FastifyInstance, db: PrismaClient
     if (!business) return reply.code(404).send({ error: "Business not found." });
     const connection = await db.canvaConnection.findUnique({ where: { businessId: business.id }, select: { scopes: true } });
     if (!connection) return reply.code(409).send({ error: "Canva is not connected.", code: "canva_not_connected" });
-    if (!connection.scopes.split(/\s+/).includes("asset:write")) {
-      return reply.code(409).send({ error: "Canva image generation requires asset:write. Enable this scope in the Canva developer app, then reconnect Canva.", code: "canva_scope_required", requiredScope: "asset:write" });
-    }
+    const scopes = connection.scopes.split(/\s+/).filter(Boolean);
+    if (!scopes.includes("asset:write")) return reply.code(409).send({ error: "Canva image generation requires Asset → Write. Enable it in the Canva developer app, then reconnect.", code: "canva_scope_required", requiredScope: "asset:write" });
+    if (!scopes.includes(CAPABILITIES_SCOPE)) return reply.code(409).send({ error: "LocalBoost needs Profile → Read (profile:read) to check Canva image-generation eligibility. Enable it in the Canva developer app, then reconnect.", code: "canva_scope_required", requiredScope: CAPABILITIES_SCOPE });
     try {
-      const token = await getCanvaAccessToken(db, business.id);
+      let token = await getCanvaAccessToken(db, business.id);
+      const readCapabilities = async (accessToken: string) => {
+        const response = await fetch(API_URL + "/users/me/capabilities", { headers: { authorization: "Bearer " + accessToken, accept: "application/json" } });
+        const data = await response.json() as { capabilities?: string[]; code?: string; message?: string };
+        if (!response.ok) {
+          const error = new Error(data.message || data.code || "Canva capability check failed") as Error & { statusCode?: number; canvaCode?: string };
+          error.statusCode = response.status; error.canvaCode = data.code; throw error;
+        }
+        return data.capabilities || [];
+      };
+      let capabilities: string[];
+      try { capabilities = await readCapabilities(token); }
+      catch (error) {
+        if ((error as Error & { statusCode?: number }).statusCode !== 401) throw error;
+        token = await getCanvaAccessToken(db, business.id, true);
+        capabilities = await readCapabilities(token);
+      }
+      if (!capabilities.includes(IMAGE_GENERATION_CAPABILITY)) return reply.code(403).send({
+        error: "This Canva account is not eligible for Image Generation API access. Canva requires both Canva AI and Magic Media to be allowed for this user's account/team.",
+        code: "canva_image_generation_capability_missing", requiredCapability: IMAGE_GENERATION_CAPABILITY, capabilities
+      });
       const response = await fetch(API_URL + "/image-generations", {
         method: "POST",
-        headers: { authorization: "Bearer " + token, "content-type": "application/json", "accept": "application/json" },
-        body: JSON.stringify({
-          prompt: body.data.prompt,
-          aspect_ratio: body.data.aspectRatio,
-          idempotency_key: body.data.idempotencyKey,
-          asset_upload: { type: "upload", asset_name: "LocalBoost campaign artwork" }
-        })
+        headers: { authorization: "Bearer " + token, "content-type": "application/json", accept: "application/json" },
+        body: JSON.stringify({ prompt: body.data.prompt, aspect_ratio: body.data.aspectRatio, idempotency_key: body.data.idempotencyKey, asset_upload: { type: "upload", asset_name: "LocalBoost campaign artwork" } })
       });
       const data = await response.json() as { job?: { id?: string; status?: string }; code?: string; message?: string };
       if (!response.ok || !data.job?.id) {
-        if (response.status === 402) return reply.code(402).send({ error: "Canva AI image credits are unavailable or exhausted.", code: data.code || "credit_quota_exceeded" });
-        if (response.status === 403) return reply.code(403).send({ error: "Canva image generation is not enabled for this app or user.", code: data.code || "canva_capability_required" });
-        return reply.code(response.status >= 500 ? 502 : response.status).send({ error: data.message || data.code || "Canva image generation could not start.", code: data.code });
+        req.log.warn({ statusCode: response.status, code: data.code, message: data.message }, "Canva image generation request rejected");
+        if (response.status === 402) return reply.code(402).send({ error: "Canva AI image credits are unavailable or exhausted.", code: data.code || "credit_quota_exceeded", canvaMessage: data.message || null });
+        if (response.status === 403) return reply.code(403).send({ error: data.message || "Canva denied Image Generation API access.", code: data.code || "canva_image_generation_denied", canvaMessage: data.message || null });
+        return reply.code(response.status >= 500 ? 502 : response.status).send({ error: data.message || "Canva image generation could not start.", code: data.code || "canva_image_generation_failed", canvaMessage: data.message || null });
       }
       return { jobId: data.job.id, status: data.job.status || "in_progress" };
     } catch (error) {
-      req.log.error({ error: error instanceof Error ? error.message : "unknown" }, "Canva image generation start failed");
-      return reply.code(502).send({ error: "Unable to start Canva image generation." });
+      const apiError = error as Error & { statusCode?: number; canvaCode?: string };
+      req.log.error({ statusCode: apiError.statusCode, code: apiError.canvaCode, error: apiError.message }, "Canva image generation start failed");
+      if (apiError.canvaCode === "missing_scope") return reply.code(409).send({ error: "Canva rejected a required scope. Check Asset → Write and Profile → Read, then reconnect Canva.", code: "canva_scope_required" });
+      if (apiError.statusCode === 401) return reply.code(401).send({ error: "Canva authorisation expired. Reconnect Canva.", code: "canva_reconnect_required" });
+      return reply.code(502).send({ error: "Unable to start Canva image generation: " + apiError.message });
     }
   });
 
