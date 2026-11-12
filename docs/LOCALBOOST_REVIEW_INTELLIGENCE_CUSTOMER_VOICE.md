@@ -242,3 +242,43 @@ Build owner-reviewed explainers around:
 For every ingredient video, retain a structured fact sheet containing ingredient name, supplier/source where approved for disclosure, actual grade or variety, blend percentage where relevant, preparation context, evidence/source, last owner verification date and claims that must not be made. If the business has not confirmed a detail, omit it or label it as unavailable; never fill gaps with model-generated assumptions.
 
 Scripts must distinguish general food knowledge from facts about Paanagam's own recipe and sourcing. The owner must approve all Paanagam-specific statements before generation and publishing. Do not make health, medicinal, energy, weight-loss or disease-prevention claims about coffee, chicory or tea. Do not disclose confidential recipes or supplier commercial terms.
+
+
+## Strict Paanagam menu-and-recipe boundary
+
+**The Customer Education engine must teach only about items that actually exist in Paanagam's approved menu and their approved recipes. It is not a general food, beverage, nutrition or ingredient education channel.** Do not create standalone topics about ingredients, products or preparation methods that Paanagam does not use in an active menu item.
+
+### Source of truth and recipe analysis
+
+- Read the active Paanagam menu catalogue and its linked, owner-approved recipe/BOM and SOP records from the connected business data. The current active catalogue and approved recipe version—not old drafts, trial recipes, historical menus or generic model knowledge—determine what can be taught.
+- Build a menu-to-recipe map: menu item → recipe version → ingredients/sub-recipes → quantities and units → yield/portion → preparation steps → approved serving/presentation.
+- Analyse each menu item and its recipe to identify customer-useful explanations: what the item contains, what its named ingredients do in that particular recipe, how the approved preparation affects its taste/texture/appearance, what distinguishes it from another Paanagam menu item, and how it is served.
+- Analyse shared ingredients and sub-recipes across active menu items to identify useful comparisons, but only in the context of those actual menu items.
+- Ingredient topics such as coffee beans, chicory, tea dust, CTC leaf and premium tea liquor are eligible only when the relevant ingredient/type is present in an active Paanagam recipe or approved menu specification. Explain its role in that actual product; do not create generic product education detached from the menu.
+- Where the approved recipe does not specify a detail (for example, bean variety, coffee/chicory percentage, tea grade, supplier origin, milk fat level or exact brewing temperature), mark it as **not specified** and do not infer or invent it.
+- Preserve recipe version and effective date. If a recipe changes, new content must use the current approved version; old published content remains linked to the version it described and is flagged for owner review when materially outdated.
+- Never expose confidential recipe quantities, proprietary blends, supplier terms or internal SOP steps in public content unless the owner explicitly marks those details as publishable.
+
+### Menu-linked learning formats
+
+- **What's in this menu item?** Explain only its approved ingredients and relevant allergen information.
+- **Why this ingredient is used here:** explain the ingredient's function in the specific Paanagam recipe.
+- **How this Paanagam item is prepared:** use owner-approved, public-safe steps; omit confidential production details.
+- **Menu item comparison:** compare two or more active Paanagam items using their actual recipe differences, flavour profile and serving style.
+- **Choosing from our menu:** help customers understand the real available options, portions and approved customisations.
+- **Behind this recipe:** tell the story of a dish or drink using verified Paanagam recipe and sourcing facts.
+- **Customer question answered:** answer a recurring question about a specific active menu item, grounded in its recipe and approved business facts.
+
+### Content eligibility and guardrails
+
+Before proposing a topic, verify that it links to at least one active menu item and an approved recipe or owner-approved menu fact. If no such link exists, do not generate the topic. Label missing recipe data as a request for owner completion—not an invitation for AI to fill the gap. Never recommend new dishes, ingredients, menu extensions or recipe changes through this education workflow. Recipe development and menu changes belong to a separate owner-controlled workflow.
+
+### Acceptance criteria
+
+- Every educational topic is linked to one or more active Paanagam menu item IDs and the exact approved recipe version or owner-approved menu fact used.
+- The owner can inspect the source recipe facts behind every product-specific sentence.
+- Topics about ingredients absent from Paanagam's active recipes/menu are blocked.
+- No old, draft, trial or inactive recipe is used as current menu truth.
+- Missing recipe attributes are visibly marked unknown; no AI-inferred sourcing, grade, ratio, quantity or method is presented as Paanagam fact.
+- Public content excludes confidential quantities and SOP details unless explicitly approved for disclosure.
+- Recipe changes trigger a review of affected educational scripts and published evergreen content.
