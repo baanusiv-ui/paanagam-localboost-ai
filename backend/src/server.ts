@@ -98,7 +98,8 @@ app.get("/v1/creative-integrations/status", { preHandler: requireUser }, async (
     administrator: isAdmin,
     providers: {
       canva: { enabled: isAdmin && Boolean(env.CANVA_CLIENT_ID && env.CANVA_CLIENT_SECRET && env.CANVA_REDIRECT_URI), configured: Boolean(env.CANVA_CLIENT_ID && env.CANVA_CLIENT_SECRET && env.CANVA_REDIRECT_URI) },
-      adobeExpress: { enabled: isAdmin && Boolean(env.ADOBE_EXPRESS_CLIENT_ID), configured: Boolean(env.ADOBE_EXPRESS_CLIENT_ID) }
+      adobeExpress: { enabled: isAdmin && Boolean(env.ADOBE_EXPRESS_CLIENT_ID), configured: Boolean(env.ADOBE_EXPRESS_CLIENT_ID) },
+      poyo: { enabled: isAdmin && env.POYO_ENABLED && Boolean(env.POYO_API_KEY), configured: Boolean(env.POYO_API_KEY), webhookConfigured: Boolean(env.POYO_WEBHOOK_HMAC_KEY) }
     }
   };
 });
