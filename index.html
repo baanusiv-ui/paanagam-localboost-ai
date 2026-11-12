@@ -339,6 +339,13 @@ We look forward to welcoming you!</textarea></label>
 </main>
   </div>
   <script src="config.js"></script>
+  <script>
+    // Keep the PR #31 preview isolated from production services.
+    if (window.location.hostname === "paanagam-localboost-dashboard-pr-31.onrender.com") {
+      window.LOCALBOOST_API_BASE = "https://paanagam-localboost-api-pr-31.onrender.com";
+      window.LOCALBOOST_NEON_AUTH_URL = "https://ep-tiny-credit-az25azf0.neonauth.c-3.ap-southeast-1.aws.neon.tech/localboost_staging/auth";
+    }
+  </script>
   <script src="app.js"></script><script src="growth.js"></script><script src="growth-intelligence.js"></script><script src="gbp-owner.js"></script><script src="creative-studio.js"></script><script src="social-publishing.js"></script><script>
 (() => {
   "use strict";
