@@ -11,6 +11,7 @@
   };
   let activeBusiness = null;
   let googleConnected = false;
+  let googleSelectedLocationId = null;
 
   const $ = (selector) => document.querySelector(selector);
   const token = () => sessionStorage.getItem(TOKEN_KEY);
@@ -145,8 +146,12 @@
         option.textContent = (account.accountName || account.name || "Google account") + " · " + (account.role || account.type || "Access");
         select.append(option);
       });
-      message("google-import-message", "Checking authorised accounts for the saved Paanagam location…");
-      await autoSelectPaanagamLocation(result.accounts);
+      if (googleSelectedLocationId !== "13677234647182178607") {
+        message("google-import-message", "Checking authorised accounts for the saved Paanagam location…");
+        await autoSelectPaanagamLocation(result.accounts);
+      } else {
+        message("google-import-message", "Paanagam listing is already linked. Review auto-sync is ready.");
+      }
     } catch (error) {
       select.innerHTML = "";
       const option = document.createElement("option");
@@ -243,6 +248,7 @@
     if (!activeBusiness) return;
     const result = await api("/v1/businesses/" + encodeURIComponent(activeBusiness.id) + "/google");
     setConnectionState(result.connected, result.connected ? "Authorised connection" : "Not connected");
+    googleSelectedLocationId = result.selectedLocationId || null;
     $("#google-picker").classList.toggle("hidden", !result.connected);
     if (result.connected) await loadGoogleAccounts();
   }
