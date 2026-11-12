@@ -117,6 +117,7 @@ export async function submitPoyoGeneration(
     signal: AbortSignal.timeout(20_000)
   });
   const raw = await response.json().catch(() => null) as {
+    code?: number;
     task_id?: string;
     data?: { task_id?: string };
     message?: string;
