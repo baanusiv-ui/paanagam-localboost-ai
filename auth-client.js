@@ -2,7 +2,21 @@
   "use strict";
 
   const API_BASE = (window.LOCALBOOST_API_BASE || "").replace(/\/$/, "");
-  const AUTH_URL = window.LOCALBOOST_NEON_AUTH_URL;
+  const AUTH_URL = (() => {
+    const configured = window.LOCALBOOST_NEON_AUTH_URL;
+    if (!configured) return configured;
+    try {
+      const url = new URL(configured);
+      // The isolated PoYo staging dashboard must use the existing LocalBoost staging Neon Auth project.
+      if (url.hostname === "ep-tiny-credit-az25azf0.neonauth.c-3.ap-southeast-1.aws.neon.tech" &&
+          url.pathname === "/neondb/auth") {
+        url.pathname = "/localboost_staging/auth";
+      }
+      return url.toString().replace(/\\/$/, "");
+    } catch {
+      return configured;
+    }
+  })();
   const TOKEN_KEY = "localboost_access_token";
   const authMessage = document.getElementById("auth-message");
 
