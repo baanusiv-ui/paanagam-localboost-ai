@@ -178,13 +178,14 @@ export function registerPoyoRoutes(app: FastifyInstance, db: PrismaClient, requi
       while (true) {
         const chunk = await reader.read();
         if (chunk.done) break;
-        if (!chunk.value) continue;
-        totalBytes += chunk.value.byteLength;
+        const value = chunk.value;
+        if (!value) continue;
+        totalBytes += value.byteLength;
         if (totalBytes > 25 * 1024 * 1024) {
           await reader.cancel();
           return reply.code(413).send({ error: "Generated video exceeds the 25 MB preview storage limit." });
         }
-        chunks.push(chunk.value);
+        chunks.push(value);
       }
       if (!totalBytes) return reply.code(502).send({ error: "PoYo returned an empty video file." });
       const bytes = Buffer.concat(chunks.map(chunk => Buffer.from(chunk)), totalBytes);
