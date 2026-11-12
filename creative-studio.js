@@ -189,8 +189,8 @@
     }catch(err){setMessage("Artwork import failed: "+err.message,true);button.disabled=false;}
   });
   $("creative-image-download")?.addEventListener("click",()=>{
-    if(!canvaGeneratedImageUrl)return;
-    const a=document.createElement("a"); a.href=canvaGeneratedImageUrl; a.target="_blank"; a.rel="noopener noreferrer"; a.download="paanagam-canva-campaign.png"; document.body.appendChild(a); a.click(); a.remove();
+    if(!generatedImageDataUrl)return;
+    const a=document.createElement("a"); a.href=generatedImageDataUrl; a.download="paanagam-canva-campaign.jpg"; document.body.appendChild(a); a.click(); a.remove();
   });
   $("creative-save")?.addEventListener("click",async()=>{
     if(!ready||!current)return;
