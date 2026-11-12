@@ -96,7 +96,9 @@ These are private operational records. The education feed must not expose the ra
 
 ## Current implementation status
 
-- LocalBoost imports POS menu items and daily sales only.
-- LocalBoost has no recipe/education feed importer yet.
-- Paanagam POS has local recipe/BOM and SOP tables, but no confirmed customer-facing education approval/export endpoint.
+- LocalBoost imports POS menu items and daily sales only; there is no POS recipe/education feed importer.
+- LocalBoost now has a manual owner-entered education facts screen. It reads active menu context from imported `MENU_ITEM` records and stores owner-approved bilingual facts as tenant-scoped `Evidence` records using the existing evidence API; no Prisma enum or database migration was needed.
+- The facts screen supports explicit owner confirmation before saving, Tamil and English text, an evidence reference, fact versioning and withdrawal records. Withdrawn facts remain in the audit history and are not counted as active.
+- The facts screen does not generate scripts, create creatives, or publish. Script generation remains blocked pending a tested approved-fact retrieval/traceability pipeline.
+- Paanagam POS has local recipe/BOM and SOP tables, but no confirmed customer-facing education approval/export endpoint. Raw recipe/BOM data is not exported.
 - No production database migration or deployment is authorised by this document.
