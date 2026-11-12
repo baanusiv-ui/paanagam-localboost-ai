@@ -80,7 +80,7 @@ Use a unique provider task ID and idempotent webhook processing. Verify business
 - Added unified task-status lookup using the documented `GET /api/generate/status/{task_id}` endpoint for the forthcoming task worker.
 - Added an admin-gated provider readiness indicator to the existing creative-integration status response.
 - Added HMAC webhook signature verification with a five-minute timestamp window and constant-time comparison, plus unit tests.
-- Still pending: live catalogue/schema/price discovery and verification against the account's actual API key. Balance lookup is implemented but has not yet been exercised with a configured key.
+- Added a documentation-backed model catalogue endpoint at `GET /v1/creative-integrations/poyo/models`, filterable by IMAGE or VIDEO. Initial entries include Wan 2.7 Video, Wan 3.0 Video, Wan 2.7 Image and GPT Image 2. This catalogue is explicitly marked documentation-sourced; model schema, account availability and price remain unverified, so generation stays disabled. Balance lookup has not yet been exercised with a configured key.
 - Generation is not exposed to the UI and no paid generation can be initiated yet; do not enable the feature flag until live account checks and cost confirmation are implemented.
 
 **Slice B — task lifecycle (draft persistence implemented)**
