@@ -92,7 +92,11 @@ export async function registerCanvaRoutes(app: FastifyInstance, db: PrismaClient
     url.searchParams.set("response_type", "code");
     url.searchParams.set("redirect_uri", env.CANVA_REDIRECT_URI);
     const requestedScopes = (env.CANVA_SCOPES.trim() || DEFAULT_SCOPES).split(/\s+/).filter(Boolean);
-    if (!requestedScopes.includes(CAPABILITIES_SCOPE)) requestedScopes.push(CAPABILITIES_SCOPE);
+    // Image generation and capability diagnostics require these scopes even
+    // when deployments provide a custom CANVA_SCOPES allow-list.
+    for (const requiredScope of ["asset:write", CAPABILITIES_SCOPE]) {
+      if (!requestedScopes.includes(requiredScope)) requestedScopes.push(requiredScope);
+    }
     url.searchParams.set("scope", requestedScopes.join(" "));
     url.searchParams.set("state", state);
     url.searchParams.set("code_challenge", challenge);
