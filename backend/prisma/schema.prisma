@@ -74,6 +74,9 @@ model Business {
   metaMediaShares MetaMediaShare[]
   canvaConnection CanvaConnection?
   canvaOAuthStates CanvaOAuthState[]
+  knowledgeMenuItems KnowledgeMenuItem[]
+  knowledgeRecipes KnowledgeRecipe[]
+  knowledgeClaims KnowledgeClaim[]
   @@index([ownerId, createdAt])
 }
 
@@ -370,4 +373,104 @@ model CanvaConnection {
   expiresAt             DateTime?
   connectedAt           DateTime @default(now())
   updatedAt             DateTime @updatedAt
+}
+
+
+enum KnowledgeItemStatus {
+  DRAFT
+  CURRENT
+  ARCHIVED
+}
+
+enum RecipeRevisionStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  SUPERSEDED
+  ARCHIVED
+}
+
+enum KnowledgeStepVisibility {
+  CUSTOMER_SAFE
+  INTERNAL_ONLY
+}
+
+model KnowledgeMenuItem {
+  id          String              @id @default(cuid())
+  businessId  String
+  business    Business            @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  itemKey     String
+  name        String
+  nameTamil   String?
+  nameEnglish String?
+  nameTanglish String?
+  category    String?
+  description String?             @db.Text
+  status      KnowledgeItemStatus @default(DRAFT)
+  recipes     KnowledgeRecipe[]
+  claims      KnowledgeClaim[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  @@unique([businessId, itemKey])
+  @@index([businessId, status, updatedAt])
+}
+
+model KnowledgeRecipe {
+  id                String                  @id @default(cuid())
+  businessId        String
+  business          Business                @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  menuItemId        String
+  menuItem          KnowledgeMenuItem       @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  recipeKey         String
+  title             String
+  currentRevisionId String?                 @unique
+  currentRevision   KnowledgeRecipeRevision? @relation("CurrentRecipeRevision", fields: [currentRevisionId], references: [id], onDelete: SetNull)
+  revisions         KnowledgeRecipeRevision[] @relation("RecipeRevisions")
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  @@unique([businessId, recipeKey])
+  @@index([businessId, menuItemId, updatedAt])
+}
+
+model KnowledgeRecipeRevision {
+  id             String                   @id @default(cuid())
+  recipeId       String
+  recipe         KnowledgeRecipe          @relation("RecipeRevisions", fields: [recipeId], references: [id], onDelete: Cascade)
+  revision       Int
+  status         RecipeRevisionStatus     @default(DRAFT)
+  yieldQuantity  Decimal?                 @db.Decimal(12, 3)
+  yieldUnit      String?
+  ingredients    Json
+  preparationSteps Json
+  changeSummary  String?                  @db.Text
+  effectiveAt    DateTime?
+  approvedByUserId String?
+  approvedAt     DateTime?
+  currentFor     KnowledgeRecipe?         @relation("CurrentRecipeRevision")
+  claims         KnowledgeClaim[]
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  @@unique([recipeId, revision])
+  @@index([recipeId, status, revision])
+}
+
+model KnowledgeClaim {
+  id               String                    @id @default(cuid())
+  businessId       String
+  business         Business                  @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  menuItemId       String?
+  menuItem         KnowledgeMenuItem?        @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  recipeRevisionId String?
+  recipeRevision   KnowledgeRecipeRevision?  @relation(fields: [recipeRevisionId], references: [id], onDelete: Cascade)
+  claimText        String                    @db.Text
+  language         String                    @default("ta")
+  usage            String[]
+  sourceRefs       Json
+  approvedByUserId String?
+  approvedAt       DateTime?
+  reviewAfter      DateTime?
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  @@index([businessId, approvedAt, updatedAt])
+  @@index([menuItemId, recipeRevisionId])
 }
