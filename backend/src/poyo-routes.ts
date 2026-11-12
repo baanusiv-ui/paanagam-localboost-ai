@@ -171,8 +171,22 @@ export function registerPoyoRoutes(app: FastifyInstance, db: PrismaClient, requi
       if (declaredLength > 25 * 1024 * 1024) return reply.code(413).send({ error: "Generated video exceeds the 25 MB preview storage limit." });
       const mimeType = (response.headers.get("content-type") || "video/mp4").split(";")[0].trim().toLowerCase();
       if (!["video/mp4", "video/webm"].includes(mimeType)) return reply.code(415).send({ error: "PoYo returned an unsupported video format." });
-      const bytes = Buffer.from(await response.arrayBuffer());
-      if (!bytes.length || bytes.length > 25 * 1024 * 1024) return reply.code(413).send({ error: "Generated video exceeds the 25 MB preview storage limit." });
+      const reader = response.body?.getReader();
+      if (!reader) return reply.code(502).send({ error: "Generated video response had no readable body." });
+      const chunks: Uint8Array[] = [];
+      let totalBytes = 0;
+      while (true) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        totalBytes += chunk.value.byteLength;
+        if (totalBytes > 25 * 1024 * 1024) {
+          await reader.cancel();
+          return reply.code(413).send({ error: "Generated video exceeds the 25 MB preview storage limit." });
+        }
+        chunks.push(chunk.value);
+      }
+      if (!totalBytes) return reply.code(502).send({ error: "PoYo returned an empty video file." });
+      const bytes = Buffer.concat(chunks.map(chunk => Buffer.from(chunk)), totalBytes);
       const usage = await db.creativeAsset.aggregate({ where: { businessId: business.id }, _count: { _all: true }, _sum: { byteSize: true } });
       if (usage._count._all >= 100 || (usage._sum.byteSize ?? 0) + bytes.length > 100 * 1024 * 1024) {
         return reply.code(413).send({ error: "Business creative library limit reached (100 assets or 100 MB)." });
