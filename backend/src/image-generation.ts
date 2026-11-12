@@ -112,7 +112,7 @@ export async function generateGeminiCampaignImage(input: ImageDraftInput) {
   const imagePart = parts.find(part => part.inlineData?.data);
   const imageData = imagePart?.inlineData?.data;
   const mimeType = imagePart?.inlineData?.mimeType || "image/png";
-  if (!imageData || !/^image\\/(png|jpeg|webp)$/.test(mimeType)) {
+  if (!imageData || !/^image\/(png|jpeg|webp)$/.test(mimeType)) {
     const explanation = parts.map(part => part.text).filter(Boolean).join(" ").slice(0, 400);
     throw new Error(explanation || "Gemini returned no image. Finish reason: " + (raw.candidates?.[0]?.finishReason || "unknown"));
   }
