@@ -72,7 +72,9 @@
     });
     $("ri-evidence").innerHTML = filtered.length ? filtered.map(row => {
       const p=payload(row), text=String(p.reviewText||"").trim();
-      return '<article class="ri-evidence-card"><div class="ri-evidence-top"><span>'+esc(sourceName(row))+'</span><span>'+esc(rating(p.rating))+'</span></div><p>'+ (text ? esc(text) : '<em>Rating-only feedback · no written comment</em>') +'</p><small>'+esc(fmtDate(p.reviewDate || row.recordedAt))+' · '+esc(sentimentFor(row))+'</small></article>';
+      const validation=p.ownerValidation||"NEEDS_REVIEW";
+      return '<article class="ri-evidence-card" data-review-card="'+esc(row.externalId||"")+'"><div class="ri-evidence-top"><span>'+esc(sourceName(row))+'</span><span>'+esc(rating(p.rating))+'</span></div><p>'+ (text ? esc(text) : '<em>Rating-only feedback · no written comment</em>') +'</p><small>'+esc(fmtDate(p.reviewDate || row.recordedAt))+' · '+esc(sentimentFor(row))+'</small>'+
+        '<div class="ri-owner-review"><label>Owner validation<select data-owner-validation><option value="NEEDS_REVIEW" '+(validation==="NEEDS_REVIEW"?"selected":"")+'>Needs review</option><option value="CONFIRMED" '+(validation==="CONFIRMED"?"selected":"")+'>Confirmed issue / feedback</option><option value="NOT_APPLICABLE" '+(validation==="NOT_APPLICABLE"?"selected":"")+'>Not applicable</option><option value="RESOLVED" '+(validation==="RESOLVED"?"selected":"")+'>Already resolved</option></select></label><label>Improvement action / owner note<textarea data-owner-action rows="2" placeholder="Record the action to investigate or the verified improvement…">'+esc(p.ownerAction||"")+'</textarea></label><button class="secondary-button" type="button" data-save-owner-review>Save owner review</button><small class="ri-owner-saved">'+(p.ownerReviewedAt?"Last saved: "+esc(fmtDate(p.ownerReviewedAt)):"Not owner-validated")+'</small></div></article>';
     }).join("") : '<p class="ri-empty">No feedback matches this filter.</p>';
     $("ri-method").textContent = analysis ? "Analysis: " + analysis.method.replaceAll("_"," ").toLowerCase() + " · " + analysis.textReviewCount + " written / " + analysis.sampleSize + " total. This is directional keyword analysis, not a trained AI judgement." : "No analysis available.";
     $("ri-caveats").innerHTML = (analysis?.limitations || ["Small samples can be misleading. Read original feedback before acting."]).map(item=>"<li>"+esc(item)+"</li>").join("");
@@ -117,7 +119,7 @@
       <div class="ri-source-grid"><article class="panel ri-source"><span>Google Business Profile</span><strong id="ri-google-state">Checking connection…</strong><small>Official authorised review API only.</small></article><article class="panel ri-source"><span>Meta feedback</span><strong id="ri-meta-state">No Meta feedback imported</strong><small id="ri-meta-note">No scraping or private messages.</small></article></div>
       <div class="ri-metric-grid"><article class="panel"><small>Feedback items</small><strong id="ri-total">0</strong></article><article class="panel"><small>Written comments</small><strong id="ri-written">0</strong></article><article class="panel"><small>Average imported rating</small><strong id="ri-average">—</strong></article><article class="panel"><small>Review date range</small><strong id="ri-period">—</strong></article></div>
       <div class="ri-two-col"><article class="panel"><div class="panel-heading"><div><h3>Sentiment signals</h3><p>Text-only heuristic; rating is a tie-breaker.</p></div></div><div id="ri-sentiment"></div></article><article class="panel"><div class="panel-heading"><div><h3>Recurring themes</h3><p>One review may match more than one theme.</p></div></div><div id="ri-themes"></div></article></div>
-      <article class="panel"><div class="panel-heading"><div><h3>Customer evidence</h3><p>Original comments remain visible so AI labels are never treated as proof.</p></div><div class="ri-filters"><input id="ri-search" type="search" placeholder="Search feedback"><select id="ri-source-filter"><option value="all">All sources</option><option value="google">Google</option><option value="meta">Meta</option></select></div></div><div id="ri-evidence" class="ri-evidence-list"></div></article>
+      <article class="panel"><div class="panel-heading"><div><h3>Customer evidence & owner validation</h3><p>Review each item, confirm whether it reflects a real issue, and record the next action. AI labels are not proof.</p></div><div class="ri-filters"><input id="ri-search" type="search" placeholder="Search feedback"><select id="ri-source-filter"><option value="all">All sources</option><option value="google">Google</option><option value="meta">Meta</option></select></div></div><div id="ri-evidence" class="ri-evidence-list"></div></article>
       <article class="panel"><div class="panel-heading"><div><h3>Customer education opportunities</h3><p>Topics only; scripts must use approved Paanagam menu and recipe facts.</p></div></div><div id="ri-education" class="ri-education-list"></div></article>
       <details class="panel ri-method"><summary>Analysis method and limitations</summary><p id="ri-method"></p><ul id="ri-caveats"></ul></details>`;
     main.querySelector("main")?.append(section) || main.append(section);
@@ -127,9 +129,26 @@
     document.addEventListener("click",event=>{if(event.target.closest("[data-view], [data-go]"))section.classList.add("hidden");},true);
     $("ri-refresh").addEventListener("click",refresh);
     $("ri-import-google").addEventListener("click",importGoogle);
+    $("ri-evidence").addEventListener("click",async event=>{
+      const button=event.target.closest("[data-save-owner-review]");
+      if(!button)return;
+      const card=button.closest("[data-review-card]");
+      const row=reviews.find(item=>item.externalId===card?.dataset.reviewCard);
+      if(!row)return status("Could not identify this feedback record. Refresh and try again.",true);
+      const select=card.querySelector("[data-owner-validation]");
+      const note=card.querySelector("[data-owner-action]");
+      button.disabled=true;
+      try{
+        const updatedPayload={...payload(row),ownerValidation:select.value,ownerAction:note.value.trim(),ownerReviewedAt:new Date().toISOString()};
+        await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"REVIEW_ITEM",externalId:row.externalId,payload:updatedPayload,recordedAt:row.recordedAt||new Date().toISOString()})});
+        status("Owner review saved. This records your assessment; it does not publish a reply or claim the issue is fixed.");
+        await refresh();
+      }catch(error){status("Could not save owner review: "+error.message,true);}
+      finally{button.disabled=false;}
+    });
     $("ri-search").addEventListener("input",render);
     $("ri-source-filter").addEventListener("change",render);
-    window.addEventListener("localboost:business-ready",event=>{businessId=event.detail?.businessId||sessionStorage.getItem(BUSINESS);});
+    window.addEventListener("localboost:business-ready",event=>{businessId=event.detail?.businessId||sessionStorage.getItem(BUSINESS);if(!section.classList.contains("hidden"))refresh();});
     window.addEventListener("localboost:signed-out",()=>{businessId=null;reviews=[];analysis=null;sourceStatus=null;if($("ri-evidence")){render();status("Signed out · private review evidence cleared.");}});
     businessId=sessionStorage.getItem(BUSINESS);
   }
