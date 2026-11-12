@@ -108,11 +108,10 @@
     finally { button.disabled=false; }
   }
   function install() {
-    const nav=document.querySelector(".nav-list"), main=document.querySelector(".main");
-    if(!nav||!main||$("review-intelligence-view")) return;
-    const button=document.createElement("button"); button.type="button"; button.className="nav-item"; button.dataset.reviewIntelligenceNav="true"; button.innerHTML="<span>✳</span> Review intelligence";
-    nav.insertBefore(button,nav.querySelector('[data-view="content"]')||null);
-    const section=document.createElement("section"); section.className="view-panel hidden"; section.id="review-intelligence-view";
+    const section=$("reviews-view");
+    const reviewNav=document.querySelector('.nav-item[data-view="reviews"]');
+    if(!section||!reviewNav||section.dataset.reviewIntelligenceInstalled==="true") return;
+    section.dataset.reviewIntelligenceInstalled="true";
     section.innerHTML=`
       <div class="section-heading"><div><h2>Review Intelligence & Customer Voice</h2><p>Understand recurring customer feedback with source labels, sample sizes and original evidence.</p></div><span class="tag pending-tag">Evidence first · owner decision</span></div>
       <div class="ri-toolbar"><p id="ri-status" role="status">Sign in and select a business to load its private feedback.</p><div><button class="secondary-button" id="ri-refresh">Refresh</button><button class="primary-button" id="ri-import-google">Import Google reviews</button></div></div>
@@ -122,11 +121,7 @@
       <article class="panel"><div class="panel-heading"><div><h3>Customer evidence & owner validation</h3><p>Review each item, confirm whether it reflects a real issue, and record the next action. AI labels are not proof.</p></div><div class="ri-filters"><input id="ri-search" type="search" placeholder="Search feedback"><select id="ri-source-filter"><option value="all">All sources</option><option value="google">Google</option><option value="meta">Meta</option></select></div></div><div id="ri-evidence" class="ri-evidence-list"></div></article>
       <article class="panel"><div class="panel-heading"><div><h3>Customer education opportunities</h3><p>Topics only; scripts must use approved Paanagam menu and recipe facts.</p></div></div><div id="ri-education" class="ri-education-list"></div></article>
       <details class="panel ri-method"><summary>Analysis method and limitations</summary><p id="ri-method"></p><ul id="ri-caveats"></ul></details>`;
-    main.querySelector("main")?.append(section) || main.append(section);
-    const show=()=>{document.querySelectorAll(".main > .view-panel").forEach(x=>x.classList.add("hidden")); section.classList.remove("hidden"); document.querySelectorAll(".nav-item").forEach(x=>x.classList.toggle("active",x===button)); const crumb=$("crumb-title"),title=$("page-title"); if(crumb)crumb.textContent="Review intelligence";if(title)title.textContent="Review intelligence";if(businessId)refresh();};
-    button.addEventListener("click",show);
-    // The core router only knows its built-in views; hide this extension view when a built-in route is selected.
-    document.addEventListener("click",event=>{if(event.target.closest("[data-view], [data-go]"))section.classList.add("hidden");},true);
+    reviewNav.addEventListener("click",()=>{businessId=sessionStorage.getItem(BUSINESS);if(businessId)refresh();});
     $("ri-refresh").addEventListener("click",refresh);
     $("ri-import-google").addEventListener("click",importGoogle);
     $("ri-evidence").addEventListener("click",async event=>{
