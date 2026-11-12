@@ -40,7 +40,7 @@ for (const [path, pathItem] of Object.entries(spec.paths ?? {})) {
   }
 }
 
-if (operationCount !== 57) fail("expected 57 documented operations, found " + operationCount);
+if (operationCount !== 58) fail("expected 58 documented operations, found " + operationCount);
 
 const visitRefs = (value, location = "root") => {
   if (!value || typeof value !== "object") return;
