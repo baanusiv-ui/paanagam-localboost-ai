@@ -3264,6 +3264,41 @@
           }
         }
       }
+    },
+    "/v1/creative-integrations/poyo/models": {
+      "get": {
+        "summary": "List documentation-backed PoYo model options; generation remains disabled until live schema and price verification",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "mediaType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "IMAGE",
+                "VIDEO"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Documented model options and verification flags"
+          },
+          "400": {
+            "description": "Invalid media type"
+          },
+          "401": {
+            "description": "Authentication required"
+          }
+        }
+      }
     }
   }
 }
