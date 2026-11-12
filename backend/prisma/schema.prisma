@@ -8,6 +8,21 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum PoyoCreativeStatus {
+  DRAFT
+  SUBMITTED
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum PoyoMediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+}
+
 enum EvidenceSource {
   OWNER_CONFIRMED
   GOOGLE_API
@@ -74,6 +89,7 @@ model Business {
   metaMediaShares MetaMediaShare[]
   canvaConnection CanvaConnection?
   canvaOAuthStates CanvaOAuthState[]
+  poyoCreativeTasks PoyoCreativeTask[]
   @@index([ownerId, createdAt])
 }
 
@@ -370,4 +386,31 @@ model CanvaConnection {
   expiresAt             DateTime?
   connectedAt           DateTime @default(now())
   updatedAt             DateTime @updatedAt
+}
+
+ 
+model PoyoCreativeTask {
+  id             String             @id @default(cuid())
+  businessId     String
+  business       Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  requestedById  String
+  providerTaskId String?            @unique
+  mediaType      PoyoMediaType
+  modelId        String
+  prompt         String             @db.Text
+  modelInput     Json
+  status         PoyoCreativeStatus @default(DRAFT)
+  estimatedCredits Float?
+  actualCredits  Float?
+  outputUrls     String[]           @default([])
+  errorCode      String?
+  errorMessage   String?
+  submittedAt    DateTime?
+  completedAt    DateTime?
+  approvedAt     DateTime?
+  approvedById   String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  @@index([businessId, status, createdAt])
+  @@index([businessId, requestedById, createdAt])
 }

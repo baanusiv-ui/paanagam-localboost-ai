@@ -264,6 +264,23 @@ We look forward to welcoming you!</textarea></label>
           </div>
         </div>
 
+        <div class="panel" id="poyo-creative-panel" style="margin-top:16px">
+          <div class="panel-heading"><div><h3>PoYo Creative Engine</h3><p>Explore image and video models and save a creative brief to this business workspace.</p></div><span class="tag pending-tag">Draft mode</span></div>
+          <p id="poyo-generation-state" class="footnote">Loading provider catalogue…</p>
+          <div id="poyo-model-list" class="content-grid"><p class="empty-copy">Loading PoYo models…</p></div>
+          <div class="panel" style="margin-top:14px">
+            <h3>Save a PoYo creative brief</h3>
+            <form id="poyo-draft-form" class="creative-form">
+              <label for="poyo-media-type">Media type<select id="poyo-media-type"><option value="VIDEO">Video</option><option value="IMAGE">Image</option></select></label>
+              <label for="poyo-model-id">Model<select id="poyo-model-id"><option value="">Loading models…</option></select></label>
+              <label for="poyo-prompt">Creative brief<textarea id="poyo-prompt" rows="4" maxlength="12000" required placeholder="Describe the campaign, audience, visual direction and language. Use verified Paanagam menu and recipe facts only."></textarea></label>
+              <div class="form-actions"><button id="poyo-save-draft" class="secondary-button" type="submit">Save draft only</button></div>
+            </form>
+            <p id="poyo-studio-message" class="creative-message" role="status">No provider generation or credit charge occurs when saving a draft.</p>
+          </div>
+          <div class="panel" style="margin-top:14px"><div class="panel-heading"><div><h3>PoYo draft history</h3><p>Business-scoped creative briefs. Generation and publishing are not active.</p></div></div><div id="poyo-task-list" class="creative-library"><p class="empty-copy">Loading drafts…</p></div></div>
+          <p class="footnote">Paid generation is intentionally disabled until the exact model input schemas, live account availability and pricing are verified. Generated assets will require separate owner approval before publishing.</p>
+        </div>
         <div class="panel" id="design-integrations-panel" hidden style="margin-top:16px">
           <div class="panel-heading"><div><h3>External design tools · Administrator</h3><p>Connect Canva to generate complete campaign images from your LocalBoost brief, then save the finished artwork to the business library.</p></div><span class="tag pending-tag" id="design-integrations-access">Checking access…</span></div>
           <div class="content-grid">
@@ -348,7 +365,7 @@ We look forward to welcoming you!</textarea></label>
       window.LOCALBOOST_NEON_AUTH_URL = "https://ep-tiny-credit-az25azf0.neonauth.c-3.ap-southeast-1.aws.neon.tech/localboost_staging/auth";
     }
   </script>
-  <script src="app.js"></script><script src="growth.js"></script><script src="growth-intelligence.js"></script><script src="review-intelligence.js"></script><script src="paanagam-education.js"></script><script src="gbp-owner.js"></script><script src="creative-studio.js"></script><script src="social-publishing.js"></script><script>
+  <script src="app.js"></script><script src="growth.js"></script><script src="growth-intelligence.js"></script><script src="review-intelligence.js"></script><script src="paanagam-education.js"></script><script src="gbp-owner.js"></script><script src="creative-studio.js"></script><script src="poyo-studio.js"></script><script src="social-publishing.js"></script><script>
 (() => {
   "use strict";
   const $ = id => document.getElementById(id);
