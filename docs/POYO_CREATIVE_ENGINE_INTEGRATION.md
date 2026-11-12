@@ -75,10 +75,12 @@ Use a unique provider task ID and idempotent webhook processing. Verify business
 
 **Slice A — provider foundation (initial code committed)**
 - Added server-only `POYO_ENABLED`, `POYO_API_KEY`, `POYO_API_BASE_URL` and `POYO_WEBHOOK_HMAC_KEY` configuration.
-- Added a PoYo submission client with timeout, HTTPS callback validation and safe error messages.
+- Added a PoYo submission client with timeout, HTTPS callback validation, end-user attribution header support and safe error messages.
+- Added live account credit-balance lookup using the documented `GET /api/user/balance` endpoint, exposed only to LocalBoost administrators at `GET /v1/creative-integrations/poyo/balance`.
+- Added unified task-status lookup using the documented `GET /api/generate/status/{task_id}` endpoint for the forthcoming task worker.
 - Added an admin-gated provider readiness indicator to the existing creative-integration status response.
 - Added HMAC webhook signature verification with a five-minute timestamp window and constant-time comparison, plus unit tests.
-- Still pending: live catalogue/schema/price discovery and verification against the account's actual API key.
+- Still pending: live catalogue/schema/price discovery and verification against the account's actual API key. Balance lookup is implemented but has not yet been exercised with a configured key.
 - Generation is not exposed to the UI and no paid generation can be initiated yet; do not enable the feature flag until live account checks and cost confirmation are implemented.
 
 **Slice B — task lifecycle (draft persistence implemented)**
@@ -88,7 +90,7 @@ Use a unique provider task ID and idempotent webhook processing. Verify business
   - `GET /v1/businesses/:businessId/poyo/tasks`
   - `GET /v1/businesses/:businessId/poyo/tasks/:taskId`
 - Draft creation does not call PoYo and does not consume credits.
-- Still pending: live price confirmation, paid-generation confirmation, provider submission/status polling, webhook route/idempotency, output download and asset persistence.
+- Still pending: live price confirmation, paid-generation confirmation, provider submission/status polling wiring, webhook route/idempotency, output download and asset persistence.
 
 **Slice C — LocalBoost Creative Studio**
 - Creative brief and storyboard records
