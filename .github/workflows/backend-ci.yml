@@ -11,6 +11,10 @@ on:
       - "index.html"
       - "styles.css"
       - "growth-intelligence.js"
+      - "review-intelligence.js"
+      - "review-intelligence.css"
+      - "paanagam-education.js"
+      - "paanagam-education.css"
       - "growth.js"
       - "growth-intelligence.css"
       - "gbp-owner.css"
@@ -24,20 +28,27 @@ on:
   pull_request:
     paths:
       - "backend/**"
+      - "docs/**"
       - "app.js"
+      - "auth-client.js"
       - "config.js"
       - "index.html"
       - "styles.css"
       - "growth-intelligence.js"
+      - "review-intelligence.js"
+      - "review-intelligence.css"
+      - "paanagam-education.js"
+      - "paanagam-education.css"
+      - "growth.js"
       - "growth-intelligence.css"
       - "gbp-owner.css"
       - "gbp-owner.js"
       - "creative-studio.js"
+      - "social-publishing.js"
       - "growth-goals.js"
       - "growth-goals.css"
       - "render.yaml"
       - ".github/workflows/backend-ci.yml"
-
 jobs:
   validate-and-build:
     runs-on: ubuntu-latest
@@ -61,11 +72,11 @@ jobs:
       - run: npm run security:check
       - name: Check dashboard JavaScript syntax
         working-directory: .
-        run: node --check app.js && node --check growth.js && node --check growth-intelligence.js && node --check gbp-owner.js && node --check creative-studio.js && node --check social-publishing.js && node --check growth-goals.js && node --check auth-client.js
+        run: node --check app.js && node --check growth.js && node --check growth-intelligence.js && node --check review-intelligence.js && node --check paanagam-education.js && node --check gbp-owner.js && node --check creative-studio.js && node --check social-publishing.js && node --check growth-goals.js && node --check auth-client.js
 
       - name: Validate Render dashboard bundle and manual-deploy guard
         working-directory: .
         run: |
-          grep -q 'cp index.html styles.css growth-intelligence.css gbp-owner.css app.js growth.js growth-intelligence.js gbp-owner.js creative-studio.js social-publishing.js growth-goals.js growth-goals.css config.js auth-client.js public-dist/' render.yaml
-          for asset in index.html styles.css growth-intelligence.css gbp-owner.css app.js auth-client.js growth.js growth-intelligence.js gbp-owner.js creative-studio.js social-publishing.js growth-goals.js growth-goals.css config.js; do test -f "$asset"; done
+          grep -q 'cp index.html styles.css growth-intelligence.css review-intelligence.css paanagam-education.css gbp-owner.css app.js growth.js growth-intelligence.js review-intelligence.js paanagam-education.js gbp-owner.js creative-studio.js social-publishing.js growth-goals.js growth-goals.css config.js auth-client.js public-dist/' render.yaml
+          for asset in index.html styles.css growth-intelligence.css review-intelligence.js review-intelligence.css paanagam-education.js paanagam-education.css gbp-owner.css app.js auth-client.js growth.js growth-intelligence.js gbp-owner.js creative-studio.js social-publishing.js growth-goals.js growth-goals.css config.js; do test -f "$asset"; done
           test "$(grep -c 'autoDeployTrigger: off' render.yaml)" -eq 2

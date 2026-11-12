@@ -48,7 +48,7 @@ services:
   - type: web
     name: paanagam-localboost-dashboard
     runtime: static
-    buildCommand: mkdir -p public-dist && cp index.html styles.css growth-intelligence.css gbp-owner.css app.js growth.js growth-intelligence.js gbp-owner.js creative-studio.js social-publishing.js growth-goals.js growth-goals.css config.js auth-client.js public-dist/ && printf '%s\n' 'window.LOCALBOOST_API_BASE = "https://paanagam-localboost-api.onrender.com"; window.LOCALBOOST_NEON_AUTH_URL = "https://ep-floral-paper-aotvi0zj.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth";' > public-dist/config.js
+    buildCommand: mkdir -p public-dist && cp index.html styles.css growth-intelligence.css review-intelligence.css paanagam-education.css gbp-owner.css app.js growth.js growth-intelligence.js review-intelligence.js paanagam-education.js gbp-owner.js creative-studio.js social-publishing.js growth-goals.js growth-goals.css config.js auth-client.js public-dist/ && printf '%s\n' 'window.LOCALBOOST_API_BASE = "https://paanagam-localboost-api.onrender.com"; window.LOCALBOOST_NEON_AUTH_URL = "https://ep-floral-paper-aotvi0zj.neonauth.c-2.ap-southeast-1.aws.neon.tech/neondb/auth";' > public-dist/config.js
     staticPublishPath: ./public-dist
     autoDeployTrigger: off
     headers:
