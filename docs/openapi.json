@@ -3237,6 +3237,33 @@
           }
         }
       }
+    },
+    "/v1/creative-integrations/poyo/balance": {
+      "get": {
+        "summary": "Get the live PoYo credit balance (LocalBoost administrator only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current PoYo account email, credit balance and check time"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "404": {
+            "description": "Not found for non-administrators"
+          },
+          "502": {
+            "description": "PoYo balance could not be verified"
+          },
+          "503": {
+            "description": "PoYo API key is not configured"
+          }
+        }
+      }
     }
   }
 }
