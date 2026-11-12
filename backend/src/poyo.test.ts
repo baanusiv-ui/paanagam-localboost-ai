@@ -9,6 +9,7 @@ process.env.POYO_ENABLED = "true";
 process.env.POYO_API_KEY = "test-poyo-api-key";
 
 const { verifyPoyoWebhook, getPoyoBalance, getPoyoTaskStatus, submitPoyoGeneration } = await import("./poyo.js");
+const { getPoyoModel, listPoyoModels } = await import("./poyo-catalogue.js");
 
 test("accepts a correctly signed PoYo webhook within the five-minute window", () => {
   const taskId = "task-test-123";
@@ -93,4 +94,14 @@ test("rejects non-HTTPS callback URLs before making a provider request", async (
     return Response.json({});
   }), /must use HTTPS/);
   assert.equal(called, false);
+});
+
+
+test("catalogue exposes the exact Wan 2.2 Fast text and image video model IDs", () => {
+  const videoModels = listPoyoModels("VIDEO");
+  assert.equal(getPoyoModel("wan2.2-text-to-video-fast")?.mediaType, "VIDEO");
+  assert.equal(getPoyoModel("wan2.2-image-to-video-fast")?.mediaType, "VIDEO");
+  assert.equal(videoModels.some(model => model.id === "wan2.2-text-to-video-fast"), true);
+  assert.equal(videoModels.some(model => model.id === "wan2.2-image-to-video-fast"), true);
+  assert.equal(videoModels.every(model => model.estimatedCredits === 6), true);
 });
