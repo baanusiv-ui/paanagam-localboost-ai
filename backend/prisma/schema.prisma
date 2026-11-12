@@ -89,6 +89,7 @@ model Business {
   metaMediaShares MetaMediaShare[]
   canvaConnection CanvaConnection?
   canvaOAuthStates CanvaOAuthState[]
+  poyoCreativeTasks PoyoCreativeTask[]
   @@index([ownerId, createdAt])
 }
 
