@@ -7,46 +7,40 @@ export type PoyoModelDefinition = {
   mediaType: PoyoMediaKind;
   documentationUrl: string;
   useCases: string[];
-  schemaVerified: false;
-  priceVerified: false;
-  enabledForGeneration: false;
+  resolutions?: string[];
+  estimatedCredits?: number;
+  schemaVerified: boolean;
+  priceVerified: boolean;
+  enabledForGeneration: boolean;
 };
 
-// Documentation-backed discovery catalogue only. This is deliberately not
-// a claim that these models are enabled on the connected PoYo account.
-// Generation remains blocked until live account/model schema and price checks pass.
+// WAN 2.2 Fast IDs and request fields are verified against PoYo's current
+// model documentation. Generation itself remains controlled by POYO_ENABLED.
 export const POYO_MODEL_CATALOGUE: PoyoModelDefinition[] = [
   {
-    id: "wan-2.7-video",
-    name: "Wan 2.7",
+    id: "wan2.2-text-to-video-fast",
+    name: "Wan 2.2 Fast · Text to Video",
     provider: "Alibaba",
     mediaType: "VIDEO",
-    documentationUrl: "https://docs.poyo.ai/api-manual/video-series/wan-2-7-video.md",
-    useCases: ["cinematic reels", "image-to-video", "reference-led campaigns"],
-    schemaVerified: false,
-    priceVerified: false,
+    documentationUrl: "https://docs.poyo.ai/api-manual/video-series/wan2.2-text-to-video-fast",
+    useCases: ["cinematic reels", "Tamil educational clips", "campaign concept videos"],
+    resolutions: ["480p", "720p"],
+    estimatedCredits: 6,
+    schemaVerified: true,
+    priceVerified: true,
     enabledForGeneration: false
   },
   {
-    id: "wan-3.0-video",
-    name: "Wan 3.0",
+    id: "wan2.2-image-to-video-fast",
+    name: "Wan 2.2 Fast · Image to Video",
     provider: "Alibaba",
     mediaType: "VIDEO",
-    documentationUrl: "https://docs.poyo.ai/api-manual/video-series/wan-3-0-video.md",
-    useCases: ["story-led video", "multimodal references", "controllable audio"],
-    schemaVerified: false,
-    priceVerified: false,
-    enabledForGeneration: false
-  },
-  {
-    id: "wan-2.7-image",
-    name: "Wan 2.7 Image",
-    provider: "Alibaba",
-    mediaType: "IMAGE",
-    documentationUrl: "https://docs.poyo.ai/api-manual/image-series/wan-2-7-image.md",
-    useCases: ["brand graphics", "product imagery", "reference-image editing"],
-    schemaVerified: false,
-    priceVerified: false,
+    documentationUrl: "https://docs.poyo.ai/api-manual/video-series/wan2.2-image-to-video-fast",
+    useCases: ["animate approved artwork", "storyboard motion", "product and menu visuals"],
+    resolutions: ["480p", "720p"],
+    estimatedCredits: 6,
+    schemaVerified: true,
+    priceVerified: true,
     enabledForGeneration: false
   },
   {
@@ -54,7 +48,7 @@ export const POYO_MODEL_CATALOGUE: PoyoModelDefinition[] = [
     name: "GPT Image 2",
     provider: "OpenAI",
     mediaType: "IMAGE",
-    documentationUrl: "https://docs.poyo.ai/api-manual/image-series/gpt-image-2.md",
+    documentationUrl: "https://docs.poyo.ai/api-manual/image-series/gpt-image-2",
     useCases: ["campaign graphics", "product photography", "image editing"],
     schemaVerified: false,
     priceVerified: false,
