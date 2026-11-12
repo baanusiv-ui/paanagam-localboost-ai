@@ -178,6 +178,7 @@ export function registerPoyoRoutes(app: FastifyInstance, db: PrismaClient, requi
       while (true) {
         const chunk = await reader.read();
         if (chunk.done) break;
+        if (!chunk.value) continue;
         totalBytes += chunk.value.byteLength;
         if (totalBytes > 25 * 1024 * 1024) {
           await reader.cancel();
