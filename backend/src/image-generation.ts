@@ -64,3 +64,65 @@ export async function generateCampaignImage(input: ImageDraftInput) {
     disclaimer: "Generated artwork is a temporary preview. Download it or upload it to the business creative library; this response does not persist the image or publish it."
   };
 }
+
+
+export async function generateGeminiCampaignImage(input: ImageDraftInput) {
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) {
+    throw new Error("Gemini image generation is not configured. Add GEMINI_API_KEY to the LocalBoost API environment in Render.");
+  }
+  const model = process.env.GEMINI_IMAGE_MODEL?.trim() || "gemini-3.1-flash-image";
+  const aspectRatio: Record<ImageDraftInput["format"], string> = {
+    SQUARE: "1:1",
+    PORTRAIT: "4:5",
+    STORY: "9:16"
+  };
+  const prompt = [
+    "Create a photorealistic commercial South Indian cafe campaign background photograph only.",
+    "PRIMARY SUBJECT: " + input.topic.slice(0, 180) + ".",
+    "Business context: " + input.businessName.slice(0, 100) + ".",
+    input.offer ? "Offer context only; do not render text: " + input.offer.slice(0, 240) : "",
+    input.creativeBrief ? "Visual mood guidance: " + input.creativeBrief.slice(0, 500) : "",
+    "Warm ivory, coffee brown, mustard-gold highlights, dark walnut details, authentic premium but welcoming South Indian cafe atmosphere.",
+    "Use a clear focal subject and uncluttered negative space near the top and bottom for the app to add the brand and campaign copy.",
+    "NO text, letters, numbers, Tamil or English typography, logos, watermarks, signage, menus, labels, packaging, badges or graphic design.",
+    "Photograph only. Do not invent prices, phone numbers, addresses, dates or claims.",
+    "Output composition aspect ratio " + aspectRatio[input.format] + "."
+  ].filter(Boolean).join("\\n");
+  const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent", {
+    method: "POST",
+    headers: { "x-goog-api-key": apiKey, "content-type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ role: "user", parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseModalities: ["IMAGE"],
+        imageConfig: { aspectRatio: aspectRatio[input.format], imageSize: "1K" }
+      }
+    }),
+    signal: AbortSignal.timeout(180000)
+  });
+  const raw = await response.json() as {
+    candidates?: Array<{ content?: { parts?: Array<{ inlineData?: { mimeType?: string; data?: string }; text?: string }> }; finishReason?: string }>;
+    error?: { message?: string; status?: string };
+  };
+  if (!response.ok) {
+    throw new Error(raw.error?.message || "Gemini image generation failed with HTTP " + response.status);
+  }
+  const parts = raw.candidates?.[0]?.content?.parts || [];
+  const imagePart = parts.find(part => part.inlineData?.data);
+  const imageData = imagePart?.inlineData?.data;
+  const mimeType = imagePart?.inlineData?.mimeType || "image/png";
+  if (!imageData || !/^image\\/(png|jpeg|webp)$/.test(mimeType)) {
+    const explanation = parts.map(part => part.text).filter(Boolean).join(" ").slice(0, 400);
+    throw new Error(explanation || "Gemini returned no image. Finish reason: " + (raw.candidates?.[0]?.finishReason || "unknown"));
+  }
+  return {
+    imageDataUrl: "data:" + mimeType + ";base64," + imageData,
+    mimeType,
+    provider: "GOOGLE_GEMINI",
+    model,
+    generatedAt: new Date().toISOString(),
+    storage: "TEMPORARY_BROWSER_PREVIEW",
+    disclaimer: "Generated artwork is a temporary preview. Download it or save it to the business creative library; this response does not publish it."
+  };
+}
