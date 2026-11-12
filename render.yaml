@@ -67,7 +67,7 @@ services:
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     dockerCommand: node dist/google-review-autosync.js
-    schedule: "*/30 * * * *"
+    schedule: "0 */3 * * *"
     envVars:
       - key: NODE_ENV
         value: production
