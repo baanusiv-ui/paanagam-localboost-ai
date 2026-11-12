@@ -186,3 +186,15 @@ Approval is required separately for each profile edit, review reply, post, messa
 - Meta connection secrets stay server-side. All business routes verify ownership; activity history records connect, approve, reject and publish actions.
 - Before production use: configure Meta app ID/secret, exact redirect URI and public API URL in Render; complete Meta app setup and App Review/Advanced Access for external businesses; test against a non-production Page and linked Instagram professional account.
 - Current release supports Facebook Page feed posts and Instagram single-image feed posts only. No Reels, Stories, carousels, scheduling, analytics or comments are enabled.
+
+
+## Menu & Recipe Knowledge Foundation (specification added; implementation pending)
+
+- Added `docs/PAANAGAM_MENU_RECIPE_KNOWLEDGE.md` as the source-of-truth design for menu and recipe knowledge in LocalBoost.
+- Paanagam is the pilot workspace; the data model and APIs remain tenant-scoped for future businesses.
+- Knowledge is restricted to current or explicitly archived Paanagam menu items, owner-approved recipes, ingredient facts, preparation, serving and ordering. Unrelated general food, health or nutrition content is out of scope.
+- Existing MENU_ITEM growth records may be offered for owner review, but are not silently converted into recipes.
+- Recipe revisions are immutable after approval. Changes create a new revision and flag dependent FAQs, claims, scripts and video drafts for review.
+- Every customer-facing factual claim must cite an approved menu, recipe or ingredient source. Unsupported questions are returned as unconfirmed and routed to the owner.
+- The only existing process detail suitable for a draft seed is the filter-coffee decoction SOP; it remains pending owner verification. Other menu names are not recipe records until current status and recipes are confirmed.
+- Next implementation stage: tenant-scoped schema, CRUD, recipe revisioning, approval/audit trail and cross-tenant tests. No production migration, paid generation or publishing is included in this specification.
