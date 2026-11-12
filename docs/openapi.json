@@ -3108,6 +3108,197 @@
           }
         ]
       }
+    },
+    "/v1/businesses/{businessId}/poyo/tasks": {
+      "parameters": [
+        {
+          "name": "businessId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "summary": "List PoYo creative drafts and tasks",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Business-scoped task list"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "404": {
+            "description": "Business not found"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a PoYo creative draft without submitting or charging credits",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "mediaType",
+                  "modelId",
+                  "prompt"
+                ],
+                "properties": {
+                  "mediaType": {
+                    "type": "string",
+                    "enum": [
+                      "IMAGE",
+                      "VIDEO",
+                      "AUDIO"
+                    ]
+                  },
+                  "modelId": {
+                    "type": "string",
+                    "maxLength": 160
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "maxLength": 12000
+                  },
+                  "modelInput": {
+                    "type": "object",
+                    "additionalProperties": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Draft created; no provider request submitted"
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "404": {
+            "description": "Business not found"
+          }
+        }
+      }
+    },
+    "/v1/businesses/{businessId}/poyo/tasks/{taskId}": {
+      "parameters": [
+        {
+          "name": "businessId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "taskId",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "summary": "Get one PoYo creative draft or task",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Business-scoped task"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "404": {
+            "description": "Business or task not found"
+          }
+        }
+      }
+    },
+    "/v1/creative-integrations/poyo/balance": {
+      "get": {
+        "summary": "Get the live PoYo credit balance (LocalBoost administrator only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current PoYo account email, credit balance and check time"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "404": {
+            "description": "Not found for non-administrators"
+          },
+          "502": {
+            "description": "PoYo balance could not be verified"
+          },
+          "503": {
+            "description": "PoYo API key is not configured"
+          }
+        }
+      }
+    },
+    "/v1/creative-integrations/poyo/models": {
+      "get": {
+        "summary": "List documentation-backed PoYo model options; generation remains disabled until live schema and price verification",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "mediaType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "IMAGE",
+                "VIDEO"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Documented model options and verification flags"
+          },
+          "400": {
+            "description": "Invalid media type"
+          },
+          "401": {
+            "description": "Authentication required"
+          }
+        }
+      }
     }
   }
 }
