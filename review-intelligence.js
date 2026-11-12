@@ -123,6 +123,8 @@
     main.querySelector("main")?.append(section) || main.append(section);
     const show=()=>{document.querySelectorAll(".main > .view-panel").forEach(x=>x.classList.add("hidden")); section.classList.remove("hidden"); document.querySelectorAll(".nav-item").forEach(x=>x.classList.toggle("active",x===button)); const crumb=$("crumb-title"),title=$("page-title"); if(crumb)crumb.textContent="Review intelligence";if(title)title.textContent="Review intelligence";if(businessId)refresh();};
     button.addEventListener("click",show);
+    // The core router only knows its built-in views; hide this extension view when a built-in route is selected.
+    document.addEventListener("click",event=>{if(event.target.closest("[data-view], [data-go]"))section.classList.add("hidden");},true);
     $("ri-refresh").addEventListener("click",refresh);
     $("ri-import-google").addEventListener("click",importGoogle);
     $("ri-search").addEventListener("input",render);
