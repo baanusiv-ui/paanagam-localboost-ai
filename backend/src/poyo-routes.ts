@@ -169,7 +169,7 @@ export function registerPoyoRoutes(app: FastifyInstance, db: PrismaClient, requi
       if (!response.ok) return reply.code(502).send({ error: "Generated video could not be downloaded from PoYo storage." });
       const declaredLength = Number(response.headers.get("content-length") || 0);
       if (declaredLength > 25 * 1024 * 1024) return reply.code(413).send({ error: "Generated video exceeds the 25 MB preview storage limit." });
-      const mimeType = (response.headers.get("content-type") || "video/mp4").split(";")[0].trim().toLowerCase();
+      const mimeType = ((response.headers.get("content-type") || "video/mp4").split(";")[0] ?? "video/mp4").trim().toLowerCase();
       if (!["video/mp4", "video/webm"].includes(mimeType)) return reply.code(415).send({ error: "PoYo returned an unsupported video format." });
       const reader = response.body?.getReader();
       if (!reader) return reply.code(502).send({ error: "Generated video response had no readable body." });
