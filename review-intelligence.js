@@ -138,7 +138,7 @@
       <article class="panel"><div class="panel-heading"><div><h3>Customer evidence & owner validation</h3><p>Review each item, confirm whether it reflects a real issue, and record the next action. AI labels are not proof.</p></div><div class="ri-filters"><input id="ri-search" type="search" placeholder="Search feedback"><select id="ri-source-filter"><option value="all">All sources</option><option value="google">Google</option><option value="meta">Meta</option></select></div></div><div id="ri-evidence" class="ri-evidence-list"></div></article>
       <article class="panel"><div class="panel-heading"><div><h3>Customer education opportunities</h3><p>Topics only; scripts must use approved Paanagam menu and recipe facts.</p></div></div><div id="ri-education" class="ri-education-list"></div></article>
       <details class="panel ri-method"><summary>Analysis method and limitations</summary><p id="ri-method"></p><ul id="ri-caveats"></ul></details>`;
-    reviewNav.addEventListener("click",()=>{businessId=sessionStorage.getItem(BUSINESS);if(businessId)refresh();});
+    reviewNav.addEventListener("click",()=>{businessId=sessionStorage.getItem(BUSINESS);if(businessId){refresh();startAutoSync();}});
     $("ri-refresh").addEventListener("click",refresh);
     $("ri-import-google").addEventListener("click",importGoogle);
     $("ri-evidence").addEventListener("click",async event=>{
