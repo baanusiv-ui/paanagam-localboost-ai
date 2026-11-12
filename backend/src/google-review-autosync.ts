@@ -165,23 +165,14 @@ async function syncBusiness(business: {
 }
 
 async function main() {
-  // A PostgreSQL advisory lock prevents two cron invocations from overlapping.
-  const lock = await prisma.$queryRaw<Array<{ locked: boolean }>>`SELECT pg_try_advisory_lock(731904261) AS locked`;
-  if (!lock[0]?.locked) {
-    console.log("Google review sync skipped: another run holds the advisory lock.");
-    return;
-  }
-  try {
-    const businesses = await prisma.business.findMany({
-      where: { googleConnection: { isNot: null } },
-      include: { googleConnection: true }
-    });
-    for (const business of businesses) await syncBusiness(business);
-    console.log(JSON.stringify({ status: "COMPLETE", businessesChecked: businesses.length, completedAt: new Date().toISOString() }));
-  } finally {
-    await prisma.$queryRaw`SELECT pg_advisory_unlock(731904261)`;
-    await prisma.$disconnect();
-  }
+  // Render Cron Jobs do not overlap runs of the same job; keep each invocation bounded.
+  const businesses = await prisma.business.findMany({
+    where: { googleConnection: { isNot: null } },
+    include: { googleConnection: true }
+  });
+  for (const business of businesses) await syncBusiness(business);
+  console.log(JSON.stringify({ status: "COMPLETE", businessesChecked: businesses.length, completedAt: new Date().toISOString() }));
+  await prisma.$disconnect();
 }
 
 main().catch(async error => {
