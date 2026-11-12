@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import type { PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import { findOwnedBusiness } from "./modules/businesses/access.js";
 
@@ -47,7 +47,7 @@ export function registerPoyoRoutes(app: FastifyInstance, db: PrismaClient, requi
         mediaType: body.data.mediaType,
         modelId: body.data.modelId,
         prompt: body.data.prompt,
-        modelInput: body.data.modelInput,
+        modelInput: body.data.modelInput as Prisma.InputJsonValue,
         status: "DRAFT"
       },
       select: {
