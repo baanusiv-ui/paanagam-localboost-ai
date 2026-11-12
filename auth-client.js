@@ -117,12 +117,9 @@
     // OAuth can return to the dashboard before the browser exposes the new
     // cross-origin HTTP-only session cookie to the first session request.
     // Retry briefly so the first Google authorisation completes the login.
-    const callbackReturned = new URLSearchParams(window.location.search).has("code") ||
-      new URLSearchParams(window.location.search).has("state") ||
-      window.location.search.includes("error=");
     const existingToken = await restoreOwnerSession({
-      attempts: callbackReturned ? 10 : 3,
-      delayMs: callbackReturned ? 700 : 350
+      attempts: 8,
+      delayMs: 600
     });
     if (!existingToken) {
       console.info("No Google owner session found; Google sign-in is ready.");
