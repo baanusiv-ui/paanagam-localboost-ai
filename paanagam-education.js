@@ -4,7 +4,7 @@
   const API=()=>(window.LOCALBOOST_API_BASE||"").replace(/\/$/,"");
   const $=id=>document.getElementById(id);
   const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  let businessId=null, menu=[], evidence=[], active=false;
+  let businessId=null, menu=[], evidence=[], scriptDrafts=[];
   async function api(path,options={}) {
     const token=sessionStorage.getItem(TOKEN);
     if(!token) throw new Error("Sign in to manage owner-approved facts.");
@@ -24,6 +24,13 @@
     for(const row of rows){const p=value(row);if(!p.factId)continue;const old=latest.get(p.factId);if(!old||new Date(row.observedAt)>=new Date(old.observedAt))latest.set(p.factId,row);}
     return [...latest.values()].sort((a,b)=>new Date(b.observedAt)-new Date(a.observedAt));
   }
+  function renderSavedDrafts(){
+    const host=$("pe-saved-drafts");if(!host)return;
+    host.innerHTML=scriptDrafts.length?scriptDrafts.map(row=>{
+      const p=row.payload||{},source=p.sourceFact||{};
+      return '<article class="pe-fact"><div class="pe-fact-head"><strong>'+esc(p.menuItemName||"Menu item")+' · Education script</strong><span class="pe-withdrawn">'+esc(p.ownerApprovalStatus||"PENDING")+'</span></div><small>Draft · '+esc(row.recordedAt||"")+' · Fact '+esc(source.factId||"")+' v'+esc(source.factVersion||"")+' · '+esc(source.evidenceRef||"")+'</small><p lang="ta">'+esc(p.scriptTamil||"")+'</p><p>'+esc(p.scriptEnglish||"")+'</p></article>';
+    }).join(""):'<p class="pe-empty">No saved education script drafts yet.</p>';
+  }
   function render(){
     const select=$("pe-menu-item"),previous=select.value;
     select.innerHTML='<option value="">Select an active Paanagam menu item</option>'+menu.filter(x=>x.active!==false).map(x=>'<option value="'+esc(itemId(x))+'">'+esc(itemName(x))+'</option>').join("");
@@ -37,14 +44,20 @@
       return '<article class="pe-fact"><div class="pe-fact-head"><strong>'+esc(p.menuItemName||"Menu item")+' · '+esc(p.topic||"Fact")+'</strong><span class="'+(isApproved?"pe-approved":"pe-withdrawn")+'">'+(isApproved?"Owner-approved":"Withdrawn")+'</span></div><p lang="ta">'+esc(p.textTa||"")+'</p><p>'+esc(p.textEn||"")+'</p><small>Version '+esc(p.factVersion||1)+' · Source: '+esc(p.evidenceRef||"Not supplied")+' · '+esc(new Date(row.observedAt).toLocaleDateString("en-IN"))+'</small>'+
         (isApproved?'<button type="button" class="primary-button" data-script="'+esc(p.factId)+'">Create education script draft</button> <button type="button" class="secondary-button" data-withdraw="'+esc(p.factId)+'">Withdraw this fact</button>':'')+'</article>';
     }).join(""):'<p class="pe-empty">No customer-facing facts have been owner-approved yet. POS menu records alone do not authorise recipe claims.</p>';
+    renderSavedDrafts();
   }
   async function refresh(){
     if(!businessId)return;
     status("Loading Paanagam menu and owner-approved facts…");
     try{
-      const [m,e]=await Promise.all([api(base()+"/growth-records?type=MENU_ITEM&limit=200"),api(base()+"/evidence")]);
+      const [m,e,d]=await Promise.all([
+        api(base()+"/growth-records?type=MENU_ITEM&limit=200"),
+        api(base()+"/evidence"),
+        api(base()+"/growth-records?type=CAMPAIGN_DRAFT&limit=200")
+      ]);
       menu=(m.records||[]).filter(x=>x.source!=="DEMO").map(x=>x.payload||{});
       evidence=Array.isArray(e)?e:[];
+      scriptDrafts=(d.records||[]).filter(x=>x.payload?.scriptType==="CUSTOMER_EDUCATION").sort((a,b)=>new Date(b.recordedAt)-new Date(a.recordedAt));
       render();
       status(menu.length?"Loaded "+menu.length+" menu record(s). Only explicitly owner-approved facts can be used in future scripts.":"No POS menu records found. Connect and sync Paanagam POS first.");
     }catch(err){status(err.message,true);}
@@ -67,6 +80,7 @@
       '<p class="pe-warning">Do not enter health benefits, nutrition, allergen-free claims, medical claims, supplier claims, exact internal quantities, costing or stock details. Never copy internal BOM/SOP instructions verbatim.</p>'+
       '<button class="primary-button" type="submit">Save as owner-approved fact</button></form></article>'+
       '<article class="panel"><div class="panel-heading"><div><h3>Current fact register</h3><p>Withdrawn facts remain in the audit history and must not be used for new scripts.</p></div></div><div id="pe-facts" class="pe-facts"></div></article>'+
+      '<article class="panel"><div class="panel-heading"><div><h3>Saved education script drafts</h3><p>Persisted drafts remain visible after refresh and retain their source fact references.</p></div></div><div id="pe-saved-drafts" class="pe-facts"><p class="pe-empty">Loading saved drafts…</p></div></article>'+
       '<article class="panel pe-script-preview hidden" id="pe-script-preview"><h3>Education script draft</h3><p class="pe-warning">Draft only · owner review required · not published</p><div id="pe-script-content"></div></article>'+
       '<p class="pe-footnote">Scripts are deterministic templates built only from the selected approved fact. Every saved draft cites the exact fact ID, version and evidence record; a separate owner review is required before any creative or post is produced.</p>';
     main.querySelector("main")?.append(section)||main.append(section);
@@ -87,6 +101,24 @@
       }catch(err){status("Could not save fact: "+err.message,true);}
     });
     $("pe-facts").addEventListener("click",async e=>{
+      const scriptBtn=e.target.closest("[data-script]");
+      if(scriptBtn){
+        const row=latestFacts().find(x=>value(x).factId===scriptBtn.dataset.script);
+        if(!row)return;
+        const p=value(row);
+        if(p.status!=="OWNER_APPROVED"||!p.factId||!Number.isInteger(Number(p.factVersion))||!p.evidenceRef||!p.textTa?.trim()||!p.textEn?.trim()){
+          status("Script blocked: this fact is incomplete, withdrawn or not owner-approved.",true);return;
+        }
+        if(!confirm("Create a Tamil-first and English education script draft using only this approved fact? It will remain unpublished and pending your review."))return;
+        const scriptTamil="பானாகத்தின் "+String(p.menuItemName||"இந்த உணவு")+". "+p.textTa.trim()+" மேலும் விவரங்களுக்கு பானாகத்தை அணுகுங்கள்.";
+        const scriptEnglish="At Paanagam: "+String(p.menuItemName||"this menu item")+". "+p.textEn.trim()+" Please ask our team if you would like to know more.";
+        const payload={scriptType:"CUSTOMER_EDUCATION",status:"DRAFT",ownerApprovalStatus:"PENDING",menuItemId:p.menuItemId,menuItemName:p.menuItemName,languageOrder:["ta","en"],scriptTamil,scriptEnglish,visualDirection:"Show only the actual Paanagam menu item. Do not add ingredients, preparation details, nutrition, health, allergen, supplier or quality claims that are not in the approved fact.",sourceFact:{factId:p.factId,factVersion:Number(p.factVersion),evidenceRef:p.evidenceRef,evidenceRecordId:row.id},publicationAllowed:false};
+        try{
+          await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:"paanagam-education-script:"+p.factId+":"+Number(p.factVersion),payload,recordedAt:new Date().toISOString()})});
+          await refresh();status("Education script draft saved. It is pending owner review; no creative was generated or published.");
+        }catch(err){status("Could not save script draft: "+err.message,true);}
+        return;
+      }
       const btn=e.target.closest("[data-withdraw]");if(!btn)return;
       const row=latestFacts().find(x=>value(x).factId===btn.dataset.withdraw);if(!row)return;
       const p=value(row);if(!confirm("Withdraw this customer-facing fact? Future scripts must not use it."))return;
