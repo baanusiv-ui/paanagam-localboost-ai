@@ -16,7 +16,7 @@ import { buildBusinessIntelligence } from "./intelligence.js";
 import { generateLocalConsultant, getLocalAiStatus } from "./consultant.js";
 import { generateLocalReviewReplyDraft } from "./review-replies.js";
 import { generateLocalContentDraft } from "./content-drafts.js";
-import { generateCampaignImage, generateGeminiCampaignImage } from "./image-generation.js";
+import { generateMetaMuseCampaignImage } from "./image-generation.js";
 import { generateLocalKeywords } from "./local-seo.js";
 import { normalizeGoogleReview, type GoogleReviewApiRecord } from "./google-reviews.js";
 import { analyzeReviewThemes } from "./review-themes.js";
@@ -587,7 +587,7 @@ app.post("/v1/businesses/:businessId/creative/image", {
     creativeBrief: z.string().trim().max(1200).optional(),
     language: z.enum(["Tamil", "English", "Tamil + English"]).default("Tamil + English"),
     format: z.enum(["SQUARE", "PORTRAIT", "STORY"]).default("SQUARE"),
-    provider: z.enum(["CLOUDFLARE", "GEMINI"]).default("CLOUDFLARE")
+    provider: z.literal("META").default("META")
   }).safeParse(request.body);
   if (!params.success || !body.success) return reply.code(400).send({ error: "Invalid creative image request" });
   const business = await ownedBusiness(request.userId!, params.data.businessId);
@@ -601,9 +601,7 @@ app.post("/v1/businesses/:businessId/creative/image", {
       language: body.data.language,
       format: body.data.format
     };
-    const image = body.data.provider === "GEMINI"
-      ? await generateGeminiCampaignImage(imageInput)
-      : await generateCampaignImage(imageInput);
+    const image = await generateMetaMuseCampaignImage(imageInput);
     return { business: { id: business.id, displayName: business.displayName }, ...image };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Campaign image generation is unavailable";
