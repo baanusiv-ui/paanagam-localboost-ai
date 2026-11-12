@@ -26,6 +26,8 @@ on:
   pull_request:
     paths:
       - "backend/**"
+      - "review-intelligence.js"
+      - "review-intelligence.css"
       - "app.js"
       - "config.js"
       - "index.html"
