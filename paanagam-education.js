@@ -35,7 +35,7 @@
     $("pe-facts").innerHTML=facts.length?facts.map(row=>{
       const p=value(row),isApproved=p.status==="OWNER_APPROVED";
       return '<article class="pe-fact"><div class="pe-fact-head"><strong>'+esc(p.menuItemName||"Menu item")+' · '+esc(p.topic||"Fact")+'</strong><span class="'+(isApproved?"pe-approved":"pe-withdrawn")+'">'+(isApproved?"Owner-approved":"Withdrawn")+'</span></div><p lang="ta">'+esc(p.textTa||"")+'</p><p>'+esc(p.textEn||"")+'</p><small>Version '+esc(p.factVersion||1)+' · Source: '+esc(p.evidenceRef||"Not supplied")+' · '+esc(new Date(row.observedAt).toLocaleDateString("en-IN"))+'</small>'+
-        (isApproved?'<button type="button" class="secondary-button" data-withdraw="'+esc(p.factId)+'">Withdraw this fact</button>':'')+'</article>';
+        (isApproved?'<button type="button" class="primary-button" data-script="'+esc(p.factId)+'">Create education script draft</button> <button type="button" class="secondary-button" data-withdraw="'+esc(p.factId)+'">Withdraw this fact</button>':'')+'</article>';
     }).join(""):'<p class="pe-empty">No customer-facing facts have been owner-approved yet. POS menu records alone do not authorise recipe claims.</p>';
   }
   async function refresh(){
@@ -67,6 +67,7 @@
       '<p class="pe-warning">Do not enter health benefits, nutrition, allergen-free claims, medical claims, supplier claims, exact internal quantities, costing or stock details. Never copy internal BOM/SOP instructions verbatim.</p>'+
       '<button class="primary-button" type="submit">Save as owner-approved fact</button></form></article>'+
       '<article class="panel"><div class="panel-heading"><div><h3>Current fact register</h3><p>Withdrawn facts remain in the audit history and must not be used for new scripts.</p></div></div><div id="pe-facts" class="pe-facts"></div></article>'+
+      '<article class="panel pe-script-preview hidden" id="pe-script-preview"><h3>Education script draft</h3><p class="pe-warning">Draft only · owner review required · not published</p><div id="pe-script-content"></div></article>'+
       '<p class="pe-footnote">Script generation is not enabled by this screen. Future scripts must cite the exact approved fact ID and version, then receive a separate owner review before any creative or post is produced.</p>';
     main.querySelector("main")?.append(section)||main.append(section);
     const show=()=>{document.querySelectorAll(".main > .view-panel").forEach(x=>x.classList.add("hidden"));section.classList.remove("hidden");document.querySelectorAll(".nav-item").forEach(x=>x.classList.toggle("active",x===button));const c=$("crumb-title"),t=$("page-title");if(c)c.textContent="Paanagam education facts";if(t)t.textContent="Customer education facts";if(businessId)refresh();};
