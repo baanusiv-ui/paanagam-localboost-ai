@@ -68,7 +68,7 @@
       '<button class="primary-button" type="submit">Save as owner-approved fact</button></form></article>'+
       '<article class="panel"><div class="panel-heading"><div><h3>Current fact register</h3><p>Withdrawn facts remain in the audit history and must not be used for new scripts.</p></div></div><div id="pe-facts" class="pe-facts"></div></article>'+
       '<article class="panel pe-script-preview hidden" id="pe-script-preview"><h3>Education script draft</h3><p class="pe-warning">Draft only · owner review required · not published</p><div id="pe-script-content"></div></article>'+
-      '<p class="pe-footnote">Script generation is not enabled by this screen. Future scripts must cite the exact approved fact ID and version, then receive a separate owner review before any creative or post is produced.</p>';
+      '<p class="pe-footnote">Scripts are deterministic templates built only from the selected approved fact. Every saved draft cites the exact fact ID, version and evidence record; a separate owner review is required before any creative or post is produced.</p>';
     main.querySelector("main")?.append(section)||main.append(section);
     const show=()=>{document.querySelectorAll(".main > .view-panel").forEach(x=>x.classList.add("hidden"));section.classList.remove("hidden");document.querySelectorAll(".nav-item").forEach(x=>x.classList.toggle("active",x===button));const c=$("crumb-title"),t=$("page-title");if(c)c.textContent="Paanagam education facts";if(t)t.textContent="Customer education facts";if(businessId)refresh();};
     button.addEventListener("click",show);
