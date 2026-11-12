@@ -11,8 +11,13 @@ on:
       - "index.html"
       - "styles.css"
       - "growth-intelligence.js"
-      - "review-intelligence.js"\n      - "paanagam-education.js"
-      - "review-intelligence.css"\n      - "paanagam-education.js"\n      - "paanagam-education.css"
+      - "review-intelligence.js"
+      - "paanagam-education.js"
+      - "paanagam-education.js"
+      - "review-intelligence.css"
+      - "paanagam-education.css"
+      - "paanagam-education.js"
+      - "paanagam-education.css"
       - "growth.js"
       - "growth-intelligence.css"
       - "gbp-owner.css"
@@ -71,5 +76,5 @@ jobs:
         working-directory: .
         run: |
           grep -q 'cp index.html styles.css growth-intelligence.css review-intelligence.css paanagam-education.css gbp-owner.css app.js growth.js growth-intelligence.js review-intelligence.js paanagam-education.js gbp-owner.js creative-studio.js social-publishing.js growth-goals.js growth-goals.css config.js auth-client.js public-dist/' render.yaml
-          for asset in index.html styles.css growth-intelligence.css review-intelligence.css paanagam-education.css gbp-owner.css app.js auth-client.js growth.js growth-intelligence.js gbp-owner.js creative-studio.js social-publishing.js growth-goals.js growth-goals.css config.js; do test -f "$asset"; done
+          for asset in index.html styles.css growth-intelligence.css review-intelligence.js review-intelligence.css paanagam-education.js paanagam-education.css gbp-owner.css app.js auth-client.js growth.js growth-intelligence.js gbp-owner.js creative-studio.js social-publishing.js growth-goals.js growth-goals.css config.js; do test -f "$asset"; done
           test "$(grep -c 'autoDeployTrigger: off' render.yaml)" -eq 2
