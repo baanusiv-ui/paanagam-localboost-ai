@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
-import { verifyPoyoWebhook } from "./poyo.js";
+process.env.DATABASE_URL ??= "postgresql://test:test@localhost:5432/localboost?schema=public";
+process.env.JWT_SECRET ??= "test-jwt-secret-at-least-32-characters-long";
+process.env.TOKEN_ENCRYPTION_KEY_BASE64 ??= "dGVzdC1lbmNyeXB0aW9uLWtleS1mb3ItdGVzdHM=";
+
+const { verifyPoyoWebhook } = await import("./poyo.js");
 
 test("accepts a correctly signed PoYo webhook within the five-minute window", () => {
   const taskId = "task-test-123";
