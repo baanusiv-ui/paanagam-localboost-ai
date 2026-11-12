@@ -239,8 +239,15 @@ We look forward to welcoming you!</textarea></label>
             <div id="creative-preview" class="creative-preview hidden">
               <h4>Generated caption</h4><p id="creative-preview-copy"></p>
               <h4>Image / designer brief</h4><p id="creative-preview-brief"></p>
-              <button class="primary-button" id="creative-image-generate" type="button">Generate campaign artwork</button>
-              <img id="creative-image-preview" class="creative-image-preview hidden" alt="Generated campaign artwork preview">
+              <div class="form-actions">
+                <button class="primary-button" id="creative-image-generate" type="button">Generate with Canva</button>
+                <button class="secondary-button" id="creative-image-gemini" type="button">Generate with Gemini</button>
+              </div>
+              <div class="creative-provider-comparison" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:14px">
+                <section><h4>Canva result</h4><img id="creative-image-preview" class="creative-image-preview hidden" alt="Canva generated campaign artwork"></section>
+                <section><h4>Gemini result</h4><img id="creative-gemini-preview" class="creative-image-preview hidden" alt="Gemini generated campaign artwork"></section>
+              </div>
+              <p id="creative-provider-metrics" class="footnote" aria-live="polite"></p>
               <button class="secondary-button" id="creative-image-download" type="button" disabled>Download artwork</button>
               <button class="secondary-button" id="creative-image-save" type="button" disabled>Save artwork to business library</button>
               <label for="creative-asset-url" class="creative-form">Finished image URL (optional)<input id="creative-asset-url" type="url" placeholder="https://…"></label>
