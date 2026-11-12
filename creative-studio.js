@@ -121,13 +121,13 @@
     $("creative-image-save").disabled=true; $("creative-image-download").disabled=true;
     const formatMap={feed:"square",portrait:"portrait_4_5",story:"portrait"};
     const prompt=[
-      "Create a complete, polished, photorealistic social media campaign artwork for Paanagam (பானகம்), a South Indian café brand.",
+      "Create a photorealistic South Indian café campaign background photograph only. No text, no letters, no typography, no logos, no watermarks, no labels, no signage.",
       "Campaign subject: "+current.topic,
       current.offer ? "Offer or supporting detail: "+current.offer : "",
       current.designerBrief ? "Creative direction: "+current.designerBrief : "",
       "Brand style: mustard yellow, warm ivory, dark walnut, subtle kolam/rangoli details, premium but welcoming South Indian café atmosphere.",
-      "Show a complete finished visual composition with strong focal subject, thoughtful lighting, balanced negative space and professional advertising art direction.",
-      "Do not add invented prices, phone numbers, addresses, dates, logos or factual claims. Keep any lettering minimal and accurate; Tamil wording must not be garbled.",
+      "Create a clean photographic composition with a strong focal subject, thoughtful lighting and clear negative space in the upper-left and lower area for a brand overlay to be added later.",
+      "Absolutely no visible text or lettering of any language. Do not invent logos, prices, phone numbers, addresses, dates or factual claims.",
       "Output purpose: "+current.platform+" campaign. Image only; no mockup, no phone frame, no presentation slide."
     ].filter(Boolean).join("\n");
     setMessage("Sending the full artwork brief to Canva AI…");
