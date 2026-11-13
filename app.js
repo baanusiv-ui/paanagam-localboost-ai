@@ -62,6 +62,40 @@
     $("#connect-google").textContent = connected ? "Google connected" : "Connect Google";
   }
 
+  async function refreshAiProviderStatus() {
+    const card = $("#sidebar-ai-status");
+    const label = $("#sidebar-ai-status-text");
+    if (!card || !label) return;
+    if (!token()) {
+      label.textContent = "Sign in to check";
+      card.classList.remove("ai-ready", "ai-warning");
+      return;
+    }
+    label.textContent = "Checking providers…";
+    try {
+      const status = await api("/v1/ai/status");
+      const cloudReady = Boolean(status.cloud?.reachable && status.cloud?.modelAvailable);
+      const geminiReady = Boolean(status.fallback?.configured);
+      if (cloudReady) {
+        label.textContent = "Ollama Cloud connected · Gemini " + (geminiReady ? "ready" : "not configured");
+        card.classList.add("ai-ready");
+        card.classList.remove("ai-warning");
+      } else if (geminiReady) {
+        label.textContent = "Ollama unavailable · Gemini fallback ready";
+        card.classList.add("ai-warning");
+        card.classList.remove("ai-ready");
+      } else {
+        label.textContent = "AI providers unavailable";
+        card.classList.remove("ai-ready");
+        card.classList.add("ai-warning");
+      }
+    } catch (error) {
+      label.textContent = error.message.includes("401") ? "Sign in to check" : "Status check unavailable";
+      card.classList.remove("ai-ready");
+      card.classList.add("ai-warning");
+    }
+  }
+
   function signOut(showMessage = true) {
     $("#connection-setup").hidden = false;
     $("#logout-button").hidden = true;
@@ -79,6 +113,7 @@
     $("#auth-form").querySelectorAll("input").forEach(input => input.disabled = false);
     $("#business-form").hidden = true;
     setConnectionState(false, "Not connected");
+    refreshAiProviderStatus();
     if (showMessage) message("auth-message", "You have signed out.");
   }
 
@@ -124,7 +159,8 @@
 
     const results = await Promise.allSettled([
       refreshGoogleStatus(),
-      loadAuditHistory()
+      loadAuditHistory(),
+      refreshAiProviderStatus()
     ]);
     const googleFailure = results[0].status === "rejected" ? results[0].reason : null;
     const auditFailure = results[1].status === "rejected" ? results[1].reason : null;
@@ -575,6 +611,7 @@
     }
     if (!token()) {
       $("#api-status").textContent = "Sign in to connect API";
+      refreshAiProviderStatus();
       return;
     }
     try {
