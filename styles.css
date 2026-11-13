@@ -191,3 +191,27 @@ footer{padding:36px 0 24px}
 #gbp-media-form input, #gbp-media-form select { width:100%; min-height:42px; padding:10px; border:1px solid var(--line); border-radius:8px; background:var(--surface); color:var(--text); }
 #gbp-media-form button.primary-button { display:inline-flex; align-items:center; justify-content:center; width:auto; min-width:190px; min-height:44px; height:auto; padding:12px 18px; border-radius:8px; white-space:normal; }
 #gbp-media-preview { display:block; max-width:220px; max-height:220px; width:auto; height:auto; object-fit:contain; border:1px solid var(--line); border-radius:10px; padding:6px; background:#fff; }
+
+
+/* Content Studio declutter — progressive, mobile-first layout */
+#content-view .lb-studio-nav{display:flex;gap:8px;overflow-x:auto;padding:4px 0 14px;margin:0 0 12px;scrollbar-width:thin}
+#content-view .lb-studio-tab{flex:0 0 auto;border:1px solid var(--border,#dfe5df);background:#fff;color:var(--text,#24352c);border-radius:999px;padding:10px 15px;font:inherit;font-size:13px;font-weight:650;cursor:pointer}
+#content-view .lb-studio-tab[aria-selected="true"]{background:#173b2b;color:#fff;border-color:#173b2b}
+#content-view .lb-studio-pane[hidden]{display:none!important}
+#content-view .lb-studio-pane{min-width:0}
+#content-view .lb-studio-pane>.panel,#content-view .lb-studio-pane>.creative-layout{margin-top:0}
+#content-view .lb-studio-pane .creative-layout{grid-template-columns:minmax(0,1fr);gap:12px}
+#content-view .lb-studio-pane .creative-layout>.panel:nth-child(2){order:2}
+#content-view .lb-studio-pane .creative-form{gap:12px}
+#content-view .lb-studio-pane label{margin-bottom:2px}
+#content-view .lb-studio-pane textarea{min-height:88px}
+#content-view .lb-studio-pane .panel-heading{align-items:flex-start}
+#content-view .lb-studio-advanced{margin:10px 0 14px;border:1px solid var(--border,#e1e7e1);border-radius:12px;background:#fafbf9;padding:12px}
+#content-view .lb-studio-advanced summary{cursor:pointer;font-weight:650;font-size:13px;color:#385445}
+#content-view .lb-studio-advanced #poyo-model-list{margin-top:12px}
+#content-view .lb-studio-advanced #poyo-model-list .metric-card{padding:12px}
+#content-view .lb-studio-note{font-size:12px;color:#69776e;margin:6px 0 12px}
+#content-view .lb-studio-pane .social-post-card{margin:10px 0}
+@media(min-width:900px){
+  #content-view .lb-studio-pane .creative-layout{grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr)}
+}
