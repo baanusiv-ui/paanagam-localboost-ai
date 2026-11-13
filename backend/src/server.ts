@@ -1645,6 +1645,8 @@ app.post("/v1/meta/connect/:businessId/url", { preHandler: requireUser, config: 
     client_id: env.META_APP_ID,
     redirect_uri: env.META_REDIRECT_URI,
     response_type: "code",
+    auth_type: "rerequest",
+    return_scopes: "true",
     state,
     scope: "pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish"
   }).toString();
