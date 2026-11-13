@@ -190,19 +190,22 @@
         result.customers.forEach(row=>{const item=document.createElement("li");item.textContent=(row.name||"Unnamed")+" · "+(row.phoneE164||row.email||"No contact");list.append(item);});
         preview.append(list);
       }
-      $("crm-retention-apply").disabled=result.count===0;
+      const previewIds=(result.customers||[]).map(row=>row.id);
+      $("crm-retention-apply").disabled=previewIds.length===0;
       $("crm-retention-apply").dataset.previewCount=String(result.count);
+      $("crm-retention-apply").dataset.previewIds=JSON.stringify(previewIds);
     }catch(error){preview.textContent=error.message;status(error.message,true);}
   }
   async function applyRetention(){
     if(!requireWorkspace())return;
-    if(Number($("crm-retention-apply").dataset.previewCount||0)===0)return;
-    const phrase=window.prompt('This permanently erases customer profiles and related CRM events older than the configured retention period. Type DELETE EXPIRED CUSTOMER DATA to continue.');
+    const previewIds=JSON.parse($("crm-retention-apply").dataset.previewIds||"[]");
+    if(!previewIds.length)return;
+    const phrase=window.prompt('This permanently erases only the '+previewIds.length+' customer records shown in the latest preview. Type DELETE EXPIRED CUSTOMER DATA to continue.');
     if(phrase!=="DELETE EXPIRED CUSTOMER DATA")return;
     try{
-      const result=await api(base()+"/crm-retention/apply",{method:"POST",body:JSON.stringify({confirmation:phrase})});
+      const result=await api(base()+"/crm-retention/apply",{method:"POST",body:JSON.stringify({confirmation:phrase,expectedCustomerIds:previewIds})});
       $("crm-retention-preview-output").textContent=result.deleted+" expired customer records erased.";
-      $("crm-retention-apply").disabled=true;delete $("crm-retention-apply").dataset.previewCount;
+      $("crm-retention-apply").disabled=true;delete $("crm-retention-apply").dataset.previewCount;delete $("crm-retention-apply").dataset.previewIds;
       await loadCustomers(true);status("Retention cleanup completed. "+result.deleted+" customer records erased.");
     }catch(error){status(error.message,true);}
   }
