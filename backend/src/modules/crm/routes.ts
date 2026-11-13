@@ -223,8 +223,8 @@ export async function registerCrmRoutes(
       await tx.customer.deleteMany({ where: { id: customer.id, businessId: business.id } });
       await tx.activityEvent.create({ data: {
         businessId: business.id, actorUserId: request.userId!, eventType: "CRM_CUSTOMER_ERASED",
-        entityType: "Customer", entityId: customer.id, summary: "Customer profile and associated personal data permanently erased",
-        metadata: { customerId: customer.id, method: "OWNER_REQUEST" }
+        entityType: "Customer", entityId: null, summary: "Customer profile and associated personal data permanently erased",
+        metadata: { method: "OWNER_REQUEST" }
       } });
     });
     return reply.code(204).send();
