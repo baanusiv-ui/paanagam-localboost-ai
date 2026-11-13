@@ -195,4 +195,112 @@ export async function registerCrmRoutes(
       throw error;
     }
   });
+  app.get("/v1/businesses/:businessId/customers/:customerId/export", { preHandler: requireUser }, async (request, reply) => {
+    const params = customerIdParams.safeParse(request.params);
+    if (!params.success) return reply.code(400).send({ error: "Invalid customer identifier." });
+    const business = await findOwnedBusiness(db, request.userId!, params.data.businessId);
+    if (!business) return reply.code(404).send({ error: "Business not found." });
+    const customer = await db.customer.findFirst({
+      where: { id: params.data.customerId, businessId: business.id },
+      include: { consents: { orderBy: { capturedAt: "asc" } }, events: { orderBy: { occurredAt: "asc" } } }
+    });
+    if (!customer) return reply.code(404).send({ error: "Customer not found." });
+    return reply.header("content-type", "application/json; charset=utf-8")
+      .header("content-disposition", 'attachment; filename="localboost-customer-export-' + customer.id + '.json"')
+      .send({ exportedAt: new Date().toISOString(), businessId: business.id, customer });
+  });
+
+  app.delete("/v1/businesses/:businessId/customers/:customerId", { preHandler: requireUser }, async (request, reply) => {
+    const params = customerIdParams.safeParse(request.params);
+    const body = z.object({ confirmation: z.literal("DELETE CUSTOMER") }).safeParse(request.body);
+    if (!params.success || !body.success) return reply.code(400).send({ error: 'Confirm permanent deletion by sending confirmation: "DELETE CUSTOMER".' });
+    const business = await findOwnedBusiness(db, request.userId!, params.data.businessId);
+    if (!business) return reply.code(404).send({ error: "Business not found." });
+    const customer = await db.customer.findFirst({ where: { id: params.data.customerId, businessId: business.id }, select: { id: true } });
+    if (!customer) return reply.code(404).send({ error: "Customer not found." });
+    await db.$transaction(async tx => {
+      await tx.customerEvent.deleteMany({ where: { businessId: business.id, customerId: customer.id } });
+      await tx.customer.deleteMany({ where: { id: customer.id, businessId: business.id } });
+      await tx.activityEvent.create({ data: {
+        businessId: business.id, actorUserId: request.userId!, eventType: "CRM_CUSTOMER_ERASED",
+        entityType: "Customer", entityId: customer.id, summary: "Customer profile and associated personal data permanently erased",
+        metadata: { customerId: customer.id, method: "OWNER_REQUEST" }
+      } });
+    });
+    return reply.code(204).send();
+  });
+
+  app.get("/v1/businesses/:businessId/crm-retention", { preHandler: requireUser }, async (request, reply) => {
+    const params = businessParams.safeParse(request.params);
+    if (!params.success) return reply.code(400).send({ error: "Invalid business identifier." });
+    const business = await findOwnedBusiness(db, request.userId!, params.data.businessId);
+    if (!business) return reply.code(404).send({ error: "Business not found." });
+    const policy = await db.business.findUnique({ where: { id: business.id }, select: { customerRetentionMonths: true } });
+    return { retentionMonths: policy?.customerRetentionMonths ?? 36, automaticDeletion: false };
+  });
+
+  app.patch("/v1/businesses/:businessId/crm-retention", { preHandler: requireUser }, async (request, reply) => {
+    const params = businessParams.safeParse(request.params);
+    const body = z.object({ retentionMonths: z.number().int().min(12).max(84) }).safeParse(request.body);
+    if (!params.success || !body.success) return reply.code(400).send({ error: "Retention must be between 12 and 84 months." });
+    const business = await findOwnedBusiness(db, request.userId!, params.data.businessId);
+    if (!business) return reply.code(404).send({ error: "Business not found." });
+    const policy = await db.business.update({
+      where: { id: business.id }, data: { customerRetentionMonths: body.data.retentionMonths },
+      select: { customerRetentionMonths: true }
+    });
+    await db.activityEvent.create({ data: {
+      businessId: business.id, actorUserId: request.userId!, eventType: "CRM_RETENTION_POLICY_UPDATED",
+      entityType: "Business", entityId: business.id, summary: "Customer data retention period updated",
+      metadata: { retentionMonths: policy.customerRetentionMonths }
+    } });
+    return { retentionMonths: policy.customerRetentionMonths, automaticDeletion: false };
+  });
+
+  app.get("/v1/businesses/:businessId/crm-retention/preview", { preHandler: requireUser }, async (request, reply) => {
+    const params = businessParams.safeParse(request.params);
+    if (!params.success) return reply.code(400).send({ error: "Invalid business identifier." });
+    const business = await findOwnedBusiness(db, request.userId!, params.data.businessId);
+    if (!business) return reply.code(404).send({ error: "Business not found." });
+    const policy = await db.business.findUnique({ where: { id: business.id }, select: { customerRetentionMonths: true } });
+    const months = policy?.customerRetentionMonths ?? 36;
+    const cutoff = new Date(); cutoff.setUTCMonth(cutoff.getUTCMonth() - months);
+    const candidates = await db.customer.findMany({
+      where: { businessId: business.id, status: { not: "DELETED" }, OR: [
+        { lastSeenAt: { lt: cutoff } }, { lastSeenAt: null, createdAt: { lt: cutoff } }
+      ] },
+      select: { id: true, name: true, phoneE164: true, email: true, createdAt: true, lastSeenAt: true },
+      orderBy: { createdAt: "asc" }, take: 501
+    });
+    return { retentionMonths: months, cutoff, count: candidates.length, capped: candidates.length > 500, customers: candidates.slice(0, 500) };
+  });
+
+  app.post("/v1/businesses/:businessId/crm-retention/apply", { preHandler: requireUser }, async (request, reply) => {
+    const params = businessParams.safeParse(request.params);
+    const body = z.object({ confirmation: z.literal("DELETE EXPIRED CUSTOMER DATA") }).safeParse(request.body);
+    if (!params.success || !body.success) return reply.code(400).send({ error: 'Explicit confirmation required: "DELETE EXPIRED CUSTOMER DATA".' });
+    const business = await findOwnedBusiness(db, request.userId!, params.data.businessId);
+    if (!business) return reply.code(404).send({ error: "Business not found." });
+    const policy = await db.business.findUnique({ where: { id: business.id }, select: { customerRetentionMonths: true } });
+    const months = policy?.customerRetentionMonths ?? 36;
+    const cutoff = new Date(); cutoff.setUTCMonth(cutoff.getUTCMonth() - months);
+    const candidates = await db.customer.findMany({
+      where: { businessId: business.id, status: { not: "DELETED" }, OR: [
+        { lastSeenAt: { lt: cutoff } }, { lastSeenAt: null, createdAt: { lt: cutoff } }
+      ] }, select: { id: true }, take: 500
+    });
+    const ids = candidates.map(customer => customer.id);
+    if (!ids.length) return { deleted: 0, retentionMonths: months };
+    await db.$transaction(async tx => {
+      await tx.customerEvent.deleteMany({ where: { businessId: business.id, customerId: { in: ids } } });
+      await tx.customer.deleteMany({ where: { businessId: business.id, id: { in: ids } } });
+      await tx.activityEvent.create({ data: {
+        businessId: business.id, actorUserId: request.userId!, eventType: "CRM_RETENTION_ERASURE",
+        entityType: "Customer", summary: "Expired customer records and associated personal data erased",
+        metadata: { count: ids.length, retentionMonths: months, cutoff: cutoff.toISOString() }
+      } });
+    });
+    return { deleted: ids.length, retentionMonths: months, capped: ids.length === 500 };
+  });
+
 }
