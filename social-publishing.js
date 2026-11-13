@@ -38,7 +38,7 @@
     try{
       const result=await api(base()+"/meta/pages");
       select.innerHTML="";
-      if(!result.pages.length){select.innerHTML="<option value=''>No accessible Pages found</option>";return;}
+      if(!result.pages.length){select.innerHTML="<option>No accessible Pages found</option>";const d=result.diagnostic||{};statusMessage((d.message||"Meta returned no Pages for this Facebook profile.")+(Array.isArray(d.checks)?" "+d.checks.join(" "):""),true);return;}}
       select.innerHTML="<option value=''>Choose a Page…</option>";
       result.pages.forEach(page=>{const option=document.createElement("option");option.value=page.id;option.textContent=page.name+(page.instagramUsername?" · @"+page.instagramUsername:" · no linked Instagram");select.append(option);});
       select.addEventListener("change",()=>{button.disabled=!select.value;});
