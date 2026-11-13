@@ -147,3 +147,108 @@
   });
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();
 })();
+
+/* Guided Content Studio navigation. Existing feature nodes are moved, not rebuilt,
+   so their original event handlers, IDs, forms and approval safeguards remain intact. */
+(() => {
+  "use strict";
+  function setupContentStudio() {
+    const root=document.getElementById("content-view");
+    const engine=document.getElementById("poyo-creative-panel");
+    if(!root||!engine||root.dataset.guidedStudio==="ready")return;
+    const campaign=root.querySelector(".creative-layout");
+    const image=document.getElementById("poyo-image-panel");
+    const imageCreate=document.createElement("div");imageCreate.className="panel";
+    const imageHeader=image?.querySelector(".panel-heading");
+    const imageForm=image?.querySelector("#poyo-image-form");
+    const imageMessage=document.getElementById("poyo-image-message");
+    if(imageHeader)imageCreate.append(imageHeader);if(imageForm)imageCreate.append(imageForm);if(imageMessage)imageCreate.append(imageMessage);
+    const imageJobsPanel=document.createElement("div");imageJobsPanel.className="panel";
+    const imageJobsHeader=image?.querySelector(".panel-heading");
+    const imageJobsList=document.getElementById("poyo-image-task-list");
+    if(imageJobsHeader)imageJobsPanel.append(imageJobsHeader);if(imageJobsList)imageJobsPanel.append(imageJobsList);
+    const videoForm=engine.querySelector("#poyo-draft-form")?.closest(".panel");
+    const imageJobs=image?.querySelector("#poyo-image-task-list")?.closest(".panel-heading")?.parentElement;
+    const videoJobs=document.getElementById("poyo-task-list")?.closest(".panel");
+    const integrations=document.getElementById("design-integrations-panel");
+    const meta=root.querySelector(".meta-connection-panel");
+    if(!campaign||!image||!videoForm||!videoJobs)return;
+    root.dataset.guidedStudio="ready";
+
+    const nav=document.createElement("div");
+    nav.className="lb-studio-nav";
+    nav.setAttribute("role","tablist");
+    nav.setAttribute("aria-label","Content studio sections");
+    const panes=document.createElement("div");
+    panes.className="lb-studio-panes";
+    const specs=[
+      ["campaign","Campaign post",campaign],
+      ["image","Create image",imageCreate],
+      ["video","Create video",videoForm],
+      ["library","Saved work",null],
+      ["settings","Connections",null]
+    ];
+    const paneMap={};
+    specs.forEach(([id,label,node],index)=>{
+      const pane=document.createElement("section");
+      pane.className="lb-studio-pane";
+      pane.id="lb-studio-"+id;
+      pane.hidden=index!==0;
+      if(node)pane.appendChild(node);
+      paneMap[id]=pane;
+      panes.appendChild(pane);
+      const tab=document.createElement("button");
+      tab.type="button";tab.className="lb-studio-tab";
+      tab.textContent=label;tab.setAttribute("role","tab");
+      tab.setAttribute("aria-controls",pane.id);
+      tab.setAttribute("aria-selected",index===0?"true":"false");
+      tab.addEventListener("click",()=>{
+        Object.entries(paneMap).forEach(([key,p])=>p.hidden=key!==id);
+        nav.querySelectorAll("button").forEach(b=>b.setAttribute("aria-selected",b===tab?"true":"false"));
+      });
+      nav.appendChild(tab);
+    });
+
+    /* Keep provider catalogue available, but out of the everyday creation flow. */
+    const modelList=document.getElementById("poyo-model-list");
+    const advanced=document.createElement("details");
+    advanced.className="lb-studio-advanced";
+    const summary=document.createElement("summary");
+    summary.textContent="Advanced · AI models, providers and estimated credits";
+    advanced.append(summary);
+    if(modelList)advanced.append(modelList);
+    engine.insertBefore(advanced,engine.children[2]||null);
+
+    const library=paneMap.library;
+    const savedCopy=document.createElement("p");
+    savedCopy.className="lb-studio-note";
+    savedCopy.textContent="Your saved campaign drafts and generated previews. Nothing is published from this screen.";
+    library.append(savedCopy);
+    const creativeLibrary=campaign.querySelector("#creative-library")?.closest(".panel");
+    if(creativeLibrary)library.append(creativeLibrary);
+    if(imageJobsPanel)library.append(imageJobsPanel);
+    library.append(videoJobs);
+
+    const settings=paneMap.settings;
+    const settingsCopy=document.createElement("p");
+    settingsCopy.className="lb-studio-note";
+    settingsCopy.textContent="Connect social accounts and optional design tools here. Publishing still requires separate approval.";
+    settings.append(settingsCopy);
+    if(integrations)settings.append(integrations);
+    if(meta)settings.append(meta);
+    settings.append(advanced);
+
+    /* Move the existing content into one simple navigation without cloning IDs. */
+    const heading=root.querySelector(".section-heading");
+    if(heading)heading.insertAdjacentElement("afterend",nav);
+    nav.insertAdjacentElement("afterend",panes);
+
+    /* The engine wrapper now only carries advanced provider information. */
+    engine.querySelector(".panel-heading")?.remove();
+    const generationState=document.getElementById("poyo-generation-state");
+    if(generationState)advanced.append(generationState);
+    engine.hidden=true;
+  }
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",setupContentStudio,{once:true});
+  else setupContentStudio();
+})();
