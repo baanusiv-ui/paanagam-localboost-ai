@@ -44,6 +44,19 @@ export const POYO_MODEL_CATALOGUE: PoyoModelDefinition[] = [
     enabledForGeneration: false
   },
   {
+    id: "nano-banana-2.1",
+    name: "Google Nano Banana 2.1",
+    provider: "Google",
+    mediaType: "IMAGE",
+    documentationUrl: "https://docs.poyo.ai/api-manual/image-series/overview.md",
+    useCases: ["Paanagam campaign artwork", "product visuals", "reference-image editing"],
+    resolutions: ["1K", "2K", "4K"],
+    estimatedCredits: 2,
+    schemaVerified: false,
+    priceVerified: true,
+    enabledForGeneration: false
+  },
+  {
     id: "gpt-image-2",
     name: "GPT Image 2",
     provider: "OpenAI",
