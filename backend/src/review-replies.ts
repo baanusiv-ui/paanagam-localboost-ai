@@ -50,26 +50,18 @@ export function parseReviewReplyOutput(raw: string) {
 }
 
 export async function generateLocalReviewReplyDraft(input: ReviewReplyInput) {
-  const baseUrl = localBaseUrl();
-  const model = localModel();
-  if (!baseUrl) throw new Error("Local AI is not configured. Set OLLAMA_BASE_URL in backend/.env and restart the API.");
-  const response = await fetch(baseUrl + "/api/chat", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      model,
-      messages: buildReviewReplyMessages(input),
-      stream: false,
-      format: "json",
-      options: { temperature: 0.25 }
-    }),
-    signal: AbortSignal.timeout(45000)
+  const generated = await generateAiJson({
+    task: "review-reply",
+    messages: buildReviewReplyMessages(input),
+    temperature: 0.25,
+    maxOutputTokens: 500,
+    responseSchema: {
+      type: "OBJECT",
+      properties: { reply: { type: "STRING" } },
+      required: ["reply"]
+    }
   });
-  const data = await response.json() as { message?: { content?: string }; error?: string };
-  if (!response.ok) throw new Error(data.error || "Local Ollama request failed with HTTP " + response.status);
-  const content = data.message?.content;
-  if (!content) throw new Error("Local AI returned an empty reply draft. Try again or check the model.");
-  const parsed = parseReviewReplyOutput(content);
+  const parsed = parseReviewReplyOutput(generated.raw);
   return {
     ...parsed,
     provider: generated.provider,
