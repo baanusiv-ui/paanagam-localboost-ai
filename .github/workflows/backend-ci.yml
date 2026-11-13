@@ -29,7 +29,7 @@ on:
       - "index.html"
       - "styles.css"
       - "growth-intelligence.js"
-      - "growth-intelligence.css"
+      - "growth-intelligence.css"\n      - "crm.js"\n      - "crm.css"
       - "gbp-owner.css"
       - "gbp-owner.js"
       - "creative-studio.js"
