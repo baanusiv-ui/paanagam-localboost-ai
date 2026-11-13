@@ -52,7 +52,7 @@
         </div>
         <article class="panel crm-detail" id="crm-customer-detail" aria-live="polite"><div class="crm-empty"><strong>Select a customer</strong><p>Customer profile, contact consent and recorded activity will appear here.</p></div></article>
       </div>
-      <p class="footnote">Marketing consent is separate from service consent. Purchases never imply permission to send marketing. No messages are sent from this screen. Customer deletion/export and retention controls are not yet enabled.</p>`;
+      <article class="panel crm-retention"><div class="panel-heading"><div><h3>Privacy &amp; data retention</h3><p>Choose how long inactive customer records are retained.</p></div><span class="tag">Manual review</span></div><div class="crm-retention-controls"><label>Retention period<select id="crm-retention-months"><option value="12">12 months</option><option value="18">18 months</option><option value="24">24 months</option><option value="36">36 months</option><option value="48">48 months</option><option value="60">60 months</option><option value="72">72 months</option><option value="84">84 months</option></select></label><button class="secondary-button" id="crm-retention-save" type="button">Save period</button><button class="secondary-button" id="crm-retention-preview" type="button">Preview expired records</button></div><div id="crm-retention-preview" class="crm-retention-preview" aria-live="polite">No records will be deleted automatically.</div><button class="danger-button" id="crm-retention-apply" type="button" disabled>Erase previewed expired records</button><p class="footnote">Preview is limited to the first 500 matching records. Applying deletion requires typing an exact confirmation phrase. Automatic deletion is disabled.</p></article><p class="footnote">Marketing consent is separate from service consent. Purchases never imply permission to send marketing. No messages are sent from this screen.</p>`;
     main.append(section);
     button.addEventListener("click",show);
     document.addEventListener("click",event=>{if(event.target.closest("[data-view],[data-gi-nav]"))section.classList.add("hidden");},true);
@@ -60,6 +60,10 @@
     $("crm-search-form").addEventListener("submit",event=>{event.preventDefault();loadCustomers(true);});
     $("crm-load-more").addEventListener("click",()=>loadCustomers(false));
     $("crm-customer-list").addEventListener("click",event=>{const target=event.target.closest("[data-crm-customer]");if(target)loadCustomer(target.dataset.crmCustomer);});
+    $("crm-customer-detail").addEventListener("click",event=>{const action=event.target.closest("[data-crm-action]")?.dataset.crmAction;if(action==="export")exportCustomer();if(action==="erase")eraseCustomer();});
+    $("crm-retention-save").addEventListener("click",saveRetention);
+    $("crm-retention-preview").addEventListener("click",previewRetention);
+    $("crm-retention-apply").addEventListener("click",applyRetention);
     $("crm-customer-detail").addEventListener("submit",event=>{
       if(event.target.id==="crm-profile-form"){event.preventDefault();saveProfile();}
       if(event.target.id==="crm-consent-form"){event.preventDefault();saveConsent();}
@@ -71,7 +75,7 @@
     $("crm-workspace").classList.remove("hidden");
     if($("crumb-title"))$("crumb-title").textContent="Customer CRM";
     if($("page-title"))$("page-title").textContent="Customer CRM";
-    if(businessId)loadCustomers(true);
+    if(businessId){loadCustomers(true);loadRetention();}
   }
   async function loadCustomers(reset=true){
     if(!requireWorkspace()||loading)return;
@@ -138,6 +142,68 @@
       const payload={channel:$("crm-consent-channel").value,purpose:$("crm-consent-purpose").value,granted:$("crm-consent-granted").value==="true",source:"OWNER_CONFIRMED",evidence:$("crm-consent-evidence").value.trim()};
       await api(base()+"/customers/"+encodeURIComponent(selectedCustomer.id)+"/consents",{method:"POST",body:JSON.stringify(payload)});
       await loadCustomer(selectedCustomer.id);status("Consent decision saved to the audit history. No message was sent.");
+    }catch(error){status(error.message,true);}
+  }
+  async function exportCustomer(){
+    if(!selectedCustomer||!requireWorkspace())return;
+    try{
+      const result=await api(base()+"/customers/"+encodeURIComponent(selectedCustomer.id)+"/export");
+      const blob=new Blob([JSON.stringify(result,null,2)],{type:"application/json"});
+      const url=URL.createObjectURL(blob),anchor=document.createElement("a");
+      anchor.href=url;anchor.download="localboost-customer-"+selectedCustomer.id+".json";anchor.click();URL.revokeObjectURL(url);
+      status("Customer data export prepared.");
+    }catch(error){status(error.message,true);}
+  }
+  async function eraseCustomer(){
+    if(!selectedCustomer||!requireWorkspace())return;
+    const phrase=window.prompt('This permanently erases the customer profile, consent history and associated events. Type DELETE CUSTOMER to continue.');
+    if(phrase!=="DELETE CUSTOMER")return;
+    try{
+      await api(base()+"/customers/"+encodeURIComponent(selectedCustomer.id),{method:"DELETE",body:JSON.stringify({confirmation:phrase})});
+      selectedCustomer=null;await loadCustomers(true);
+      $("crm-customer-detail").innerHTML='<div class="crm-empty"><strong>Customer erased</strong><p>The profile and associated personal data were permanently deleted.</p></div>';
+      status("Customer data permanently erased.");
+    }catch(error){status(error.message,true);}
+  }
+  async function loadRetention(){
+    if(!requireWorkspace())return;
+    try{const result=await api(base()+"/crm-retention");$("crm-retention-months").value=String(result.retentionMonths);}
+    catch(error){status(error.message,true);}
+  }
+  async function saveRetention(){
+    if(!requireWorkspace())return;
+    try{
+      const result=await api(base()+"/crm-retention",{method:"PATCH",body:JSON.stringify({retentionMonths:Number($("crm-retention-months").value)})});
+      status("Retention period saved: "+result.retentionMonths+" months. Automatic deletion remains off.");
+      $("crm-retention-preview").textContent="Run a fresh preview to see records older than this period.";
+      $("crm-retention-apply").disabled=true;
+    }catch(error){status(error.message,true);}
+  }
+  async function previewRetention(){
+    if(!requireWorkspace())return;
+    const preview=$("crm-retention-preview");preview.textContent="Checking expired records…";
+    try{
+      const result=await api(base()+"/crm-retention/preview");
+      preview.textContent=result.count+" candidate records older than "+result.retentionMonths+" months. "+(result.capped?"Showing first 500; apply works in batches.":"");
+      if(result.customers.length){
+        const list=document.createElement("ul");list.className="crm-history";
+        result.customers.forEach(row=>{const item=document.createElement("li");item.textContent=(row.name||"Unnamed")+" · "+(row.phoneE164||row.email||"No contact");list.append(item);});
+        preview.append(list);
+      }
+      $("crm-retention-apply").disabled=result.count===0;
+      $("crm-retention-apply").dataset.previewCount=String(result.count);
+    }catch(error){preview.textContent=error.message;status(error.message,true);}
+  }
+  async function applyRetention(){
+    if(!requireWorkspace())return;
+    if(Number($("crm-retention-apply").dataset.previewCount||0)===0)return;
+    const phrase=window.prompt('This permanently erases customer profiles and related CRM events older than the configured retention period. Type DELETE EXPIRED CUSTOMER DATA to continue.');
+    if(phrase!=="DELETE EXPIRED CUSTOMER DATA")return;
+    try{
+      const result=await api(base()+"/crm-retention/apply",{method:"POST",body:JSON.stringify({confirmation:phrase})});
+      $("crm-retention-preview").textContent=result.deleted+" expired customer records erased.";
+      $("crm-retention-apply").disabled=true;delete $("crm-retention-apply").dataset.previewCount;
+      await loadCustomers(true);status("Retention cleanup completed. "+result.deleted+" customer records erased.");
     }catch(error){status(error.message,true);}
   }
   function ready(event){
