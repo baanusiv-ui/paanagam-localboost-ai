@@ -44,6 +44,8 @@ on:
       - "paanagam-education.css"
       - "growth.js"
       - "growth-intelligence.css"
+      - "menu-engineering.js"
+      - "menu-engineering.css"
       - "gbp-owner.css"
       - "gbp-owner.js"
       - "creative-studio.js"
@@ -81,6 +83,6 @@ jobs:
       - name: Validate Render dashboard bundle and manual-deploy guard
         working-directory: .
         run: |
-          grep -q 'cp index.html styles.css growth-intelligence.css menu-engineering.css review-intelligence.css paanagam-education.css gbp-owner.css app.js growth.js growth-intelligence.js menu-engineering.js review-intelligence.js paanagam-education.js gbp-owner.js creative-studio.js poyo-studio.js social-publishing.js menu-engineering.js growth-goals.js growth-goals.css config.js auth-client.js public-dist/' render.yaml
-          for asset in index.html styles.css growth-intelligence.css review-intelligence.js review-intelligence.css paanagam-education.js paanagam-education.css gbp-owner.css app.js auth-client.js growth.js growth-intelligence.js gbp-owner.js creative-studio.js poyo-studio.js social-publishing.js growth-goals.js growth-goals.css config.js; do test -f "$asset"; done
+          grep -q 'cp index.html styles.css growth-intelligence.css menu-engineering.css review-intelligence.css paanagam-education.css gbp-owner.css app.js growth.js growth-intelligence.js menu-engineering.js review-intelligence.js paanagam-education.js gbp-owner.js creative-studio.js poyo-studio.js social-publishing.js growth-goals.js growth-goals.css config.js auth-client.js public-dist/' render.yaml
+          for asset in index.html styles.css growth-intelligence.css menu-engineering.css menu-engineering.js review-intelligence.js review-intelligence.css paanagam-education.js paanagam-education.css gbp-owner.css app.js auth-client.js growth.js growth-intelligence.js gbp-owner.js creative-studio.js poyo-studio.js social-publishing.js growth-goals.js growth-goals.css config.js; do test -f "$asset"; done
           test "$(grep -c 'autoDeployTrigger: off' render.yaml)" -eq 2
