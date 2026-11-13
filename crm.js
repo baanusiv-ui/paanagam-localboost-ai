@@ -34,7 +34,7 @@
       </article>
       <article class="panel crm-meta-comments" id="crm-meta-comments">
         <div class="panel-heading"><div><h3>Facebook public comments</h3><p>Imports comments on the connected Page's recent posts. No private messages, author-name matching or replies.</p></div><button class="secondary-button" id="crm-meta-comments-sync" type="button">Import public comments</button></div>
-        <div id="crm-meta-comments-summary" class="empty-copy">Load public comments from the connected Facebook Page.</div>
+        <div id="crm-meta-connection-status" class="footnote">Checking the existing Meta connection…</div><div id="crm-meta-comments-summary" class="empty-copy">Load public comments from the connected Facebook Page.</div>
       </article>
       <div class="crm-layout">
         <div class="crm-left">
@@ -84,7 +84,28 @@
     $("crm-workspace").classList.remove("hidden");
     if($("crumb-title"))$("crumb-title").textContent="Customer CRM";
     if($("page-title"))$("page-title").textContent="Customer CRM";
-    if(businessId){loadCustomers(true);loadRetention();loadCustomerVoice();loadMetaComments(false);}
+    if(businessId){loadCustomers(true);loadRetention();loadCustomerVoice();loadMetaConnection();loadMetaComments(false);}
+  }
+  async function loadMetaConnection(){
+    if(!requireWorkspace())return;
+    const statusNode=$("crm-meta-connection-status"),button=$("crm-meta-comments-sync");
+    try{
+      const result=await api(base()+"/meta");
+      const connection=result.connection;
+      if(!result.connected||!connection){
+        statusNode.textContent="Meta Page not connected. Connect the business Page in the existing Integrations settings.";
+        button.disabled=true;
+        return;
+      }
+      const scopes=new Set(String(connection.scopes||"").split(/\\s+/).filter(Boolean));
+      const canRead=scopes.has("pages_read_engagement");
+      const instagram=connection.instagramUsername?" · Instagram @"+connection.instagramUsername+" linked":"";
+      statusNode.textContent="Facebook Page connected: "+connection.pageName+instagram+(canRead?" · public comment read permission available":" · pages_read_engagement permission missing");
+      button.disabled=!canRead;
+    }catch(error){
+      statusNode.textContent="Meta connection status unavailable: "+error.message;
+      button.disabled=true;
+    }
   }
   async function loadMetaComments(sync=false){
     if(!requireWorkspace())return;
