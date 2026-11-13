@@ -57,11 +57,12 @@ Never import payment credentials, UPI references, full receipts or unrelated inv
 
 ## Google Business Profile reviews
 
-Reuse the existing LocalBoost Google OAuth connection, selected account/location and review importer. Do not create a second Google connection.
+Reuse the existing Reviews workspace as the single source of truth: its existing Google OAuth connection, selected account/location, importer, saved `GrowthRecord` rows (`REVIEW_ITEM`) and review-theme analysis. CRM reads those same saved review records through a tenant-scoped read-only endpoint. Do not create a second Google connection, duplicate review store, or a second review import job.
 
 - Store review source ID, location resource, rating, review text, create/update timestamps, and owner reply state only where permitted by the API and existing product policy.
 - Keep reviewer display name/profile image out of CRM identity matching and avoid storing reviewer profile identifiers unless separately justified and approved.
-- Create an unlinked review event by default. Attach it to a CRM customer only if an explicit, reliable identity key is supplied by an authorized source; a Google display name or review text is not a reliable match.
+- Show review evidence and aggregate customer-voice insights inside CRM by reading the same `REVIEW_ITEM` records used by Reviews. Do not copy each review into `CustomerEvent` or create a second event stream.
+- Keep reviews unlinked from customer profiles by default. Attach only if an explicit, reliable identity key is supplied by an authorized source; a Google display name or review text is not a reliable match.
 - Review import is read-only. No replies are created or edited by this importer.
 - Use stable namespaced review IDs and idempotent upserts.
 
@@ -98,7 +99,7 @@ If the current CRM event enum does not support an event, add a migration rather 
 
 1. Confirm POS integration API implementation location and add the read-only customer/purchase export there.
 2. Add LocalBoost POS customer importer and mapping/preview UI.
-3. Extend existing Google review importer with CRM event ingestion.
+3. Expose the existing Reviews workspace evidence and theme analysis to CRM through a read-only, tenant-scoped view (no second importer or duplicate events).
 4. Extend existing Meta Page/Instagram integration for public comment ingestion only.
 5. Add unified source status, sync audit and CRM timeline filters.
 6. Run tests and deploy only after review; staging remains untouched unless explicitly requested.
