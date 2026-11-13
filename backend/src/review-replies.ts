@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { generateAiJson } from "./ai-provider.js";
 
 export type ReviewReplyInput = {
   businessName: string;
@@ -9,8 +10,7 @@ export type ReviewReplyInput = {
 };
 
 const replySchema = z.object({ reply: z.string().trim().min(1).max(1200) }).strict();
-const localBaseUrl = () => (process.env.OLLAMA_BASE_URL || "").replace(/\/$/, "");
-const localModel = () => (process.env.OLLAMA_MODEL || "qwen2.5:7b").trim();
+
 
 export function redactReviewPersonalData(value: string) {
   return value
@@ -50,30 +50,23 @@ export function parseReviewReplyOutput(raw: string) {
 }
 
 export async function generateLocalReviewReplyDraft(input: ReviewReplyInput) {
-  const baseUrl = localBaseUrl();
-  const model = localModel();
-  if (!baseUrl) throw new Error("Local AI is not configured. Set OLLAMA_BASE_URL in backend/.env and restart the API.");
-  const response = await fetch(baseUrl + "/api/chat", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      model,
-      messages: buildReviewReplyMessages(input),
-      stream: false,
-      format: "json",
-      options: { temperature: 0.25 }
-    }),
-    signal: AbortSignal.timeout(45000)
+  const generated = await generateAiJson({
+    task: "review-reply",
+    messages: buildReviewReplyMessages(input),
+    temperature: 0.25,
+    maxOutputTokens: 500,
+    responseSchema: {
+      type: "OBJECT",
+      properties: { reply: { type: "STRING" } },
+      required: ["reply"]
+    }
   });
-  const data = await response.json() as { message?: { content?: string }; error?: string };
-  if (!response.ok) throw new Error(data.error || "Local Ollama request failed with HTTP " + response.status);
-  const content = data.message?.content;
-  if (!content) throw new Error("Local AI returned an empty reply draft. Try again or check the model.");
-  const parsed = parseReviewReplyOutput(content);
+  const parsed = parseReviewReplyOutput(generated.raw);
   return {
     ...parsed,
-    provider: "LOCAL_OLLAMA",
-    model,
+    provider: generated.provider,
+    model: generated.model,
+    fallbackUsed: generated.fallbackUsed,
     language: input.language,
     tone: input.tone,
     generatedAt: new Date().toISOString(),
