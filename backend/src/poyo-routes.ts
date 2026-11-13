@@ -200,8 +200,10 @@ export function registerPoyoRoutes(app: FastifyInstance, db: PrismaClient, requi
       if (usage._count._all >= 100 || (usage._sum.byteSize ?? 0) + bytes.length > 100 * 1024 * 1024) {
         return reply.code(413).send({ error: "Business creative library limit reached (100 assets or 100 MB)." });
       }
+      const extension = mimeType === "image/jpeg" ? "jpg" : mimeType === "image/webp" ? "webp" : mimeType === "image/png" ? "png" : mimeType === "video/webm" ? "webm" : "mp4";
+      const prefix = task.mediaType === "IMAGE" ? "nano-banana-" : "wan22-";
       const asset = await db.creativeAsset.create({
-        data: { businessId: business.id, fileName: "wan22-" + task.id.slice(0, 18) + ".mp4", mimeType, byteSize: bytes.length, data: bytes, altText: task.prompt.slice(0, 240) },
+        data: { businessId: business.id, fileName: prefix + task.id.slice(0, 18) + "." + extension, mimeType, byteSize: bytes.length, data: bytes, altText: task.prompt.slice(0, 240) },
         select: { id: true }
       });
       const contentPath = "/v1/businesses/" + business.id + "/poyo/assets/" + asset.id + "/content";
@@ -245,7 +247,7 @@ export function registerPoyoRoutes(app: FastifyInstance, db: PrismaClient, requi
     const business = await findOwnedBusiness(db, request.userId, params.data.businessId);
     if (!business) return reply.code(404).send({ error: "Business not found." });
     const asset = await db.creativeAsset.findFirst({ where: { id: params.data.assetId, businessId: business.id }, select: { data: true, mimeType: true, byteSize: true } });
-    if (!asset || !["video/mp4", "video/webm"].includes(asset.mimeType)) return reply.code(404).send({ error: "Video asset not found." });
+    if (!asset || !["video/mp4", "video/webm", "image/png", "image/jpeg", "image/webp"].includes(asset.mimeType)) return reply.code(404).send({ error: "Creative asset not found." });
     return reply.header("content-type", asset.mimeType).header("content-length", String(asset.byteSize)).header("content-disposition", "inline").header("cache-control", "private, no-store").header("x-content-type-options", "nosniff").send(Buffer.from(asset.data));
   });
 
