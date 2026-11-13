@@ -198,15 +198,22 @@
     if(!ready||!current)return;
     const assetUrl=$("creative-asset-url").value.trim();
     if(assetUrl&&!/^https:\/\//i.test(assetUrl)){setMessage("Image asset must use an https:// URL.",true);return;}
+    if(assetUrl&&!current.assetId){setMessage("This URL is only a reference. Import the image into the business creative library before queueing it for publishing.",true);return;}
     current.assetUrl=assetUrl; current.updatedAt=new Date().toISOString();
     try{
       await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:current.id,payload:current,recordedAt:current.updatedAt})});
       const channels = current.format === "story" ? [] : (current.platform === "Instagram + Facebook" ? ["FACEBOOK","INSTAGRAM"] : current.platform === "Instagram" ? ["INSTAGRAM"] : current.platform === "Facebook" ? ["FACEBOOK"] : []);
-      const queued = [], skipped = current.format === "story" ? ["Story/Reel publishing is not supported yet; this remains a creative-library draft"] : [];
-      for (const channel of channels) {
-        if (channel === "INSTAGRAM" && !current.assetId) { skipped.push("Instagram needs a saved JPEG/PNG image"); continue; }
-        await api(base()+"/social-posts",{method:"POST",body:JSON.stringify({channel,caption:current.caption,sourceDraftId:current.id,assetId:current.assetId||undefined})});
-        queued.push(channel);
+      const queued = [], failed = [], skipped = current.format === "story" ? ["Story/Reel publishing is not supported by the current Meta image endpoints; this remains a creative-library draft"] : [];
+      const eligible = channels.filter(channel => {
+        if (channel === "INSTAGRAM" && !current.assetId) { skipped.push("Instagram needs a saved JPEG/PNG image"); return false; }
+        return true;
+      });
+      const outcomes = await Promise.allSettled(eligible.map(channel => api(base()+"/social-posts",{method:"POST",body:JSON.stringify({channel,caption:current.caption,sourceDraftId:current.id,assetId:current.assetId||undefined})})));
+      outcomes.forEach((outcome,index)=>{ if(outcome.status==="fulfilled")queued.push(eligible[index]); else failed.push(eligible[index]+": "+(outcome.reason?.message||"queue failed")); });
+      if(failed.length){
+        drafts.unshift({...current}); render();
+        setMessage("Campaign draft saved. Queued: "+(queued.join(", ")||"none")+". Failed channels: "+failed.join("; ")+". Retry by saving again after correcting the issue.",true);
+        return;
       }
       drafts.unshift({...current}); current=null; $("creative-save").disabled=true; $("creative-preview").classList.add("hidden"); $("creative-form").reset(); render();
       setMessage("Draft saved. "+queued.length+" social post(s) added to Approval Centre; nothing has been approved or published."+(skipped.length?" "+skipped.join("; ")+".":""));
@@ -328,6 +335,25 @@
     } catch(err) {
       setMessage("Canva disconnect failed: "+err.message,true);
     } finally { button.disabled=false; button.textContent="Disconnect Canva"; }
+  });
+  window.addEventListener("localboost:poyo-asset-selected",async event=>{
+    const detail=event.detail||{}, assetId=String(detail.assetId||""), topic=String(detail.prompt||"").trim().slice(0,120);
+    if(!ready||!assetId||!businessId()){setMessage("Select a business and wait for the campaign library to load before using a generated image.",true);return;}
+    setMessage("Connecting the saved PoYo image to a new campaign and generating its caption…");
+    try{
+      const languageValue=$("creative-language")?.value||"both", languageMap={ta:"Tamil",en:"English",both:"Tamil + English"};
+      const formatValue=$("creative-format")?.value||"feed", formatMap={feed:"SQUARE",portrait:"PORTRAIT",story:"STORY"};
+      const platform=$("creative-platform")?.value||"Facebook";
+      const result=await api(base()+"/google-content/draft",{method:"POST",body:JSON.stringify({topic:topic||"Generated campaign artwork",offer:"",language:languageMap[languageValue]||"Tamil + English",format:formatMap[formatValue]||"SQUARE",tone:"WARM"})});
+      current={id:"creative-studio:"+((crypto.randomUUID&&crypto.randomUUID())||Date.now()),kind:"LOCALBOOST_SOCIAL_CREATIVE",topic:topic||"Generated campaign artwork",offer:"",platform,format:formatValue,language:languageMap[languageValue]||"Tamil + English",caption:result.postCopy||result.caption||result.copy||result.postText||"",headline:result.headline||"",designerBrief:result.creativeBrief||result.imageBrief||"",assetId,assetUrl:"",status:"DRAFT",provenance:"POYO_GENERATED_ASSET",createdAt:new Date().toISOString()};
+      if(!current.caption)throw new Error("Caption service returned no usable copy.");
+      $("creative-preview")?.classList.remove("hidden");
+      if($("creative-preview-copy"))$("creative-preview-copy").textContent=current.caption;
+      if($("creative-preview-brief"))$("creative-preview-brief").textContent="PoYo generated image attached from the business creative library. Review the caption and artwork before saving.";
+      if($("creative-save"))$("creative-save").disabled=false;
+      if($("creative-asset-url"))$("creative-asset-url").value="";
+      setMessage("PoYo image attached to the campaign. Review the image and caption, then Save campaign to create the channel drafts.");
+    }catch(error){setMessage("Could not create a campaign from the generated image: "+error.message,true);}
   });
   window.addEventListener("localboost:business-ready",()=>{load();loadDesignIntegrations();});
   window.addEventListener("localboost:signed-out",()=>{drafts=[];current=null;ready=false;render();setMessage("Signed out. Cloud creative library is locked.");});
