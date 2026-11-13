@@ -2,7 +2,7 @@ import type { FastifyInstance, preHandlerHookHandler } from "fastify";
 import type { PrismaClient, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { findOwnedBusiness } from "../businesses/access.js";
-import { analyzeReviewThemes } from "../review-themes.js";
+import { analyzeReviewThemes } from "../../review-themes.js";
 
 const customerIdParams = z.object({ businessId: z.string().min(1), customerId: z.string().min(1) });
 const businessParams = z.object({ businessId: z.string().min(1) });
