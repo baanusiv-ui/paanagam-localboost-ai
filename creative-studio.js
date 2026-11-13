@@ -60,7 +60,9 @@
       const result=await api(base()+"/google-content/draft",{method:"POST",body:JSON.stringify({topic,offer,language:map[language],format:formatMap[format],tone:toneMap[tone]})});
       generatedImageDataUrl="";
       const imagePreview=$("creative-image-preview"); if(imagePreview){imagePreview.src="";imagePreview.classList.add("hidden");}
-      $("creative-image-generate").disabled=false; $("creative-image-download").disabled=true; $("creative-image-save").disabled=true;
+      const legacyImageGenerate=$("creative-image-generate"); if(legacyImageGenerate) legacyImageGenerate.disabled=false;
+      const legacyImageDownload=$("creative-image-download"); if(legacyImageDownload) legacyImageDownload.disabled=true;
+      const legacyImageSave=$("creative-image-save"); if(legacyImageSave) legacyImageSave.disabled=true;
       current={id:"creative-studio:"+((crypto.randomUUID&&crypto.randomUUID())||Date.now()),kind:"LOCALBOOST_SOCIAL_CREATIVE",topic,offer,platform,format,language:map[language],caption:result.postCopy||result.caption||result.copy||result.postText||"",headline:result.headline||"",designerBrief:result.creativeBrief||result.imageBrief||result.designerBrief||"",assetUrl:"",status:"DRAFT",provenance:"LOCAL_AI_DRAFT",createdAt:new Date().toISOString()};
       if(!current.caption) current.caption=JSON.stringify(result,null,2);
       $("creative-preview").classList.remove("hidden");
