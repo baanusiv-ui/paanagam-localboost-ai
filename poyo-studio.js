@@ -227,6 +227,18 @@
         window.setTimeout(()=>routeCampaignOutput(true),0);
       });
     }
+    const syncCampaignBriefToImagePrompt=()=>{
+      const brief=document.getElementById("creative-preview-brief")?.textContent?.trim();
+      const imagePrompt=document.getElementById("poyo-image-prompt");
+      if(brief&&imagePrompt){
+        imagePrompt.value=brief+" Create a polished Paanagam campaign visual. Use only verified menu and product facts. Do not invent prices, offers or claims.";
+        imagePrompt.dispatchEvent(new Event("input",{bubbles:true}));
+      }
+    };
+    if(campaignPreview&&typeof MutationObserver!=="undefined"){
+      const briefObserver=new MutationObserver(()=>syncCampaignBriefToImagePrompt());
+      briefObserver.observe(campaignPreview,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:["class"]});
+    }
     routeCampaignOutput();
     if(campaignPreview&&typeof MutationObserver!=="undefined"){
       const previewObserver=new MutationObserver(()=>{routeCampaignOutput();});
