@@ -212,7 +212,7 @@
     install();
     const detail=$("crm-customer-detail");
     if(detail)detail.innerHTML='<div class="crm-empty"><strong>Select a customer</strong><p>Customer profile, contact consent and recorded activity will appear here.</p></div>';
-    if(businessId&&!$("crm-workspace").classList.contains("hidden"))loadCustomers(true);
+    if(businessId&&!$("crm-workspace").classList.contains("hidden")){loadCustomers(true);loadRetention();}
   }
   window.addEventListener("localboost:business-ready",ready);
   window.addEventListener("localboost:signed-out",()=>{
