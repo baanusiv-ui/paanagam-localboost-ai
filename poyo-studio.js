@@ -162,12 +162,67 @@
     const imageHeader=image?.querySelector(".panel-heading");
     const imageForm=image?.querySelector("#poyo-image-form");
     const imageMessage=document.getElementById("poyo-image-message");
-    if(imageHeader)imageCreate.append(imageHeader);if(imageForm)imageCreate.append(imageForm);if(imageMessage)imageCreate.append(imageMessage);
+    const campaignPreview=document.getElementById("creative-preview");
+    const campaignForm=document.getElementById("creative-form");
+    const campaignOutput=document.createElement("label");
+    campaignOutput.className="lb-campaign-output-choice";
+    campaignOutput.htmlFor="creative-output-type";
+    campaignOutput.innerHTML='Create as<select id="creative-output-type"><option value="image">Image</option><option value="video">Video</option></select>';
+    if(campaignForm){
+      const generateButton=campaignForm.querySelector("#creative-generate");
+      if(generateButton)generateButton.insertAdjacentElement("beforebegin",campaignOutput);
+      else campaignForm.append(campaignOutput);
+    }
+    if(imageHeader)imageCreate.append(imageHeader);
+    if(imageForm)imageCreate.append(imageForm);
+    if(imageMessage)imageCreate.append(imageMessage);
+    const imageOutputTitle=document.createElement("h3");
+    imageOutputTitle.textContent="Campaign copy & image artwork";
+    imageOutputTitle.className="lb-studio-output-title";
+    imageCreate.append(imageOutputTitle);
+    const videoOutputTitle=document.createElement("h3");
+    videoOutputTitle.textContent="Campaign copy & video brief";
+    videoOutputTitle.className="lb-studio-output-title";
+    if(campaignPreview)campaignPreview.hidden=true;
     const imageJobsPanel=document.createElement("div");imageJobsPanel.className="panel";
     const imageJobsHeader=image?.querySelector(".panel-heading");
     const imageJobsList=document.getElementById("poyo-image-task-list");
     if(imageJobsHeader)imageJobsPanel.append(imageJobsHeader);if(imageJobsList)imageJobsPanel.append(imageJobsList);
     const videoForm=engine.querySelector("#poyo-draft-form")?.closest(".panel");
+    const videoPrompt=videoForm?.querySelector("#poyo-prompt");
+    const outputType=document.getElementById("creative-output-type");
+    const routeCampaignOutput=()=>{
+      if(!campaignPreview)return;
+      const target=outputType?.value==="video"&&videoForm?videoForm:imageCreate;
+      const title=target===videoForm?videoOutputTitle:imageOutputTitle;
+      target.append(title,campaignPreview);
+      campaignPreview.hidden=campaignPreview.classList.contains("hidden");
+      campaignPreview.classList.toggle("lb-video-campaign-output",target===videoForm);
+    };
+    if(outputType)outputType.addEventListener("change",routeCampaignOutput);
+    if(campaignForm){
+      campaignForm.addEventListener("submit",()=>{
+        window.setTimeout(routeCampaignOutput,0);
+      });
+    }
+    routeCampaignOutput();
+    if(campaignPreview&&typeof MutationObserver!=="undefined"){
+      const previewObserver=new MutationObserver(()=>{routeCampaignOutput();});
+      previewObserver.observe(campaignPreview,{attributes:true,attributeFilter:["class"]});
+    }
+    if(videoForm&&videoPrompt){
+      const useBrief=document.createElement("button");
+      useBrief.type="button";useBrief.className="secondary-button lb-use-campaign-brief";
+      useBrief.textContent="Use campaign brief in video prompt";
+      useBrief.addEventListener("click",()=>{
+        const brief=document.getElementById("creative-preview-brief")?.textContent?.trim();
+        if(!brief){const msg=document.getElementById("poyo-studio-message");if(msg)msg.textContent="Generate campaign copy first to use its image brief.";return;}
+        videoPrompt.value="Create a cinematic Paanagam video based on this approved campaign visual direction. "+brief+" Keep any text, menu facts and prices as editable overlays; do not invent product claims.";
+        videoPrompt.dispatchEvent(new Event("input",{bubbles:true}));
+        videoPrompt.focus();
+      });
+      videoPrompt.insertAdjacentElement("beforebegin",useBrief);
+    }
     const imageJobs=image?.querySelector("#poyo-image-task-list")?.closest(".panel-heading")?.parentElement;
     const videoJobs=document.getElementById("poyo-task-list")?.closest(".panel");
     const integrations=document.getElementById("design-integrations-panel");
