@@ -113,7 +113,10 @@
     $("#auth-form").querySelectorAll("input").forEach(input => input.disabled = false);
     $("#business-form").hidden = true;
     setConnectionState(false, "Not connected");
-    refreshAiProviderStatus();
+    const aiLabel = $("#sidebar-ai-status-text");
+    const aiCard = $("#sidebar-ai-status");
+    if (aiLabel) aiLabel.textContent = "Sign in to check";
+    if (aiCard) aiCard.classList.remove("ai-ready", "ai-warning");
     if (showMessage) message("auth-message", "You have signed out.");
   }
 
