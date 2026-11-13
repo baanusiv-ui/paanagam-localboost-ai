@@ -201,9 +201,12 @@
     videoOutputTitle.className="lb-studio-output-title";
     if(campaignPreview)campaignPreview.hidden=true;
     const imageJobsPanel=document.createElement("div");imageJobsPanel.className="panel";
-    const imageJobsHeader=image?.querySelector(".panel-heading");
+    const imageJobsHeader=document.createElement("div");imageJobsHeader.className="panel-heading";
+    imageJobsHeader.innerHTML='<div><h3>Image generation queue</h3><p>Generate and review campaign images here. Paid generation starts only when you press Generate.</p></div>';
     const imageJobsList=document.getElementById("poyo-image-task-list");
-    if(imageJobsHeader)imageJobsPanel.append(imageJobsHeader);if(imageJobsList)imageJobsPanel.append(imageJobsList);
+    imageJobsPanel.append(imageJobsHeader);if(imageJobsList)imageJobsPanel.append(imageJobsList);
+    /* Keep the task cards and their Generate actions beside the image prompt. */
+    imageCreate.append(imageJobsPanel);
     const videoForm=engine.querySelector("#poyo-draft-form")?.closest(".panel");
     const videoPrompt=videoForm?.querySelector("#poyo-prompt");
     const outputType=document.getElementById("creative-output-type");
@@ -346,7 +349,6 @@
     library.append(savedCopy);
     const creativeLibrary=campaign.querySelector("#creative-library")?.closest(".panel");
     if(creativeLibrary)library.append(creativeLibrary);
-    if(imageJobsPanel)library.append(imageJobsPanel);
     library.append(videoJobs);
 
     const settings=paneMap.settings;
