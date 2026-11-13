@@ -74,7 +74,7 @@ export function registerPoyoRoutes(app: FastifyInstance, db: PrismaClient, requi
         prompt: body.data.prompt,
         modelInput: body.data.modelInput as Prisma.InputJsonValue,
         status: "DRAFT",
-        estimatedCredits: body.data.mediaType === "VIDEO" ? 6 : null
+        estimatedCredits: body.data.mediaType === "VIDEO" ? 6 : body.data.mediaType === "IMAGE" && body.data.modelId === "nano-banana-2.1" ? (body.data.modelInput.resolution === "4K" ? 10 : body.data.modelInput.resolution === "1K" ? 4 : 6) : null
       },
       select: {
         id: true, mediaType: true, modelId: true, prompt: true, modelInput: true,
@@ -134,9 +134,9 @@ export function registerPoyoRoutes(app: FastifyInstance, db: PrismaClient, requi
         select: { id: true, status: true, modelId: true, estimatedCredits: true, submittedAt: true }
       });
       await db.activityEvent.create({
-        data: { businessId: business.id, actorUserId: request.userId, eventType: "POYO_VIDEO_SUBMITTED", entityType: "POYO_VIDEO", entityId: task.id, summary: "Owner submitted a Wan 2.2 Fast video generation job", metadata: { modelId: task.modelId, resolution: "480p", estimatedCredits: 6 } }
+        data: { businessId: business.id, actorUserId: request.userId, eventType: isImage ? "POYO_IMAGE_SUBMITTED" : "POYO_VIDEO_SUBMITTED", entityType: isImage ? "POYO_IMAGE" : "POYO_VIDEO", entityId: task.id, summary: isImage ? "Owner submitted a Nano Banana 2.1 image generation job" : "Owner submitted a Wan 2.2 Fast video generation job", metadata: { modelId: task.modelId, resolution: isImage ? input.resolution : "480p", estimatedCredits: task.estimatedCredits } }
       });
-      return reply.code(202).send({ task: updated, providerTaskId: submitted.taskId, estimatedCredits: 6, resolution: "480p", message: "Generation submitted. Final output is not approved or published." });
+      return reply.code(202).send({ task: updated, providerTaskId: submitted.taskId, estimatedCredits: task.estimatedCredits, resolution: input.resolution, message: "Generation submitted. Final output is not approved or published." });
     } catch (error) {
       request.log.warn({ error: error instanceof Error ? error.message : "unknown", taskId: task.id }, "PoYo submission failed");
       await db.poyoCreativeTask.update({ where: { id: task.id }, data: { status: "FAILED", errorCode: "SUBMISSION_FAILED", errorMessage: "PoYo submission failed. Check provider status before retrying." } });
@@ -213,7 +213,7 @@ export function registerPoyoRoutes(app: FastifyInstance, db: PrismaClient, requi
         select: { id: true, status: true, outputUrls: true, completedAt: true, approvedAt: true }
       });
       await db.activityEvent.create({
-        data: { businessId: business.id, actorUserId: request.userId, eventType: "POYO_VIDEO_READY", entityType: "POYO_VIDEO", entityId: task.id, summary: "Generated video saved to the business creative library", metadata: { assetId: asset.id, byteSize: bytes.length } }
+        data: { businessId: business.id, actorUserId: request.userId, eventType: task.mediaType === "IMAGE" ? "POYO_IMAGE_READY" : "POYO_VIDEO_READY", entityType: task.mediaType === "IMAGE" ? "POYO_IMAGE" : "POYO_VIDEO", entityId: task.id, summary: task.mediaType === "IMAGE" ? "Generated image saved to the business creative library" : "Generated video saved to the business creative library", metadata: { assetId: asset.id, byteSize: bytes.length } }
       });
       return { task: updated, refreshed: true };
     } catch (error) {
@@ -229,14 +229,14 @@ export function registerPoyoRoutes(app: FastifyInstance, db: PrismaClient, requi
     if (!business) return reply.code(404).send({ error: "Business not found." });
     const task = await db.poyoCreativeTask.findFirst({ where: { id: params.data.taskId, businessId: business.id } });
     if (!task) return reply.code(404).send({ error: "Creative task not found." });
-    if (task.status !== "SUCCEEDED" || !task.outputUrls.length) return reply.code(409).send({ error: "Only a completed video can be approved." });
+    if (task.status !== "SUCCEEDED" || !task.outputUrls.length) return reply.code(409).send({ error: "Only a completed creative asset can be approved." });
     const updated = await db.poyoCreativeTask.update({
       where: { id: task.id },
       data: { approvedAt: new Date(), approvedById: request.userId },
       select: { id: true, status: true, outputUrls: true, approvedAt: true, approvedById: true }
     });
     await db.activityEvent.create({
-      data: { businessId: business.id, actorUserId: request.userId, eventType: "POYO_VIDEO_APPROVED", entityType: "POYO_VIDEO", entityId: task.id, summary: "Owner explicitly approved the generated video for a separate publishing workflow", metadata: { autoPublished: false } }
+      data: { businessId: business.id, actorUserId: request.userId, eventType: task.mediaType === "IMAGE" ? "POYO_IMAGE_APPROVED" : "POYO_VIDEO_APPROVED", entityType: task.mediaType === "IMAGE" ? "POYO_IMAGE" : "POYO_VIDEO", entityId: task.id, summary: "Owner explicitly approved the generated creative asset for a separate publishing workflow", metadata: { autoPublished: false } }
     });
     return { task: updated, published: false, message: "Approval recorded. This does not publish the video." };
   });
