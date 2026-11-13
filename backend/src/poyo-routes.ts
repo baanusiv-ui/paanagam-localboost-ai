@@ -165,16 +165,19 @@ export function registerPoyoRoutes(app: FastifyInstance, db: PrismaClient, requi
         return { task: updated, refreshed: true };
       }
 
-      const video = (remote.files || []).find(file => file.file_type?.toLowerCase() === "video" && typeof file.file_url === "string");
-      if (!video || !video.file_url) return reply.code(502).send({ error: "PoYo marked the task complete but did not return a video file." });
-      const outputUrl = new URL(video.file_url);
-      if (outputUrl.protocol !== "https:" || outputUrl.hostname !== "storage.poyo.ai") return reply.code(502).send({ error: "PoYo returned an unexpected video storage host." });
+      const expectedType = task.mediaType === "IMAGE" ? "image" : "video";
+      const outputFile = (remote.files || []).find(file => file.file_type?.toLowerCase() === expectedType && typeof file.file_url === "string");
+      if (!outputFile || !outputFile.file_url) return reply.code(502).send({ error: "PoYo marked the task complete but did not return the expected media file." });
+      const outputUrl = new URL(outputFile.file_url);
+      if (outputUrl.protocol !== "https:" || outputUrl.hostname !== "storage.poyo.ai") return reply.code(502).send({ error: "PoYo returned an unexpected storage host." });
       const response = await fetch(outputUrl, { redirect: "error", signal: AbortSignal.timeout(30_000) });
       if (!response.ok) return reply.code(502).send({ error: "Generated video could not be downloaded from PoYo storage." });
       const declaredLength = Number(response.headers.get("content-length") || 0);
       if (declaredLength > 25 * 1024 * 1024) return reply.code(413).send({ error: "Generated video exceeds the 25 MB preview storage limit." });
-      const mimeType = ((response.headers.get("content-type") || "video/mp4").split(";")[0] ?? "video/mp4").trim().toLowerCase();
-      if (!["video/mp4", "video/webm"].includes(mimeType)) return reply.code(415).send({ error: "PoYo returned an unsupported video format." });
+      const fallbackMime = task.mediaType === "IMAGE" ? "image/png" : "video/mp4";
+      const mimeType = ((response.headers.get("content-type") || fallbackMime).split(";")[0] ?? fallbackMime).trim().toLowerCase();
+      const allowedMime = task.mediaType === "IMAGE" ? ["image/png", "image/jpeg", "image/webp"] : ["video/mp4", "video/webm"];
+      if (!allowedMime.includes(mimeType)) return reply.code(415).send({ error: "PoYo returned an unsupported media format." });
       const reader = response.body?.getReader();
       if (!reader) return reply.code(502).send({ error: "Generated video response had no readable body." });
       const chunks: Uint8Array[] = [];
