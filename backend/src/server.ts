@@ -1949,6 +1949,13 @@ app.get("/v1/businesses/:businessId/social-posts", { preHandler: requireUser }, 
   if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
   const business = await ownedBusiness(request.userId!, params.data.businessId);
   if (!business) return reply.code(404).send({ error: "Business not found" });
+  // A process crash can leave a post in PUBLISHING forever. After a generous
+  // timeout, quarantine it for manual Meta reconciliation; never auto-retry.
+  const stalePublishingBefore = new Date(Date.now() - 10 * 60 * 1000);
+  await prisma.socialPost.updateMany({
+    where: { businessId: business.id, status: "PUBLISHING", updatedAt: { lt: stalePublishingBefore } },
+    data: { status: "RECONCILIATION_REQUIRED", publishError: "Publishing was interrupted or timed out. Meta may already have accepted this post. Check the Page/profile before any retry." }
+  });
   const posts = await prisma.socialPost.findMany({ where: { businessId: business.id }, include: { asset: { select: { id: true, fileName: true, mimeType: true, byteSize: true } } }, orderBy: { createdAt: "desc" }, take: 100 });
   return { posts };
 });
