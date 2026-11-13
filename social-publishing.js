@@ -20,17 +20,35 @@
     try{
       const result=await api(base()+"/meta");
       const badge=$("meta-connection-badge"), connect=$("meta-connect"), disconnect=$("meta-disconnect");
+      const panel=document.querySelector(".meta-connection-panel");
+      const sidebar=$("sidebar-meta-status");
       if(result.connected){
+        const instagram=result.connection.instagramUsername?" · Instagram @"+result.connection.instagramUsername:" · Instagram not linked";
         badge.textContent="Connected";badge.className="tag confirmed";
-        statusMessage("Connected Page: "+result.connection.pageName+(result.connection.instagramUsername?" · Instagram @"+result.connection.instagramUsername:" · No linked Instagram professional account found."));
-        connect.textContent="Reconnect Meta";disconnect.hidden=false;
+        statusMessage("Connected Page: "+result.connection.pageName+instagram);
+        if(panel)panel.hidden=true;
+        if(sidebar){
+          sidebar.hidden=false;
+          const small=sidebar.querySelector("small");
+          if(small)small.textContent=result.connection.pageName+(result.connection.instagramUsername?" · @"+result.connection.instagramUsername:"");
+          sidebar.classList.add("connected");
+        }
+        connect.textContent="Connect Facebook";disconnect.hidden=true;
       }else{
         badge.textContent="Not connected";badge.className="tag pending-tag";
         statusMessage(result.configured?"Connect the Facebook Page that manages this business.":"Meta app credentials are not configured on the API yet.");
+        if(panel)panel.hidden=false;
+        if(sidebar)sidebar.hidden=true;
         connect.textContent="Connect Facebook";disconnect.hidden=true;
       }
       if(result.pageSelectionPending) await loadPages();
-    }catch(e){statusMessage("Meta connection status unavailable: "+e.message,true);}
+    }catch(e){
+      statusMessage("Meta connection status unavailable: "+e.message,true);
+      const panel=document.querySelector(".meta-connection-panel");
+      const sidebar=$("sidebar-meta-status");
+      if(panel)panel.hidden=false;
+      if(sidebar)sidebar.hidden=true;
+    }
   }
   async function loadPages(){
     const wrap=$("meta-page-picker"),select=$("meta-page-select"),button=$("meta-select-page");
@@ -90,6 +108,6 @@
     finally{button.disabled=false;}
   });
   window.addEventListener("localboost:business-ready",()=>{void loadMeta();void loadPosts();});
-  window.addEventListener("localboost:signed-out",()=>{posts=[];renderPosts();statusMessage("Sign in to manage Meta publishing.");if($("meta-connection-badge"))$("meta-connection-badge").textContent="Not connected";});
+  window.addEventListener("localboost:signed-out",()=>{posts=[];renderPosts();statusMessage("Sign in to manage Meta publishing.");if($("meta-connection-badge"))$("meta-connection-badge").textContent="Not connected";const panel=document.querySelector(".meta-connection-panel");const sidebar=$("sidebar-meta-status");if(panel)panel.hidden=false;if(sidebar)sidebar.hidden=true;});
   if(businessId()){void loadMeta();void loadPosts();}
 })();

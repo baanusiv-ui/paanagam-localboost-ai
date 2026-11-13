@@ -233,3 +233,6 @@ footer{padding:36px 0 24px}
 #content-view .lb-studio-pane .lb-video-campaign-output #creative-image-save,
 #content-view .lb-studio-pane .lb-video-campaign-output #creative-asset-url,
 #content-view .lb-studio-pane .lb-video-campaign-output #creative-save{display:none!important}
+
+/* Keep the compact Meta connection indicator hidden until a saved connection is confirmed. */
+#sidebar-meta-status[hidden], .meta-connection-panel[hidden] { display: none !important; }
