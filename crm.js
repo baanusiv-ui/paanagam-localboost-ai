@@ -129,7 +129,7 @@
         return '<li><strong>'+esc(String(meta.message||""))+'</strong><small>Facebook · '+new Date(row.occurredAt).toLocaleString()+(meta.postPermalink?' · <a href="'+esc(String(meta.postPermalink))+'" target="_blank" rel="noopener noreferrer">View post</a>':'')+'</small></li>';
       }).join("")+'</ul><p class="footnote">Comments are stored without author names and remain unlinked from customer profiles. Import is limited to the latest 10 Page posts and up to 50 comments per post.</p>';
     }catch(error){target.textContent="Meta comments unavailable: "+error.message;}
-    finally{if(button){button.disabled=false;button.textContent="Import public comments";}}
+    finally{if(button){button.textContent="Import public comments";await loadMetaConnection();}}
   }
   async function loadCustomerVoice(){
     if(!requireWorkspace())return;
