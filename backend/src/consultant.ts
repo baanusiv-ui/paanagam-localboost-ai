@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { generateAiJson, getAiProviderStatus } from "./ai-provider.js";
 
 type ReportInsight = {
   id: string;
@@ -30,8 +31,7 @@ const outputSchema = z.object({
   }).strict()).max(5)
 }).strict();
 
-const localBaseUrl = () => (process.env.OLLAMA_BASE_URL || "").replace(/\/$/, "");
-const localModel = () => (process.env.OLLAMA_MODEL || "qwen2.5:7b").trim();
+
 
 export function buildConsultantMessages(report: IntelligenceReport, language: "Tamil" | "English" | "Tamil + English") {
   const compactReport = {
@@ -131,11 +131,12 @@ export async function generateLocalConsultant(report: IntelligenceReport, langua
   const content = data.message?.content;
   if (!content) throw new Error("Local AI returned an empty response. Try again or check the model.");
   const allowedIds = report.insights.flatMap(item => item.evidence.recordIds);
-  const result = parseConsultantOutput(content, allowedIds);
+  const result = parseConsultantOutput(generated.raw, allowedIds);
   return {
     ...result,
-    provider: "LOCAL_OLLAMA",
-    model,
+    provider: generated.provider,
+    model: generated.model,
+    fallbackUsed: generated.fallbackUsed,
     language,
     generatedAt: new Date().toISOString(),
     disclaimer: "AI explanation only. Calculations and evidence remain from the rules engine. Suggestions require owner approval; no action was executed."
