@@ -277,30 +277,40 @@ export async function registerCrmRoutes(
 
   app.post("/v1/businesses/:businessId/crm-retention/apply", { preHandler: requireUser }, async (request, reply) => {
     const params = businessParams.safeParse(request.params);
-    const body = z.object({ confirmation: z.literal("DELETE EXPIRED CUSTOMER DATA") }).safeParse(request.body);
-    if (!params.success || !body.success) return reply.code(400).send({ error: 'Explicit confirmation required: "DELETE EXPIRED CUSTOMER DATA".' });
+    const body = z.object({
+      confirmation: z.literal("DELETE EXPIRED CUSTOMER DATA"),
+      expectedCustomerIds: z.array(z.string().min(1)).min(1).max(500)
+    }).safeParse(request.body);
+    if (!params.success || !body.success || new Set(body.success ? body.data.expectedCustomerIds : []).size !== (body.success ? body.data.expectedCustomerIds.length : 0)) {
+      return reply.code(400).send({ error: 'Provide the exact previewed customer IDs and confirmation: "DELETE EXPIRED CUSTOMER DATA".' });
+    }
     const business = await findOwnedBusiness(db, request.userId!, params.data.businessId);
     if (!business) return reply.code(404).send({ error: "Business not found." });
     const policy = await db.business.findUnique({ where: { id: business.id }, select: { customerRetentionMonths: true } });
     const months = policy?.customerRetentionMonths ?? 36;
     const cutoff = new Date(); cutoff.setUTCMonth(cutoff.getUTCMonth() - months);
-    const candidates = await db.customer.findMany({
-      where: { businessId: business.id, status: { not: "DELETED" }, OR: [
-        { lastSeenAt: { lt: cutoff } }, { lastSeenAt: null, createdAt: { lt: cutoff } }
-      ] }, select: { id: true }, take: 500
-    });
-    const ids = candidates.map(customer => customer.id);
-    if (!ids.length) return { deleted: 0, retentionMonths: months };
-    await db.$transaction(async tx => {
-      await tx.customerEvent.deleteMany({ where: { businessId: business.id, customerId: { in: ids } } });
-      await tx.customer.deleteMany({ where: { businessId: business.id, id: { in: ids } } });
+    const expectedIds = [...body.data.expectedCustomerIds].sort();
+    const eligibleWhere = {
+      businessId: business.id,
+      id: { in: expectedIds },
+      status: { not: "DELETED" as const },
+      OR: [{ lastSeenAt: { lt: cutoff } }, { lastSeenAt: null, createdAt: { lt: cutoff } }]
+    };
+    const outcome = await db.$transaction(async tx => {
+      const eligible = await tx.customer.findMany({ where: eligibleWhere, select: { id: true } });
+      const eligibleIds = eligible.map(customer => customer.id).sort();
+      if (eligibleIds.length !== expectedIds.length || eligibleIds.some((id, index) => id !== expectedIds[index])) return { stale: true as const };
+      await tx.customerEvent.deleteMany({ where: { businessId: business.id, customerId: { in: expectedIds } } });
+      await tx.customer.deleteMany({ where: { businessId: business.id, id: { in: expectedIds } } });
       await tx.activityEvent.create({ data: {
         businessId: business.id, actorUserId: request.userId!, eventType: "CRM_RETENTION_ERASURE",
         entityType: "Customer", summary: "Expired customer records and associated personal data erased",
-        metadata: { count: ids.length, retentionMonths: months, cutoff: cutoff.toISOString() }
+        metadata: { count: expectedIds.length, retentionMonths: months, cutoff: cutoff.toISOString() }
       } });
+      return { stale: false as const };
     });
-    return { deleted: ids.length, retentionMonths: months, capped: ids.length === 500 };
+    if (outcome.stale) return reply.code(409).send({ error: "The preview is no longer current. Refresh the preview before deleting anything." });
+    return { deleted: expectedIds.length, retentionMonths: months, previewBound: true, capped: expectedIds.length === 500 };
   });
 
 }
