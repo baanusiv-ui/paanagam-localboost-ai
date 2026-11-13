@@ -165,7 +165,7 @@ test("CRM retention erasure is limited to the exact customer IDs shown in the pr
   });
   assert.equal(response.statusCode, 200);
   assert.deepEqual(selectedIds, ["cus-a", "cus-b"]);
-  assert.deepEqual(deletedIds, ["cus-b", "cus-a"]);
+  assert.deepEqual(deletedIds, ["cus-a", "cus-b"]);
   assert.equal(eventsDeleted, true);
   assert.equal(response.json().previewBound, true);
   await app.close();
