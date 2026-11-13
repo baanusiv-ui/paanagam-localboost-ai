@@ -206,6 +206,10 @@
       });
     }
     routeCampaignOutput();
+    if(campaignPreview&&typeof MutationObserver!=="undefined"){
+      const previewObserver=new MutationObserver(()=>{routeCampaignOutput();});
+      previewObserver.observe(campaignPreview,{attributes:true,attributeFilter:["class"]});
+    }
     if(videoForm&&videoPrompt){
       const useBrief=document.createElement("button");
       useBrief.type="button";useBrief.className="secondary-button lb-use-campaign-brief";
