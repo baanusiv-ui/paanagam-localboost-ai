@@ -1,10 +1,8 @@
-import type { z } from "zod";
-
 export type AiMessage = { role: "system" | "user" | "assistant"; content: string };
 
 type JsonSchema = {
   type: "OBJECT";
-  properties: Record<string, { type: "STRING" | "ARRAY" | "NUMBER" | "BOOLEAN"; items?: unknown }>;
+  properties: Record<string, Record<string, unknown>>;
   required: string[];
 };
 
