@@ -284,6 +284,20 @@ We look forward to welcoming you!</textarea></label>
             </form>
             <p id="poyo-studio-message" class="creative-message" role="status">Saving a draft does not call PoYo or use credits. Paid generation remains paused until explicitly enabled.</p>
           </div>
+          <div class="panel" style="margin-top:14px" id="poyo-image-panel">
+            <div class="panel-heading"><div><h3>Google Nano Banana 2.1 · Image Studio</h3><p>Create Paanagam campaign artwork, product visuals or edit a reference image. Image drafts are saved before any paid generation.</p></div><span class="tag pending-tag">Owner approval required</span></div>
+            <form id="poyo-image-form" class="creative-form">
+              <label for="poyo-image-prompt">Image prompt<textarea id="poyo-image-prompt" rows="4" maxlength="800" required placeholder="Describe the Paanagam visual, composition, lighting, colours and style. Use only verified menu and product facts."></textarea></label>
+              <label for="poyo-image-size">Aspect ratio<select id="poyo-image-size"><option value="1:1">Square · 1:1</option><option value="4:5">Portrait feed · 4:5</option><option value="9:16">Story · 9:16</option><option value="16:9">Landscape · 16:9</option><option value="3:2">Photo · 3:2</option><option value="3:4">Portrait · 3:4</option></select></label>
+              <label for="poyo-image-resolution">Resolution<select id="poyo-image-resolution"><option value="1K">1K · 4 credits (est.)</option><option value="2K" selected>2K · 6 credits (est.)</option><option value="4K">4K · 10 credits (est.)</option></select></label>
+              <label for="poyo-image-refs">Reference image URLs (optional, up to 10)<textarea id="poyo-image-refs" rows="2" placeholder="One publicly accessible HTTPS image URL per line"></textarea></label>
+              <p class="footnote">Estimated provider credits only; final account charge may vary. Reference URLs must be publicly accessible HTTPS links. 1 image per generation.</p>
+              <div class="form-actions"><button id="poyo-image-save" class="secondary-button" type="submit">Save image draft</button></div>
+            </form>
+            <p id="poyo-image-message" class="creative-message" role="status">Saving a draft does not call PoYo or use credits. Paid generation requires an explicit confirmation.</p>
+            <div class="panel-heading"><div><h3>Image jobs and previews</h3><p>Generated images are stored in the selected business library and remain unpublished until separately approved.</p></div><button id="poyo-image-refresh" class="secondary-button" type="button">Refresh images</button></div>
+            <div id="poyo-image-task-list" class="creative-library"><p class="empty-copy">No image drafts yet.</p></div>
+          </div>
           <div class="panel" style="margin-top:14px"><div class="panel-heading"><div><h3>Video jobs and previews</h3><p>Private to this business workspace. Approving a video does not publish it.</p></div><button id="poyo-refresh" class="secondary-button" type="button">Refresh</button></div><div id="poyo-task-list" class="creative-library"><p class="empty-copy">Loading video jobs…</p></div></div>
           <p class="footnote">Every generated video is stored in the selected business library, previewed here and requires a separate owner approval. Publishing remains a separate action.</p>
         </div>
