@@ -143,3 +143,63 @@ test("CRM customer deletion erases linked data only after exact owner confirmati
   assert.equal(auditWritten, true);
   await app.close();
 });
+
+
+test("CRM retention erasure is limited to the exact customer IDs shown in the preview", async () => {
+  let selectedIds: string[] = [], deletedIds: string[] = [], eventsDeleted = false;
+  const { app, db, requireUser } = harness({
+    customer: {
+      findMany: async ({ where }: any) => {
+        selectedIds = where.id.in;
+        return [{ id: "cus-a" }, { id: "cus-b" }];
+      },
+      deleteMany: async ({ where }: any) => { deletedIds = where.id.in; return { count: deletedIds.length }; }
+    },
+    customerEvent: { deleteMany: async ({ where }: any) => { eventsDeleted = true; assert.deepEqual(where.customerId.in, ["cus-a", "cus-b"]); return { count: 2 }; } }
+  });
+  await registerCrmRoutes(app, db as unknown as PrismaClient, requireUser as never);
+  const response = await app.inject({
+    method: "POST",
+    url: "/v1/businesses/biz-owned/crm-retention/apply",
+    payload: { confirmation: "DELETE EXPIRED CUSTOMER DATA", expectedCustomerIds: ["cus-b", "cus-a"] }
+  });
+  assert.equal(response.statusCode, 200);
+  assert.deepEqual(selectedIds, ["cus-a", "cus-b"]);
+  assert.deepEqual(deletedIds, ["cus-b", "cus-a"]);
+  assert.equal(eventsDeleted, true);
+  assert.equal(response.json().previewBound, true);
+  await app.close();
+});
+
+test("CRM retention erasure rejects a stale preview without deleting records", async () => {
+  let deleted = false;
+  const { app, db, requireUser } = harness({
+    customer: {
+      findMany: async () => [{ id: "cus-a" }],
+      deleteMany: async () => { deleted = true; return { count: 1 }; }
+    }
+  });
+  await registerCrmRoutes(app, db as unknown as PrismaClient, requireUser as never);
+  const response = await app.inject({
+    method: "POST",
+    url: "/v1/businesses/biz-owned/crm-retention/apply",
+    payload: { confirmation: "DELETE EXPIRED CUSTOMER DATA", expectedCustomerIds: ["cus-a", "cus-b"] }
+  });
+  assert.equal(response.statusCode, 409);
+  assert.equal(deleted, false);
+  await app.close();
+});
+
+test("CRM retention erasure requires unique preview IDs and exact confirmation", async () => {
+  let queried = false;
+  const { app, db, requireUser } = harness({ customer: { findMany: async () => { queried = true; return []; } } });
+  await registerCrmRoutes(app, db as unknown as PrismaClient, requireUser as never);
+  const response = await app.inject({
+    method: "POST",
+    url: "/v1/businesses/biz-owned/crm-retention/apply",
+    payload: { confirmation: "yes", expectedCustomerIds: ["cus-a", "cus-a"] }
+  });
+  assert.equal(response.statusCode, 400);
+  assert.equal(queried, false);
+  await app.close();
+});
