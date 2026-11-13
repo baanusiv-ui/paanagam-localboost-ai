@@ -113,7 +113,7 @@ export async function getAiProviderStatus() {
   const fallbackConfigured = Boolean(process.env.GEMINI_API_KEY?.trim());
   const localReady = local.reachable && local.modelAvailable;
   return {
-    configured: Boolean(apiKey || localUrl),
+    configured: Boolean(apiKey || localUrl || fallbackConfigured),
     reachable: primaryReady || localReady,
     modelInstalled: primaryReady || localReady,
     provider: primaryReady ? "OLLAMA_CLOUD" : localReady ? "LOCAL_OLLAMA" : "UNAVAILABLE",
