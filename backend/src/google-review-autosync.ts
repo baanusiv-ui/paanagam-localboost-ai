@@ -150,7 +150,7 @@ async function syncBusiness(business: {
         create: { businessId: business.id, recordType: "REVIEW_ITEM", externalId, payload: payload as Prisma.InputJsonValue, source: "GOOGLE_API", recordedAt },
         update: { payload: payload as Prisma.InputJsonValue, source: "GOOGLE_API", recordedAt }
       });
-
+    }
     await writeStatus(prisma, business.id, {
       status: "SUCCESS", checkedAt: importedAt.toISOString(), importedCount: unique.length,
       totalReviewCount, averageRating, pagesFetched, pageLimitReached: Boolean(pageToken),
