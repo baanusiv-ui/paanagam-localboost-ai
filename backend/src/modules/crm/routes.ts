@@ -2,6 +2,7 @@ import type { FastifyInstance, preHandlerHookHandler } from "fastify";
 import type { PrismaClient, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { findOwnedBusiness } from "../businesses/access.js";
+import { analyzeReviewThemes } from "../../review-themes.js";
 
 const customerIdParams = z.object({ businessId: z.string().min(1), customerId: z.string().min(1) });
 const businessParams = z.object({ businessId: z.string().min(1) });
@@ -26,6 +27,31 @@ export async function registerCrmRoutes(
   db: PrismaClient,
   requireUser: preHandlerHookHandler
 ) {
+  // Read the same REVIEW_ITEM records used by the Reviews workspace; do not create a second review store.
+  app.get("/v1/businesses/:businessId/crm/customer-voice", { preHandler: requireUser }, async (request, reply) => {
+    const params = businessParams.safeParse(request.params);
+    if (!params.success) return reply.code(400).send({ error: "Invalid business identifier." });
+    const business = await findOwnedBusiness(db, request.userId!, params.data.businessId);
+    if (!business) return reply.code(404).send({ error: "Business not found." });
+    const records = await db.growthRecord.findMany({
+      where: { businessId: business.id, recordType: "REVIEW_ITEM", source: { not: "DEMO" } },
+      orderBy: [{ recordedAt: "desc" }, { id: "desc" }],
+      take: 200,
+      select: { id: true, externalId: true, payload: true, source: true, recordedAt: true, updatedAt: true }
+    });
+    const analysis = analyzeReviewThemes(records.map(row => {
+      const payload = row.payload && typeof row.payload === "object" && !Array.isArray(row.payload)
+        ? row.payload as Record<string, unknown> : {};
+      return { reviewText: payload.reviewText, rating: payload.rating, reviewDate: payload.reviewDate ?? row.recordedAt.toISOString() };
+    }));
+    return {
+      sourceOfTruth: "REVIEWS_WORKSPACE",
+      count: records.length,
+      analysis,
+      records
+    };
+  });
+
   app.get("/v1/businesses/:businessId/customers", { preHandler: requireUser }, async (request, reply) => {
     const params = businessParams.safeParse(request.params);
     const query = z.object({

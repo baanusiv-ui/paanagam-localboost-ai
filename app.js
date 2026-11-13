@@ -115,9 +115,21 @@
     $("#business-switcher-name").textContent = activeBusiness.displayName;
     $("#page-title").textContent = activeBusiness.displayName + " · Growth overview";
     $("#connect-google").disabled = false;
-    await refreshGoogleStatus();
-    await loadAuditHistory();
-    window.dispatchEvent(new CustomEvent("localboost:business-ready", { detail: { businessId: activeBusiness.id } }));
+
+    // Publish the active business context before optional integrations load.
+    // Meta and POS must not depend on Google OAuth or audit history succeeding.
+    window.dispatchEvent(new CustomEvent("localboost:business-ready", {
+      detail: { businessId: activeBusiness.id }
+    }));
+
+    const results = await Promise.allSettled([
+      refreshGoogleStatus(),
+      loadAuditHistory()
+    ]);
+    const googleFailure = results[0].status === "rejected" ? results[0].reason : null;
+    const auditFailure = results[1].status === "rejected" ? results[1].reason : null;
+    if (googleFailure) message("google-import-message", "Google connection status unavailable: " + googleFailure.message, true);
+    if (auditFailure) message("auth-message", "Audit history unavailable: " + auditFailure.message, true);
   }
 
   async function loadGoogleAccounts() {

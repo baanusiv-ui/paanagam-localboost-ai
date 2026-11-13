@@ -28,6 +28,14 @@
     section.innerHTML=`
       <div class="section-heading"><div><h2>Customer CRM</h2><p>Business-owned customer profiles, contact preferences and a traceable customer history.</p></div><span class="tag pending-tag">Private · consent-aware</span></div>
       <div class="crm-status panel" id="crm-status" role="status">Sign in and select a business to load customer records.</div>
+      <article class="panel crm-customer-voice" id="crm-customer-voice">
+        <div class="panel-heading"><div><h3>Customer voice · shared Reviews evidence</h3><p>Uses the same imported Google feedback and analysis shown in Reviews. No second review import or unverified customer matching.</p></div><span class="tag" id="crm-voice-source">Reviews workspace</span></div>
+        <div id="crm-voice-summary" class="empty-copy">Loading shared review evidence…</div>
+      </article>
+      <article class="panel crm-meta-comments" id="crm-meta-comments">
+        <div class="panel-heading"><div><h3>Facebook public comments</h3><p>Imports comments on the connected Page's recent posts. No private messages, author-name matching or replies.</p></div><button class="secondary-button" id="crm-meta-comments-sync" type="button">Import public comments</button></div>
+        <div id="crm-meta-connection-status" class="footnote">Checking the existing Meta connection…</div><div id="crm-meta-comments-summary" class="empty-copy">Load public comments from the connected Facebook Page.</div>
+      </article>
       <div class="crm-layout">
         <div class="crm-left">
           <article class="panel">
@@ -56,6 +64,7 @@
     main.append(section);
     button.addEventListener("click",show);
     document.addEventListener("click",event=>{if(event.target.closest("[data-view],[data-gi-nav]"))section.classList.add("hidden");},true);
+    $("crm-meta-comments-sync").addEventListener("click",()=>loadMetaComments(true));
     $("crm-create-form").addEventListener("submit",createCustomer);
     $("crm-search-form").addEventListener("submit",event=>{event.preventDefault();loadCustomers(true);});
     $("crm-load-more").addEventListener("click",()=>loadCustomers(false));
@@ -75,7 +84,64 @@
     $("crm-workspace").classList.remove("hidden");
     if($("crumb-title"))$("crumb-title").textContent="Customer CRM";
     if($("page-title"))$("page-title").textContent="Customer CRM";
-    if(businessId){loadCustomers(true);loadRetention();}
+    if(businessId){loadCustomers(true);loadRetention();loadCustomerVoice();loadMetaConnection();loadMetaComments(false);}
+  }
+  async function loadMetaConnection(){
+    if(!requireWorkspace())return;
+    const statusNode=$("crm-meta-connection-status"),button=$("crm-meta-comments-sync");
+    try{
+      const result=await api(base()+"/meta");
+      const connection=result.connection;
+      if(!result.connected||!connection){
+        statusNode.textContent="Meta Page not connected. Connect the business Page in the existing Integrations settings.";
+        button.disabled=true;
+        return;
+      }
+      const scopes=new Set(String(connection.scopes||"").split(/\\s+/).filter(Boolean));
+      const canRead=scopes.has("pages_read_engagement");
+      const instagram=connection.instagramUsername?" · Instagram @"+connection.instagramUsername+" linked":"";
+      statusNode.textContent="Facebook Page connected: "+connection.pageName+instagram+(canRead?" · public comment read permission available":" · pages_read_engagement permission missing");
+      button.disabled=!canRead;
+    }catch(error){
+      statusNode.textContent="Meta connection status unavailable: "+error.message;
+      button.disabled=true;
+    }
+  }
+  async function loadMetaComments(sync=false){
+    if(!requireWorkspace())return;
+    const target=$("crm-meta-comments-summary"),button=$("crm-meta-comments-sync");
+    if(!target)return;
+    if(sync){button.disabled=true;button.textContent="Importing…";target.textContent="Reading recent public Facebook Page comments…";}
+    else target.textContent="Loading previously imported public comments…";
+    try{
+      if(sync){
+        const result=await api(base()+"/crm/meta-comments/sync",{method:"POST",body:"{}"});
+        target.dataset.lastSync=String(result.imported||0);
+      }
+      const result=await api(base()+"/crm/meta-comments");
+      const comments=result.comments||[];
+      if(!comments.length){
+        target.textContent=sync?"No eligible public comments were returned. Check that the connected Page has recent posts and pages_read_engagement permission.":"No public comments imported yet.";
+        return;
+      }
+      target.innerHTML='<p><strong>'+Number(result.count||0)+' public comments imported</strong></p><ul class="crm-history">'+comments.slice(0,8).map(row=>{
+        const meta=row.metadata&&typeof row.metadata==="object"?row.metadata:{};
+        return '<li><strong>'+esc(String(meta.message||""))+'</strong><small>Facebook · '+new Date(row.occurredAt).toLocaleString()+(meta.postPermalink?' · <a href="'+esc(String(meta.postPermalink))+'" target="_blank" rel="noopener noreferrer">View post</a>':'')+'</small></li>';
+      }).join("")+'</ul><p class="footnote">Comments are stored without author names and remain unlinked from customer profiles. Import is limited to the latest 10 Page posts and up to 50 comments per post.</p>';
+    }catch(error){target.textContent="Meta comments unavailable: "+error.message;}
+    finally{if(button){button.textContent="Import public comments";await loadMetaConnection();}}
+  }
+  async function loadCustomerVoice(){
+    if(!requireWorkspace())return;
+    const target=$("crm-voice-summary");
+    target.textContent="Loading shared Reviews evidence…";
+    try{
+      const result=await api(base()+"/crm/customer-voice");
+      const analysis=result.analysis||{},sentiment=analysis.sentiment||{positive:0,negative:0,neutral:0};
+      const themes=(analysis.themes||[]).slice(0,4);
+      const themeHtml=themes.length?'<ul class="crm-history">'+themes.map(row=>'<li><strong>'+esc(row.theme.replaceAll("_"," "))+'</strong><small>'+row.count+' mentions · '+row.negative+' negative signals</small></li>').join("")+'</ul>':'<p class="crm-muted">No recurring themes yet.</p>';
+      target.innerHTML='<div class="crm-voice-metrics"><strong>'+Number(result.count||0)+' feedback items</strong><span>'+Number(analysis.textReviewCount||0)+' written comments</span><span>'+Number(sentiment.positive||0)+' positive</span><span>'+Number(sentiment.negative||0)+' needs attention</span><span>'+Number(sentiment.neutral||0)+' neutral / unclear</span></div><h4>Recurring customer themes</h4>'+themeHtml+'<p class="footnote">Analysis method: '+esc(String(analysis.method||"Not available").replaceAll("_"," "))+' · '+esc(analysis.confidence||"")+' confidence. Read original evidence in Reviews before deciding on action. Reviews are not automatically linked to customer profiles.</p>';
+    }catch(error){target.textContent="Shared Reviews evidence unavailable: "+error.message;}
   }
   async function loadCustomers(reset=true){
     if(!requireWorkspace()||loading)return;
