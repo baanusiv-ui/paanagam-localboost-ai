@@ -227,6 +227,33 @@
         window.setTimeout(()=>routeCampaignOutput(true),0);
       });
     }
+    window.addEventListener("localboost:campaign-copy-ready",async event=>{
+      const d=event.detail||{}, imagePrompt=document.getElementById("poyo-image-prompt"), imageSize=document.getElementById("poyo-image-size"), resolution=document.getElementById("poyo-image-resolution"), form=document.getElementById("poyo-image-form");
+      if(!imagePrompt||!form||!d.topic)return;
+      const prompt=[
+        "Create a photorealistic South Indian café campaign image for PAANAGAM (பானகம்).",
+        "Campaign: "+d.topic,
+        d.headline?"Headline direction: "+d.headline:"",
+        d.designerBrief?"Creative brief: "+d.designerBrief:"",
+        d.caption?"Campaign message context: "+d.caption:"",
+        d.offer?"Verified details only: "+d.offer:"",
+        "Visual style: authentic South Indian filter coffee experience, traditional stainless-steel tumbler and davara where relevant, warm natural café lighting, mustard yellow, warm ivory and dark walnut palette, welcoming premium local café atmosphere.",
+        "Composition: strong hero subject, clean uncluttered layout, vertical social-media composition with negative space for readable Tamil brand typography.",
+        "Do not invent prices, discounts, dates, addresses, menu items or factual claims. Do not generate fake logos or garbled text. Brand spelling: பானகம். Tagline: காபியும் கதையும்."
+      ].filter(Boolean).join(" ");
+      imagePrompt.value=prompt.slice(0,800);
+      imagePrompt.dispatchEvent(new Event("input",{bubbles:true}));
+      if(imageSize)imageSize.value=d.format==="feed"?"1:1":d.format==="portrait"?"4:5":"9:16";
+      if(resolution)resolution.value="2K";
+      const submit=form.querySelector("#poyo-image-save");
+      if(!submit)return;
+      submit.disabled=true;
+      try{
+        if(typeof form.requestSubmit==="function")form.requestSubmit(submit);else submit.click();
+      }finally{
+        window.setTimeout(()=>{if(submit.isConnected)submit.disabled=false;},1500);
+      }
+    });
     const syncCampaignBriefToImagePrompt=()=>{
       const brief=document.getElementById("creative-preview-brief")?.textContent?.trim();
       const imagePrompt=document.getElementById("poyo-image-prompt");
