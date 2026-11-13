@@ -1693,6 +1693,84 @@ app.get("/v1/meta/callback", async (request, reply) => {
   return reply.redirect(env.APP_BASE_URL + "/?meta=connected");
 });
 
+// Import public Facebook Page post comments into CRM. This is read-only at Meta and never replies.
+app.get("/v1/businesses/:businessId/crm/meta-comments", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const rows = await prisma.customerEvent.findMany({
+    where: { businessId: business.id, source: "META_PAGE_COMMENT" },
+    orderBy: [{ occurredAt: "desc" }, { id: "desc" }],
+    take: 200,
+    select: { id: true, externalId: true, occurredAt: true, metadata: true }
+  });
+  return { source: "META_PAGE_COMMENT", count: rows.length, comments: rows };
+});
+
+app.post("/v1/businesses/:businessId/crm/meta-comments/sync", { preHandler: requireUser, config: { rateLimit: { max: 3, timeWindow: "10 minutes" } } }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const connection = await prisma.metaConnection.findUnique({ where: { businessId: business.id } });
+  if (!connection) return reply.code(409).send({ error: "Connect the business Facebook Page before importing public comments." });
+  const scopes = new Set(connection.scopes.split(" ").filter(Boolean));
+  if (!scopes.has("pages_read_engagement")) return reply.code(403).send({ error: "The existing Meta connection does not include pages_read_engagement. Re-authorisation may be required; no new connection was created." });
+  try {
+    const token = decryptSecret(connection.pageAccessTokenEncrypted);
+    const feed = await metaRequest<{ data?: Array<{ id: string; permalink_url?: string; created_time?: string; comments?: { data?: Array<{ id: string; message?: string; created_time?: string; like_count?: number }> } }> }>(
+      connection.pageId + "/feed", token, "GET",
+      { fields: "id,permalink_url,created_time,comments.limit(50){id,message,created_time,like_count}", limit: "10" }
+    );
+    let imported = 0;
+    let skipped = 0;
+    for (const post of feed.data ?? []) {
+      for (const comment of post.comments?.data ?? []) {
+        const message = typeof comment.message === "string" ? comment.message.trim() : "";
+        const occurredAt = comment.created_time ? new Date(comment.created_time) : new Date();
+        if (!comment.id || !message || Number.isNaN(occurredAt.getTime())) { skipped++; continue; }
+        await prisma.customerEvent.upsert({
+          where: { businessId_source_externalId: { businessId: business.id, source: "META_PAGE_COMMENT", externalId: post.id + ":" + comment.id } },
+          create: {
+            businessId: business.id,
+            customerId: null,
+            eventType: "SOCIAL_COMMENT_RECEIVED",
+            source: "META_PAGE_COMMENT",
+            externalId: post.id + ":" + comment.id,
+            occurredAt,
+            metadata: {
+              channel: "FACEBOOK",
+              message,
+              postId: post.id,
+              postPermalink: post.permalink_url ?? null,
+              likeCount: typeof comment.like_count === "number" ? comment.like_count : 0,
+              provenance: "META_GRAPH_API"
+            } as Prisma.InputJsonValue
+          },
+          update: {
+            occurredAt,
+            metadata: {
+              channel: "FACEBOOK",
+              message,
+              postId: post.id,
+              postPermalink: post.permalink_url ?? null,
+              likeCount: typeof comment.like_count === "number" ? comment.like_count : 0,
+              provenance: "META_GRAPH_API"
+            } as Prisma.InputJsonValue
+          }
+        });
+        imported++;
+      }
+    }
+    await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "META_PUBLIC_COMMENTS_IMPORTED", entityType: "CRM_SOURCE_SYNC", summary: "Public Facebook Page comments imported into CRM", metadata: { imported, skipped, scannedPosts: (feed.data ?? []).length } });
+    return { source: "META_PAGE_COMMENT", scannedPosts: (feed.data ?? []).length, imported, skipped, note: "Bounded sync: latest 10 Page feed posts and up to 50 comments per post. No author names are retained; comments are not matched to customers and no replies are sent." };
+  } catch (error) {
+    request.log.warn({ error: error instanceof Error ? error.message : "unknown", businessId: business.id }, "Meta public comment import failed");
+    return reply.code(502).send({ error: "Meta public comments could not be imported. Check Page permissions and try again." });
+  }
+});
+
 app.get("/v1/businesses/:businessId/meta", { preHandler: requireUser }, async (request, reply) => {
   const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
   if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
