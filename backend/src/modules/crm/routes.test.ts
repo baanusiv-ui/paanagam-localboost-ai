@@ -11,7 +11,8 @@ function harness(overrides: Record<string, unknown> = {}) {
       findMany: async () => [],
       create: async ({ data }: { data: Record<string, unknown> }) => ({ id: "cus-1", ...data }),
       findFirst: async () => null,
-      update: async ({ data }: { data: Record<string, unknown> }) => ({ id: "cus-1", ...data })
+      update: async ({ data }: { data: Record<string, unknown> }) => ({ id: "cus-1", ...data }),
+      deleteMany: async () => ({ count: 1 })
     },
     customerConsent: { create: async ({ data }: { data: Record<string, unknown> }) => ({ id: "consent-1", ...data }) },
     customerEvent: { create: async ({ data }: { data: Record<string, unknown> }) => ({ id: "event-1", ...data }), deleteMany: async () => ({ count: 0 }) },
@@ -122,5 +123,21 @@ test("CRM retention policy is tenant-scoped and bounded", async () => {
   const valid = await app.inject({ method: "PATCH", url: "/v1/businesses/biz-owned/crm-retention", payload: { retentionMonths: 48 } });
   assert.equal(valid.statusCode, 200);
   assert.equal(updated, 48);
+  await app.close();
+});
+
+test("CRM customer deletion erases linked data only after exact owner confirmation", async () => {
+  let customerEventsDeleted = false, customerDeleted = false, auditWritten = false;
+  const { app, db, requireUser } = harness({
+    customer: { findFirst: async () => ({ id: "cus-1" }), deleteMany: async () => { customerDeleted = true; return { count: 1 }; } },
+    customerEvent: { deleteMany: async () => { customerEventsDeleted = true; return { count: 2 }; } },
+    activityEvent: { create: async ({ data }: any) => { auditWritten = data.eventType === "CRM_CUSTOMER_ERASED" && data.entityId === null; return { id: "audit-1" }; } }
+  });
+  await registerCrmRoutes(app, db as unknown as PrismaClient, requireUser as never);
+  const response = await app.inject({ method: "DELETE", url: "/v1/businesses/biz-owned/customers/cus-1", payload: { confirmation: "DELETE CUSTOMER" } });
+  assert.equal(response.statusCode, 204);
+  assert.equal(customerEventsDeleted, true);
+  assert.equal(customerDeleted, true);
+  assert.equal(auditWritten, true);
   await app.close();
 });
