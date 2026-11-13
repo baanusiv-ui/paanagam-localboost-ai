@@ -1,4 +1,4 @@
-export type AiMessage = { role: "system" | "user" | "assistant"; content: string };
+export type AiMessage = { role: string; content: string };
 
 type JsonSchema = {
   type: "OBJECT";
