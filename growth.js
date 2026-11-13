@@ -219,7 +219,7 @@
       cloud = await fetchAllGrowthRecords(path);
       const grouped = { MENU_ITEM: [], DAILY_SALES: [], RETENTION_SNAPSHOT: [], CAMPAIGN_DRAFT: [] };
       for (const record of cloud.records) {
-        if (grouped[record.recordType]) grouped[record.recordType].push({ ...record.payload, _id: record.externalId, _recordId: record.id });
+        if (grouped[record.recordType] && record.payload?.kind !== "PAANAGAM_LAUNCH_PLAN") grouped[record.recordType].push({ ...record.payload, _id: record.externalId, _recordId: record.id });
       }
       data = {
         menu: grouped.MENU_ITEM,
