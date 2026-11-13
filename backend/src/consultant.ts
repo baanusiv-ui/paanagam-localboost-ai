@@ -84,29 +84,7 @@ export function parseConsultantOutput(raw: string, allowedEvidenceIds: string[])
 }
 
 export async function getLocalAiStatus() {
-  const baseUrl = localBaseUrl();
-  const model = localModel();
-  if (!baseUrl) {
-    return {
-      configured: false, reachable: false, modelInstalled: false, model,
-      message: "Local AI is not configured. Set OLLAMA_BASE_URL in backend/.env and restart the API."
-    };
-  }
-  try {
-    const response = await fetch(baseUrl + "/api/tags", { signal: AbortSignal.timeout(2500) });
-    if (!response.ok) throw new Error("Ollama returned HTTP " + response.status);
-    const data = await response.json() as { models?: Array<{ name?: string }> };
-    const installed = (data.models ?? []).some(item => item.name === model || item.name === model + ":latest");
-    return {
-      configured: true, reachable: true, modelInstalled: installed, model,
-      message: installed ? "Local Ollama model is ready." : "Ollama is running, but the model is not installed. Run: ollama pull " + model
-    };
-  } catch {
-    return {
-      configured: true, reachable: false, modelInstalled: false, model,
-      message: "Cannot reach Ollama. Start Ollama on Windows and check OLLAMA_BASE_URL (Docker Desktop: http://host.docker.internal:11434)."
-    };
-  }
+  return getAiProviderStatus();
 }
 
 export async function generateLocalConsultant(report: IntelligenceReport, language: "Tamil" | "English" | "Tamil + English") {
