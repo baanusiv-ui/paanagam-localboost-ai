@@ -29,7 +29,7 @@ test("Ollama Cloud is attempted first and Gemini is used after a cloud failure",
       return new Response(JSON.stringify({ error: "temporary outage" }), { status: 503 });
     }
     return new Response(JSON.stringify({
-      candidates: [{ content: { parts: [{ text: "{\\"answer\\":\\"fallback\\"}" }] } }]
+      candidates: [{ content: { parts: [{ text: JSON.stringify({ answer: "fallback" }) }] } }]
     }), { status: 200 });
   }) as typeof fetch;
   try {
