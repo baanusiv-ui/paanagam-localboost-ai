@@ -447,6 +447,7 @@ enum CustomerEventType {
   REWARD_EARNED
   REWARD_REDEEMED
   PROFILE_UPDATED
+  SOCIAL_COMMENT_RECEIVED
 }
 
 model Customer {
