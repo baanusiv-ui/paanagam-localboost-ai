@@ -27,5 +27,5 @@ Migration `20261111100000_crm_foundation` is additive. Apply only after Prisma v
 - Add explicit consent grant/revoke endpoints.
 - Add idempotent customer-event ingestion.
 - Add customer profile and consent UI.
-- Add authenticated customer JSON export and confirmed permanent erasure.\n- Add a business-level 12–84 month retention setting, preview, and owner-confirmed manual expiry purge. Automatic deletion remains disabled.
+- Add authenticated customer JSON export and confirmed permanent erasure.\n- Add a business-level 12–84 month retention setting, preview, and owner-confirmed manual expiry purge. Automatic deletion remains disabled.\n- Bind every retention purge to the exact unique customer IDs returned by the latest preview; revalidate eligibility before deletion and reject stale previews. Purge at most 500 previewed records per confirmation; refresh the preview for the next batch.
 - Add tests for cross-tenant isolation, duplicate identities, consent history, and idempotency.
