@@ -28,6 +28,7 @@ function harness(overrides: Record<string, unknown> = {}) {
 test("CRM customer list is scoped through the authenticated business owner", async () => {
   let listCalled = false;
   const { app, db, requireUser } = harness({
+    business: { findFirst: async () => null },
     customer: { findMany: async () => { listCalled = true; return []; } }
   });
   await registerCrmRoutes(app, db as unknown as PrismaClient, requireUser as never);
@@ -116,6 +117,7 @@ test("CRM customer deletion requires the exact confirmation phrase", async () =>
 test("CRM retention policy is tenant-scoped and bounded", async () => {
   let updated = 0;
   const { app, db, requireUser } = harness({
+    business: { findFirst: async () => ({ id: "biz-owned", ownerId: "user-1" }), update: async ({ data }: any) => { updated = data.customerRetentionMonths; return { customerRetentionMonths: updated }; } }
   });
   await registerCrmRoutes(app, db as unknown as PrismaClient, requireUser as never);
   const invalid = await app.inject({ method: "PATCH", url: "/v1/businesses/biz-owned/crm-retention", payload: { retentionMonths: 2 } });
