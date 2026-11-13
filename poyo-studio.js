@@ -162,12 +162,36 @@
     const imageHeader=image?.querySelector(".panel-heading");
     const imageForm=image?.querySelector("#poyo-image-form");
     const imageMessage=document.getElementById("poyo-image-message");
-    if(imageHeader)imageCreate.append(imageHeader);if(imageForm)imageCreate.append(imageForm);if(imageMessage)imageCreate.append(imageMessage);
+    const campaignPreview=document.getElementById("creative-preview");
+    if(imageHeader)imageCreate.append(imageHeader);
+    if(imageForm)imageCreate.append(imageForm);
+    if(imageMessage)imageCreate.append(imageMessage);
+    /* Generated campaign copy, designer brief and Meta Muse result belong with artwork creation. */
+    if(campaignPreview){
+      const outputTitle=document.createElement("h3");
+      outputTitle.textContent="Campaign copy & Meta Muse artwork";
+      outputTitle.className="lb-studio-output-title";
+      imageCreate.append(outputTitle,campaignPreview);
+    }
     const imageJobsPanel=document.createElement("div");imageJobsPanel.className="panel";
     const imageJobsHeader=image?.querySelector(".panel-heading");
     const imageJobsList=document.getElementById("poyo-image-task-list");
     if(imageJobsHeader)imageJobsPanel.append(imageJobsHeader);if(imageJobsList)imageJobsPanel.append(imageJobsList);
     const videoForm=engine.querySelector("#poyo-draft-form")?.closest(".panel");
+    const videoPrompt=videoForm?.querySelector("#poyo-prompt");
+    if(videoForm&&videoPrompt){
+      const useBrief=document.createElement("button");
+      useBrief.type="button";useBrief.className="secondary-button lb-use-campaign-brief";
+      useBrief.textContent="Use campaign image brief";
+      useBrief.addEventListener("click",()=>{
+        const brief=document.getElementById("creative-preview-brief")?.textContent?.trim();
+        if(!brief){const msg=document.getElementById("poyo-studio-message");if(msg)msg.textContent="Generate campaign copy first to use its image brief.";return;}
+        videoPrompt.value="Create a cinematic Paanagam video based on this approved campaign visual direction. "+brief+" Keep any text, menu facts and prices as editable overlays; do not invent product claims.";
+        videoPrompt.dispatchEvent(new Event("input",{bubbles:true}));
+        videoPrompt.focus();
+      });
+      videoPrompt.insertAdjacentElement("beforebegin",useBrief);
+    }
     const imageJobs=image?.querySelector("#poyo-image-task-list")?.closest(".panel-heading")?.parentElement;
     const videoJobs=document.getElementById("poyo-task-list")?.closest(".panel");
     const integrations=document.getElementById("design-integrations-panel");
