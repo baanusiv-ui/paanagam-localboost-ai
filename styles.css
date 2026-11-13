@@ -215,3 +215,10 @@ footer{padding:36px 0 24px}
 @media(min-width:900px){
   #content-view .lb-studio-pane .creative-layout{grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr)}
 }
+
+/* Campaign output is now grouped with image creation; video can reuse its brief. */
+#content-view .lb-studio-output-title{font:700 14px Manrope,sans-serif;margin:20px 0 8px;color:var(--ink)}
+#content-view #creative-preview{margin-top:8px}
+#content-view .lb-use-campaign-brief{width:100%;margin:0 0 10px;min-height:42px}
+#content-view #creative-preview .creative-provider-comparison{grid-template-columns:minmax(0,1fr)!important}
+@media(min-width:900px){#content-view #creative-preview .creative-provider-comparison{grid-template-columns:minmax(0,1fr)!important}}
