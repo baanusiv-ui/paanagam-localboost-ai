@@ -52,7 +52,8 @@ model Business {
   address         String?
   website         String?
   phone           String?
-  countryCode     String             @default("IN")\n  customerRetentionMonths Int        @default(36)
+  countryCode     String             @default("IN")
+  customerRetentionMonths Int        @default(36)
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
   evidence        Evidence[]
