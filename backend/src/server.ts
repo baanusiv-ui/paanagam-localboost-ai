@@ -27,6 +27,7 @@ import { calculateGrowthGoal, buildGrowthGoalHistory } from "./growth-goals.js";
 import { buildGrowthPerformanceReport } from "./growth-performance-report.js";
 import { buildMenuSalesIntelligence } from "./menu-sales-intelligence.js";
 import { registerPosIntegrationRoutes } from "./pos-integration.js";
+import { registerCrmRoutes } from "./modules/crm/routes.js";
 import { registerCanvaRoutes } from "./canva.js";
 import { registerPoyoRoutes } from "./poyo-routes.js";
 import { getPoyoBalance } from "./poyo.js";
@@ -82,6 +83,7 @@ const requireUser = createRequireUser(async (token) => {
 
 app.decorateRequest("userId", null);
 await registerPosIntegrationRoutes(app, prisma, requireUser);
+await registerCrmRoutes(app, prisma, requireUser);
 await registerCanvaRoutes(app, prisma, requireUser);
 registerPoyoRoutes(app, prisma, requireUser);
 app.get("/v1/me", { preHandler: requireUser }, async (request, reply) => {
