@@ -52,7 +52,7 @@
         </div>
         <article class="panel crm-detail" id="crm-customer-detail" aria-live="polite"><div class="crm-empty"><strong>Select a customer</strong><p>Customer profile, contact consent and recorded activity will appear here.</p></div></article>
       </div>
-      <article class="panel crm-retention"><div class="panel-heading"><div><h3>Privacy &amp; data retention</h3><p>Choose how long inactive customer records are retained.</p></div><span class="tag">Manual review</span></div><div class="crm-retention-controls"><label>Retention period<select id="crm-retention-months"><option value="12">12 months</option><option value="18">18 months</option><option value="24">24 months</option><option value="36">36 months</option><option value="48">48 months</option><option value="60">60 months</option><option value="72">72 months</option><option value="84">84 months</option></select></label><button class="secondary-button" id="crm-retention-save" type="button">Save period</button><button class="secondary-button" id="crm-retention-preview" type="button">Preview expired records</button></div><div id="crm-retention-preview" class="crm-retention-preview" aria-live="polite">No records will be deleted automatically.</div><button class="danger-button" id="crm-retention-apply" type="button" disabled>Erase previewed expired records</button><p class="footnote">Preview is limited to the first 500 matching records. Applying deletion requires typing an exact confirmation phrase. Automatic deletion is disabled.</p></article><p class="footnote">Marketing consent is separate from service consent. Purchases never imply permission to send marketing. No messages are sent from this screen.</p>`;
+      <article class="panel crm-retention"><div class="panel-heading"><div><h3>Privacy &amp; data retention</h3><p>Choose how long inactive customer records are retained.</p></div><span class="tag">Manual review</span></div><div class="crm-retention-controls"><label>Retention period<select id="crm-retention-months"><option value="12">12 months</option><option value="18">18 months</option><option value="24">24 months</option><option value="36">36 months</option><option value="48">48 months</option><option value="60">60 months</option><option value="72">72 months</option><option value="84">84 months</option></select></label><button class="secondary-button" id="crm-retention-save" type="button">Save period</button><button class="secondary-button" id="crm-retention-preview-output" type="button">Preview expired records</button></div><div id="crm-retention-preview-output" class="crm-retention-preview" aria-live="polite">No records will be deleted automatically.</div><button class="danger-button" id="crm-retention-apply" type="button" disabled>Erase previewed expired records</button><p class="footnote">Preview is limited to the first 500 matching records. Applying deletion requires typing an exact confirmation phrase. Automatic deletion is disabled.</p></article><p class="footnote">Marketing consent is separate from service consent. Purchases never imply permission to send marketing. No messages are sent from this screen.</p>`;
     main.append(section);
     button.addEventListener("click",show);
     document.addEventListener("click",event=>{if(event.target.closest("[data-view],[data-gi-nav]"))section.classList.add("hidden");},true);
@@ -62,7 +62,7 @@
     $("crm-customer-list").addEventListener("click",event=>{const target=event.target.closest("[data-crm-customer]");if(target)loadCustomer(target.dataset.crmCustomer);});
     $("crm-customer-detail").addEventListener("click",event=>{const action=event.target.closest("[data-crm-action]")?.dataset.crmAction;if(action==="export")exportCustomer();if(action==="erase")eraseCustomer();});
     $("crm-retention-save").addEventListener("click",saveRetention);
-    $("crm-retention-preview").addEventListener("click",previewRetention);
+    $("crm-retention-preview-btn").addEventListener("click",previewRetention);
     $("crm-retention-apply").addEventListener("click",applyRetention);
     $("crm-customer-detail").addEventListener("submit",event=>{
       if(event.target.id==="crm-profile-form"){event.preventDefault();saveProfile();}
@@ -175,13 +175,13 @@
     try{
       const result=await api(base()+"/crm-retention",{method:"PATCH",body:JSON.stringify({retentionMonths:Number($("crm-retention-months").value)})});
       status("Retention period saved: "+result.retentionMonths+" months. Automatic deletion remains off.");
-      $("crm-retention-preview").textContent="Run a fresh preview to see records older than this period.";
+      $("crm-retention-preview-output").textContent="Run a fresh preview to see records older than this period.";
       $("crm-retention-apply").disabled=true;
     }catch(error){status(error.message,true);}
   }
   async function previewRetention(){
     if(!requireWorkspace())return;
-    const preview=$("crm-retention-preview");preview.textContent="Checking expired records…";
+    const preview=$("crm-retention-preview-output");preview.textContent="Checking expired records…";
     try{
       const result=await api(base()+"/crm-retention/preview");
       preview.textContent=result.count+" candidate records older than "+result.retentionMonths+" months. "+(result.capped?"Showing first 500; apply works in batches.":"");
@@ -201,7 +201,7 @@
     if(phrase!=="DELETE EXPIRED CUSTOMER DATA")return;
     try{
       const result=await api(base()+"/crm-retention/apply",{method:"POST",body:JSON.stringify({confirmation:phrase})});
-      $("crm-retention-preview").textContent=result.deleted+" expired customer records erased.";
+      $("crm-retention-preview-output").textContent=result.deleted+" expired customer records erased.";
       $("crm-retention-apply").disabled=true;delete $("crm-retention-apply").dataset.previewCount;
       await loadCustomers(true);status("Retention cleanup completed. "+result.deleted+" customer records erased.");
     }catch(error){status(error.message,true);}
