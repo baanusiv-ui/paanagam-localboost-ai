@@ -103,25 +103,29 @@ export function registerPoyoRoutes(app: FastifyInstance, db: PrismaClient, requi
     const task = await db.poyoCreativeTask.findFirst({ where: { id: params.data.taskId, businessId: business.id } });
     if (!task) return reply.code(404).send({ error: "Creative task not found." });
     if (task.status !== "DRAFT") return reply.code(409).send({ error: "Only a saved draft can be submitted. This task may already have been charged." });
-    if (task.mediaType !== "VIDEO" || !["wan2.2-text-to-video-fast", "wan2.2-image-to-video-fast"].includes(task.modelId)) {
-      return reply.code(400).send({ error: "Only the verified Wan 2.2 Fast video models are enabled by this integration." });
-    }
-
     const rawInput = task.modelInput && typeof task.modelInput === "object" && !Array.isArray(task.modelInput)
       ? task.modelInput as Record<string, unknown> : {};
-    const input: Record<string, unknown> = { prompt: task.prompt.slice(0, 800), resolution: "480p" };
-    if (task.modelId === "wan2.2-text-to-video-fast") {
-      const aspect = rawInput.aspect_ratio;
-      input.aspect_ratio = aspect === "16:9" ? "16:9" : "9:16";
-    } else {
+    const isImage = task.mediaType === "IMAGE" && task.modelId === "nano-banana-2.1";
+    const isVideo = task.mediaType === "VIDEO" && ["wan2.2-text-to-video-fast", "wan2.2-image-to-video-fast"].includes(task.modelId);
+    if (!isImage && !isVideo) return reply.code(400).send({ error: "Choose Nano Banana 2.1 for images or a verified Wan 2.2 Fast model for video." });
+    const input: Record<string, unknown> = { prompt: task.prompt.slice(0, 800) };
+    if (isImage) {
+      const size = ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"].includes(String(rawInput.size)) ? String(rawInput.size) : "1:1";
+      const resolution = ["1K", "2K", "4K"].includes(String(rawInput.resolution)) ? String(rawInput.resolution) : "2K";
+      input.size = size; input.resolution = resolution; input.n = 1;
       const urls = Array.isArray(rawInput.image_urls) ? rawInput.image_urls : [];
-      if (urls.length < 1 || urls.length > 2 || !urls.every(v => typeof v === "string" && isPublicHttpsUrl(v))) {
-        return reply.code(400).send({ error: "Image-to-video needs one or two publicly reachable HTTPS image URLs." });
+      if (urls.length > 10 || !urls.every(v => typeof v === "string" && isPublicHttpsUrl(v))) return reply.code(400).send({ error: "Image editing supports up to 10 publicly reachable HTTPS reference image URLs." });
+      if (urls.length) input.image_urls = urls;
+    } else {
+      input.resolution = "480p";
+      if (task.modelId === "wan2.2-text-to-video-fast") input.aspect_ratio = rawInput.aspect_ratio === "16:9" ? "16:9" : "9:16";
+      else {
+        const urls = Array.isArray(rawInput.image_urls) ? rawInput.image_urls : [];
+        if (urls.length < 1 || urls.length > 2 || !urls.every(v => typeof v === "string" && isPublicHttpsUrl(v))) return reply.code(400).send({ error: "Image-to-video needs one or two publicly reachable HTTPS image URLs." });
+        input.image_urls = urls;
       }
-      input.image_urls = urls;
+      if (Number.isSafeInteger(rawInput.seed) && Number(rawInput.seed) >= 0) input.seed = Number(rawInput.seed);
     }
-    if (Number.isSafeInteger(rawInput.seed) && Number(rawInput.seed) >= 0) input.seed = Number(rawInput.seed);
-
     try {
       const submitted = await submitPoyoGeneration({ model: task.modelId, input });
       const updated = await db.poyoCreativeTask.update({
