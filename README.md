@@ -46,7 +46,7 @@ Never commit API keys, OAuth client secrets, access tokens, customer personal da
 
 ## Optional private AI consultant on Windows
 
-The Growth consultant can use a local Ollama model for Tamil/English explanations of the deterministic intelligence report. The local model does not replace evidence calculations or perform external actions. See [backend/README.md](backend/README.md) for Windows setup. This feature remains optional; the rules-based report works without Ollama.
+The Growth consultant, review reply drafts and Google content drafts use Ollama Cloud first, with optional local Ollama and Gemini fallbacks. Credentials stay server-side in Render. AI does not replace evidence calculations or perform external actions. See [backend/README.md](backend/README.md) for setup and safeguards.
 
 
 ### Growth Overview Intelligence
