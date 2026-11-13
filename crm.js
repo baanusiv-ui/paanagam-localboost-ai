@@ -28,6 +28,10 @@
     section.innerHTML=`
       <div class="section-heading"><div><h2>Customer CRM</h2><p>Business-owned customer profiles, contact preferences and a traceable customer history.</p></div><span class="tag pending-tag">Private · consent-aware</span></div>
       <div class="crm-status panel" id="crm-status" role="status">Sign in and select a business to load customer records.</div>
+      <article class="panel crm-customer-voice" id="crm-customer-voice">
+        <div class="panel-heading"><div><h3>Customer voice · shared Reviews evidence</h3><p>Uses the same imported Google feedback and analysis shown in Reviews. No second review import or unverified customer matching.</p></div><span class="tag" id="crm-voice-source">Reviews workspace</span></div>
+        <div id="crm-voice-summary" class="empty-copy">Loading shared review evidence…</div>
+      </article>
       <div class="crm-layout">
         <div class="crm-left">
           <article class="panel">
@@ -75,7 +79,19 @@
     $("crm-workspace").classList.remove("hidden");
     if($("crumb-title"))$("crumb-title").textContent="Customer CRM";
     if($("page-title"))$("page-title").textContent="Customer CRM";
-    if(businessId){loadCustomers(true);loadRetention();}
+    if(businessId){loadCustomers(true);loadRetention();loadCustomerVoice();}
+  }
+  async function loadCustomerVoice(){
+    if(!requireWorkspace())return;
+    const target=$("crm-voice-summary");
+    target.textContent="Loading shared Reviews evidence…";
+    try{
+      const result=await api(base()+"/crm/customer-voice");
+      const analysis=result.analysis||{},sentiment=analysis.sentiment||{positive:0,negative:0,neutral:0};
+      const themes=(analysis.themes||[]).slice(0,4);
+      const themeHtml=themes.length?'<ul class="crm-history">'+themes.map(row=>'<li><strong>'+esc(row.theme.replaceAll("_"," "))+'</strong><small>'+row.count+' mentions · '+row.negative+' negative signals</small></li>').join("")+'</ul>':'<p class="crm-muted">No recurring themes yet.</p>';
+      target.innerHTML='<div class="crm-voice-metrics"><strong>'+Number(result.count||0)+' feedback items</strong><span>'+Number(analysis.textReviewCount||0)+' written comments</span><span>'+Number(sentiment.positive||0)+' positive</span><span>'+Number(sentiment.negative||0)+' needs attention</span><span>'+Number(sentiment.neutral||0)+' neutral / unclear</span></div><h4>Recurring customer themes</h4>'+themeHtml+'<p class="footnote">Analysis method: '+esc(String(analysis.method||"Not available").replaceAll("_"," "))+' · '+esc(analysis.confidence||"")+' confidence. Read original evidence in Reviews before deciding on action. Reviews are not automatically linked to customer profiles.</p>';
+    }catch(error){target.textContent="Shared Reviews evidence unavailable: "+error.message;}
   }
   async function loadCustomers(reset=true){
     if(!requireWorkspace()||loading)return;
