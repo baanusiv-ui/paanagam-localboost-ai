@@ -1632,6 +1632,50 @@ async function metaRequest<T>(path: string, accessToken: string, method: "GET" |
   if (!response.ok) throw new Error(data.error?.message || "Meta Graph API request failed (" + response.status + ")");
   return data;
 }
+type MetaAccessiblePage = { id: string; name: string; access_token: string; instagram_business_account?: { id: string; username?: string } };
+async function listAccessibleMetaPages(userToken: string): Promise<{ pages: MetaAccessiblePage[]; discovery: string[] }> {
+  const pages = new Map<string, MetaAccessiblePage>();
+  const discovery: string[] = [];
+  const collect = (items: MetaAccessiblePage[] | undefined) => {
+    for (const page of items ?? []) if (page.id && page.access_token) pages.set(page.id, page);
+  };
+  let after: string | undefined;
+  for (let pageNo = 0; pageNo < 10; pageNo++) {
+    const result = await metaRequest<{ data?: MetaAccessiblePage[]; paging?: { cursors?: { after?: string } } }>(
+      "me/accounts", userToken, "GET",
+      { fields: "id,name,access_token,instagram_business_account{id,username}", limit: "100", ...(after ? { after } : {}) }
+    );
+    collect(result.data);
+    if (pageNo === 0) discovery.push("me/accounts returned " + (result.data?.length ?? 0) + " Pages");
+    after = result.paging?.cursors?.after;
+    if (!after || !result.data?.length) break;
+  }
+  if (pages.size) return { pages: [...pages.values()], discovery };
+
+  // Pages assigned through a Meta Business Portfolio may not be exposed by /me/accounts.
+  // This fallback requires business_management and uses only assets available to this user.
+  const businesses = await metaRequest<{ data?: Array<{ id: string; name?: string }>; paging?: { cursors?: { after?: string } } }>(
+    "me/businesses", userToken, "GET", { fields: "id,name", limit: "100" }
+  );
+  const businessList = businesses.data ?? [];
+  discovery.push("me/businesses returned " + businessList.length + " portfolios");
+  for (const business of businessList.slice(0, 10)) {
+    for (const edge of ["owned_pages", "client_pages"]) {
+      let cursor: string | undefined;
+      for (let pageNo = 0; pageNo < 10; pageNo++) {
+        const result = await metaRequest<{ data?: MetaAccessiblePage[]; paging?: { cursors?: { after?: string } } }>(
+          business.id + "/" + edge, userToken, "GET",
+          { fields: "id,name,access_token,instagram_business_account{id,username}", limit: "100", ...(cursor ? { after: cursor } : {}) }
+        );
+        collect(result.data);
+        if (pageNo === 0 && (result.data?.length ?? 0) > 0) discovery.push(business.name + " " + edge + ": " + result.data!.length);
+        cursor = result.paging?.cursors?.after;
+        if (!cursor || !result.data?.length) break;
+      }
+    }
+  }
+  return { pages: [...pages.values()], discovery };
+}
 app.post("/v1/meta/connect/:businessId/url", { preHandler: requireUser, config: { rateLimit: { max: 5, timeWindow: "1 minute" } } }, async (request, reply) => {
   const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
   if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
@@ -1648,7 +1692,7 @@ app.post("/v1/meta/connect/:businessId/url", { preHandler: requireUser, config: 
     auth_type: "rerequest",
     return_scopes: "true",
     state,
-    scope: "pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish"
+    scope: "pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish,business_management"
   }).toString();
   return { authorizationUrl: url.toString() };
 });
@@ -1795,29 +1839,19 @@ app.get("/v1/businesses/:businessId/meta/pages", { preHandler: requireUser }, as
   const missing = required.filter(scope => !granted.has(scope));
   if (missing.length) return reply.code(403).send({ error: "Facebook login completed, but Meta did not grant: " + missing.join(", ") + ". Reconnect and approve Page access. Check the app's permissions and access level.", code: "META_PAGE_PERMISSION_MISSING", missingPermissions: missing, grantedPermissions: [...granted] });
   try {
-    const pages: Array<{ id: string; name: string; access_token: string; instagram_business_account?: { id: string; username?: string } }> = [];
-    let after: string | undefined;
-    for (let pageNo = 0; pageNo < 10; pageNo++) {
-      const result = await metaRequest<{ data?: typeof pages; paging?: { cursors?: { after?: string }; next?: string } }>(
-        "me/accounts", decryptSecret(pending.userTokenEncrypted), "GET",
-        { fields: "id,name,access_token,instagram_business_account{id,username}", limit: "100", ...(after ? { after } : {}) }
-      );
-      pages.push(...(result.data ?? []));
-      const next = result.paging?.cursors?.after;
-      if (!next || !(result.data?.length)) break;
-      after = next;
-    }
+    const { pages, discovery } = await listAccessibleMetaPages(decryptSecret(pending.userTokenEncrypted));
     if (!pages.length) {
       return reply.code(200).send({
         pages: [],
         diagnostic: {
           code: "META_NO_ACCESSIBLE_PAGES",
-          message: "Facebook login succeeded, but Meta returned no Pages for this profile.",
+          message: "Facebook login succeeded, but Meta returned no accessible Pages through either personal Page access or Business Portfolio assets.",
+          discovery,
           checks: [
             "Confirm this Facebook profile has Facebook access with full control or the required Page task access.",
             "Confirm the Paanagam Page is assigned to this profile in Meta Business Suite.",
             "During Facebook login, choose Edit access and include the Paanagam Page.",
-            "Check that the app has pages_show_list approved for the current app mode and user role."
+            "Check that pages_show_list and business_management are granted and available for the current app mode and user role."
           ],
           grantedPermissions: [...granted]
         }
@@ -1840,14 +1874,8 @@ app.post("/v1/businesses/:businessId/meta/page", { preHandler: requireUser }, as
   const pending = await prisma.metaOAuthSession.findUnique({ where: { businessId: business.id } });
   if (!pending || pending.userId !== request.userId || pending.expiresAt <= new Date()) return reply.code(409).send({ error: "Reconnect Meta before selecting a Page." });
   try {
-    let page: { id: string; name: string; access_token: string; instagram_business_account?: { id: string; username?: string } } | undefined;
-    let after: string | undefined;
-    for (let pageNo = 0; pageNo < 10 && !page; pageNo++) {
-      const result = await metaRequest<{ data?: Array<{ id: string; name: string; access_token: string; instagram_business_account?: { id: string; username?: string } }>; paging?: { cursors?: { after?: string } } }>("me/accounts", decryptSecret(pending.userTokenEncrypted), "GET", { fields: "id,name,access_token,instagram_business_account{id,username}", limit: "100", ...(after ? { after } : {}) });
-      page = (result.data ?? []).find(item => item.id === body.data.pageId);
-      after = result.paging?.cursors?.after;
-      if (!after || !result.data?.length) break;
-    }
+    const { pages } = await listAccessibleMetaPages(decryptSecret(pending.userTokenEncrypted));
+    const page = pages.find(item => item.id === body.data.pageId);
     if (!page?.access_token) return reply.code(403).send({ error: "That Page is not accessible to the connected Meta user." });
     const granted = new Set(pending.scopes.split(" ").filter(Boolean));
     const missingPageScopes = ["pages_show_list", "pages_read_engagement", "pages_manage_posts"].filter(scope => !granted.has(scope));
