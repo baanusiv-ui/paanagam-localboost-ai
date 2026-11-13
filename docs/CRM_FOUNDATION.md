@@ -22,10 +22,12 @@ This additive foundation introduces business-scoped customer profiles, consent h
 ## Migration
 Migration `20261111100000_crm_foundation` is additive. Apply only after Prisma validation, generated-client build, tests, tenant-guard checks, and staging migration verification. Do not run against production as part of this feature branch.
 
-## Next implementation steps
+## Implemented in this feature branch
 - Add authenticated customer create/list/detail/update routes.
 - Add explicit consent grant/revoke endpoints.
 - Add idempotent customer-event ingestion.
 - Add customer profile and consent UI.
-- Add authenticated customer JSON export and confirmed permanent erasure.\n- Add a business-level 12–84 month retention setting, preview, and owner-confirmed manual expiry purge. Automatic deletion remains disabled.\n- Bind every retention purge to the exact unique customer IDs returned by the latest preview; revalidate eligibility before deletion and reject stale previews. Purge at most 500 previewed records per confirmation; refresh the preview for the next batch.
+- Add authenticated customer JSON export and confirmed permanent erasure.
+- Add a business-level 12–84 month retention setting, preview, and owner-confirmed manual expiry purge. Automatic deletion remains disabled.
+- Bind every retention purge to the exact unique customer IDs returned by the latest preview; revalidate eligibility before deletion and reject stale previews. Purge at most 500 previewed records per confirmation; refresh the preview for the next batch.
 - Add tests for cross-tenant isolation, duplicate identities, consent history, and idempotency.
