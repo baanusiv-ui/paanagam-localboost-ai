@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="paanagam-education.css">
   <link rel="stylesheet" href="gbp-owner.css">
   <link rel="stylesheet" href="growth-goals.css">
+  <link rel="stylesheet" href="launch-planner.css">
 </head>
 <body>
   <div class="app-shell">
@@ -35,6 +36,7 @@
         <button class="nav-item" data-view="reviews"><span>✳</span> Reviews</button>
         <button class="nav-item" data-view="content"><span>▤</span> Content studio</button>
         <button class="nav-item" data-view="pos"><span>▣</span> POS integration</button>
+        <button class="nav-item" data-view="launch"><span>▣</span> Launch planner</button>
         <button class="nav-item" data-view="goals"><span>◎</span> Growth goals</button><button class="nav-item" data-view="consultant"><span>✦</span> Growth consultant</button><button class="nav-item" data-view="approvals"><span>✓</span> Approval centre <i class="count">2</i></button>
       </nav>
       <div class="sidebar-bottom">
@@ -358,6 +360,14 @@ We look forward to welcoming you!</textarea></label>
           <p class="footnote">Read-only scope. LocalBoost imports menu items and daily sales summaries only. It does not create bills, change prices, edit stock, or write back to the POS.</p>
         </div>
       </section>
+<section class="view-panel hidden" id="launch-view">
+<div class="section-heading"><div><h2>Paanagam launch planner</h2><p>Owner-controlled checklist from preparation through opening day.</p></div><span class="tag pending-tag">Owner-entered plan</span></div>
+<div class="launch-hero"><div><span class="launch-countdown" id="launch-countdown">Loading countdown…</span><h2>Paanagam · பானகம்</h2><p>Valayapatty, Namakkal, Tamil Nadu</p><p>Soft launch: 21–24 December 2026 · Final preparation: 25–26 December</p><p>Grand opening: <strong>Sunday, 27 December 2026</strong></p><div class="launch-progress"><i id="launch-progress-bar"></i></div><small><strong id="launch-progress-value">—</strong> checklist completed</small></div><div><h3>Today's priorities</h3><div id="launch-priorities" class="launch-priorities"><p class="empty-copy">Loading tasks…</p></div></div></div>
+<div class="launch-metrics"><div class="launch-metric"><strong id="launch-total">—</strong><small>Total tasks</small></div><div class="launch-metric"><strong id="launch-completed">—</strong><small>Completed</small></div><div class="launch-metric"><strong id="launch-blocked">—</strong><small>Blocked</small></div><div class="launch-metric"><strong id="launch-overdue">—</strong><small>Overdue</small></div></div><p id="launch-plan-status" class="form-message" role="status">Sign in and select a business workspace.</p>
+<div class="panel"><div class="panel-heading"><div><h3>Add a launch task</h3><p>Create a task in the correct phase.</p></div></div><form id="launch-add-task-form" class="launch-add-form"><label>Task title<input name="title" maxlength="180" required placeholder="What needs to be done?"></label><label>Phase<select name="phase"><option value="foundation">Foundation</option><option value="infrastructure">Infrastructure</option><option value="operations">Operational preparation</option><option value="marketing">Marketing</option><option value="readiness">Final readiness</option><option value="soft-launch">Soft launch</option><option value="final-prep">Final preparation</option><option value="opening">Grand opening</option></select></label><label>Due date<input name="dueDate" type="date"></label><label>Priority<select name="priority"><option value="high">High</option><option value="medium" selected>Medium</option><option value="low">Low</option></select></label><label class="wide">Owner<input name="owner" maxlength="100" placeholder="Assign a person"></label><button class="primary-button wide" type="submit">Add task</button></form></div>
+<div class="panel"><div class="panel-heading"><div><h3>Launch timeline and checklist</h3><p>Update owner, due date, priority, status and progress notes.</p></div></div><div id="launch-phases"><p class="empty-copy">Loading checklist…</p></div></div>
+<div class="panel"><div class="panel-heading"><div><h3>Soft-launch observations</h3><p>Record actual feedback and operating observations. Leave unknown values blank.</p></div></div><form id="launch-feedback-form" class="launch-feedback-form"><label>Date<input name="date" type="date" value="2026-12-21"></label><label>Observation type<select name="type"><option>Customer feedback</option><option>Service and waiting time</option><option>Preparation time</option><option>Wastage</option><option>Actual food-cost finding</option><option>Sales observation</option><option>Other</option></select></label><label class="wide">Actual observation / evidence<textarea name="notes" rows="3" maxlength="2000" required placeholder="Enter only what was observed or measured"></textarea></label><button class="primary-button wide" type="submit">Save observation</button></form><div id="launch-feedback-list"></div></div>
+<p class="launch-scope-note">Tamil-first marketing with English support. Content, replies, messages and profile changes remain drafts until separately approved. POS billing, menu, recipes, stock, payments and loyalty remain in the separate Paanagam POS; this planner only tracks readiness and does not write to POS.</p></section>
 </main>
   </div>
   <script src="config.js"></script>
@@ -496,6 +506,7 @@ We look forward to welcoming you!</textarea></label>
 })();
 
 </script><script src="growth-goals.js"></script>
+  <script src="launch-planner.js"></script>
   <script type="module" src="auth-client.js"></script>
 <script>
 (() => {
