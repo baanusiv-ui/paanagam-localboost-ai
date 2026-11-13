@@ -51,6 +51,8 @@ on:
       - "social-publishing.js"
       - "growth-goals.js"
       - "growth-goals.css"
+      - "launch-planner.js"
+      - "launch-planner.css"
       - "render.yaml"
       - ".github/workflows/backend-ci.yml"
 jobs:
