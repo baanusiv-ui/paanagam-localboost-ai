@@ -1787,13 +1787,45 @@ app.get("/v1/businesses/:businessId/meta/pages", { preHandler: requireUser }, as
   const business = await ownedBusiness(request.userId!, params.data.businessId);
   if (!business) return reply.code(404).send({ error: "Business not found" });
   const pending = await prisma.metaOAuthSession.findUnique({ where: { businessId: business.id } });
-  if (!pending || pending.userId !== request.userId || pending.expiresAt <= new Date()) return reply.code(409).send({ error: "Reconnect Meta to select a Page." });
+  if (!pending || pending.userId !== request.userId || pending.expiresAt <= new Date()) return reply.code(409).send({ error: "Reconnect Meta to select a Page.", code: "META_SESSION_MISSING" });
+  const granted = new Set(pending.scopes.split(" ").filter(Boolean));
+  const required = ["pages_show_list"];
+  const missing = required.filter(scope => !granted.has(scope));
+  if (missing.length) return reply.code(403).send({ error: "Facebook login completed, but Meta did not grant: " + missing.join(", ") + ". Reconnect and approve Page access. Check the app's permissions and access level.", code: "META_PAGE_PERMISSION_MISSING", missingPermissions: missing, grantedPermissions: [...granted] });
   try {
-    const result = await metaRequest<{ data?: Array<{ id: string; name: string; access_token: string; instagram_business_account?: { id: string; username?: string } }> }>("me/accounts", decryptSecret(pending.userTokenEncrypted), "GET", { fields: "id,name,access_token,instagram_business_account{id,username}", limit: "100" });
-    return { pages: (result.data ?? []).map(page => ({ id: page.id, name: page.name, instagramUserId: page.instagram_business_account?.id ?? null, instagramUsername: page.instagram_business_account?.username ?? null })) };
+    const pages: Array<{ id: string; name: string; access_token: string; instagram_business_account?: { id: string; username?: string } }> = [];
+    let after: string | undefined;
+    for (let pageNo = 0; pageNo < 10; pageNo++) {
+      const result = await metaRequest<{ data?: typeof pages; paging?: { cursors?: { after?: string }; next?: string } }>(
+        "me/accounts", decryptSecret(pending.userTokenEncrypted), "GET",
+        { fields: "id,name,access_token,instagram_business_account{id,username}", limit: "100", ...(after ? { after } : {}) }
+      );
+      pages.push(...(result.data ?? []));
+      const next = result.paging?.cursors?.after;
+      if (!next || !(result.data?.length)) break;
+      after = next;
+    }
+    if (!pages.length) {
+      return reply.code(200).send({
+        pages: [],
+        diagnostic: {
+          code: "META_NO_ACCESSIBLE_PAGES",
+          message: "Facebook login succeeded, but Meta returned no Pages for this profile.",
+          checks: [
+            "Confirm this Facebook profile has Facebook access with full control or the required Page task access.",
+            "Confirm the Paanagam Page is assigned to this profile in Meta Business Suite.",
+            "During Facebook login, choose Edit access and include the Paanagam Page.",
+            "Check that the app has pages_show_list approved for the current app mode and user role."
+          ],
+          grantedPermissions: [...granted]
+        }
+      });
+    }
+    return { pages: pages.map(page => ({ id: page.id, name: page.name, instagramUserId: page.instagram_business_account?.id ?? null, instagramUsername: page.instagram_business_account?.username ?? null })), diagnostic: { code: "OK", pagesReturned: pages.length, grantedPermissions: [...granted] } };
   } catch (error) {
-    request.log.warn({ error: error instanceof Error ? error.message : "unknown" }, "Meta Page list failed");
-    return reply.code(502).send({ error: error instanceof Error ? error.message : "Could not list Meta Pages" });
+    const message = error instanceof Error ? error.message : "Unknown Meta Graph API error";
+    request.log.warn({ error: message, businessId: business.id }, "Meta Page list failed");
+    return reply.code(502).send({ error: "Meta could not return accessible Pages: " + message, code: "META_PAGE_LIST_FAILED", grantedPermissions: [...granted] });
   }
 });
 
