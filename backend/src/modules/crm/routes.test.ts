@@ -16,7 +16,6 @@ function harness(overrides: Record<string, unknown> = {}) {
     customerConsent: { create: async ({ data }: { data: Record<string, unknown> }) => ({ id: "consent-1", ...data }) },
     customerEvent: { create: async ({ data }: { data: Record<string, unknown> }) => ({ id: "event-1", ...data }), deleteMany: async () => ({ count: 0 }) },
     activityEvent: { create: async ({ data }: { data: Record<string, unknown> }) => ({ id: "audit-1", ...data }) },
-    business: { findFirst: async () => ({ id: "biz-owned", ownerId: "user-1" }), findUnique: async () => ({ customerRetentionMonths: 36 }), update: async ({ data }: { data: Record<string, unknown> }) => data },
     $transaction: async (callback: (tx: any) => unknown) => callback(db)
   };
   Object.assign(db, overrides);
@@ -28,7 +27,6 @@ function harness(overrides: Record<string, unknown> = {}) {
 test("CRM customer list is scoped through the authenticated business owner", async () => {
   let listCalled = false;
   const { app, db, requireUser } = harness({
-    business: { findFirst: async () => null },
     customer: { findMany: async () => { listCalled = true; return []; } }
   });
   await registerCrmRoutes(app, db as unknown as PrismaClient, requireUser as never);
@@ -117,7 +115,6 @@ test("CRM customer deletion requires the exact confirmation phrase", async () =>
 test("CRM retention policy is tenant-scoped and bounded", async () => {
   let updated = 0;
   const { app, db, requireUser } = harness({
-    business: { findFirst: async () => ({ id: "biz-owned", ownerId: "user-1" }), update: async ({ data }: any) => { updated = data.customerRetentionMonths; return { customerRetentionMonths: updated }; } }
   });
   await registerCrmRoutes(app, db as unknown as PrismaClient, requireUser as never);
   const invalid = await app.inject({ method: "PATCH", url: "/v1/businesses/biz-owned/crm-retention", payload: { retentionMonths: 2 } });
