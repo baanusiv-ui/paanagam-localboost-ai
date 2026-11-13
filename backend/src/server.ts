@@ -1840,8 +1840,14 @@ app.post("/v1/businesses/:businessId/meta/page", { preHandler: requireUser }, as
   const pending = await prisma.metaOAuthSession.findUnique({ where: { businessId: business.id } });
   if (!pending || pending.userId !== request.userId || pending.expiresAt <= new Date()) return reply.code(409).send({ error: "Reconnect Meta before selecting a Page." });
   try {
-    const result = await metaRequest<{ data?: Array<{ id: string; name: string; access_token: string; instagram_business_account?: { id: string; username?: string } }> }>("me/accounts", decryptSecret(pending.userTokenEncrypted), "GET", { fields: "id,name,access_token,instagram_business_account{id,username}", limit: "100" });
-    const page = (result.data ?? []).find(item => item.id === body.data.pageId);
+    let page: { id: string; name: string; access_token: string; instagram_business_account?: { id: string; username?: string } } | undefined;
+    let after: string | undefined;
+    for (let pageNo = 0; pageNo < 10 && !page; pageNo++) {
+      const result = await metaRequest<{ data?: Array<{ id: string; name: string; access_token: string; instagram_business_account?: { id: string; username?: string } }>; paging?: { cursors?: { after?: string } } }>("me/accounts", decryptSecret(pending.userTokenEncrypted), "GET", { fields: "id,name,access_token,instagram_business_account{id,username}", limit: "100", ...(after ? { after } : {}) });
+      page = (result.data ?? []).find(item => item.id === body.data.pageId);
+      after = result.paging?.cursors?.after;
+      if (!after || !result.data?.length) break;
+    }
     if (!page?.access_token) return reply.code(403).send({ error: "That Page is not accessible to the connected Meta user." });
     const granted = new Set(pending.scopes.split(" ").filter(Boolean));
     const missingPageScopes = ["pages_show_list", "pages_read_engagement", "pages_manage_posts"].filter(scope => !granted.has(scope));
