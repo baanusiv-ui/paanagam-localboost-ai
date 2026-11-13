@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { generateAiJson } from "./ai-provider.js";
 
 export type ReviewReplyInput = {
   businessName: string;
@@ -9,8 +10,7 @@ export type ReviewReplyInput = {
 };
 
 const replySchema = z.object({ reply: z.string().trim().min(1).max(1200) }).strict();
-const localBaseUrl = () => (process.env.OLLAMA_BASE_URL || "").replace(/\/$/, "");
-const localModel = () => (process.env.OLLAMA_MODEL || "qwen2.5:7b").trim();
+
 
 export function redactReviewPersonalData(value: string) {
   return value
@@ -72,8 +72,9 @@ export async function generateLocalReviewReplyDraft(input: ReviewReplyInput) {
   const parsed = parseReviewReplyOutput(content);
   return {
     ...parsed,
-    provider: "LOCAL_OLLAMA",
-    model,
+    provider: generated.provider,
+    model: generated.model,
+    fallbackUsed: generated.fallbackUsed,
     language: input.language,
     tone: input.tone,
     generatedAt: new Date().toISOString(),
