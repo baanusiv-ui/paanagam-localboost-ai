@@ -17,6 +17,20 @@
   }
   function message(id, text, error = false) { const el=$(id); if(el){el.textContent=text;el.classList.toggle("error",error);} }
   function selectedVideoModel() { return $("poyo-video-mode")?.value === "IMAGE_TO_VIDEO" ? "wan2.2-image-to-video-fast" : "wan2.2-text-to-video-fast"; }
+
+  function syncCreativeFormat(source) {
+    const campaign=$("creative-format"), image=$("poyo-image-size"), video=$("poyo-aspect-ratio");
+    const selected=source==="campaign" ? (campaign?.value==="feed"?"1:1":"9:16") :
+      source==="image" ? image?.value : video?.value;
+    if(!selected)return;
+    if(campaign)campaign.value=selected==="1:1"?"feed":"story";
+    if(image&&["1:1","9:16","16:9"].includes(selected))image.value=selected;
+    if(video&&["1:1","9:16","16:9"].includes(selected))video.value=selected;
+  }
+  $("creative-format")?.addEventListener("change",()=>syncCreativeFormat("campaign"));
+  $("poyo-image-size")?.addEventListener("change",()=>syncCreativeFormat("image"));
+  $("poyo-aspect-ratio")?.addEventListener("change",()=>syncCreativeFormat("video"));
+  syncCreativeFormat("campaign");
   function renderVideoModels() {
     const select=$("poyo-model-id"); if(!select)return;
     const rows=modelCatalogue.filter(m=>m.mediaType==="VIDEO"), selected=selectedVideoModel();

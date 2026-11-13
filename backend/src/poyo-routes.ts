@@ -118,7 +118,7 @@ export function registerPoyoRoutes(app: FastifyInstance, db: PrismaClient, requi
       if (urls.length) input.image_urls = urls;
     } else {
       input.resolution = "480p";
-      if (task.modelId === "wan2.2-text-to-video-fast") input.aspect_ratio = rawInput.aspect_ratio === "16:9" ? "16:9" : "9:16";
+      if (task.modelId === "wan2.2-text-to-video-fast") input.aspect_ratio = ["1:1", "16:9", "9:16"].includes(String(rawInput.aspect_ratio)) ? String(rawInput.aspect_ratio) : "9:16";
       else {
         const urls = Array.isArray(rawInput.image_urls) ? rawInput.image_urls : [];
         if (urls.length < 1 || urls.length > 2 || !urls.every(v => typeof v === "string" && isPublicHttpsUrl(v))) return reply.code(400).send({ error: "Image-to-video needs one or two publicly reachable HTTPS image URLs." });
