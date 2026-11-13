@@ -32,6 +32,10 @@
         <div class="panel-heading"><div><h3>Customer voice · shared Reviews evidence</h3><p>Uses the same imported Google feedback and analysis shown in Reviews. No second review import or unverified customer matching.</p></div><span class="tag" id="crm-voice-source">Reviews workspace</span></div>
         <div id="crm-voice-summary" class="empty-copy">Loading shared review evidence…</div>
       </article>
+      <article class="panel crm-meta-comments" id="crm-meta-comments">
+        <div class="panel-heading"><div><h3>Facebook public comments</h3><p>Imports comments on the connected Page's recent posts. No private messages, author-name matching or replies.</p></div><button class="secondary-button" id="crm-meta-comments-sync" type="button">Import public comments</button></div>
+        <div id="crm-meta-comments-summary" class="empty-copy">Load public comments from the connected Facebook Page.</div>
+      </article>
       <div class="crm-layout">
         <div class="crm-left">
           <article class="panel">
@@ -60,6 +64,7 @@
     main.append(section);
     button.addEventListener("click",show);
     document.addEventListener("click",event=>{if(event.target.closest("[data-view],[data-gi-nav]"))section.classList.add("hidden");},true);
+    $("crm-meta-comments-sync").addEventListener("click",()=>loadMetaComments(true));
     $("crm-create-form").addEventListener("submit",createCustomer);
     $("crm-search-form").addEventListener("submit",event=>{event.preventDefault();loadCustomers(true);});
     $("crm-load-more").addEventListener("click",()=>loadCustomers(false));
@@ -79,7 +84,31 @@
     $("crm-workspace").classList.remove("hidden");
     if($("crumb-title"))$("crumb-title").textContent="Customer CRM";
     if($("page-title"))$("page-title").textContent="Customer CRM";
-    if(businessId){loadCustomers(true);loadRetention();loadCustomerVoice();}
+    if(businessId){loadCustomers(true);loadRetention();loadCustomerVoice();loadMetaComments(false);}
+  }
+  async function loadMetaComments(sync=false){
+    if(!requireWorkspace())return;
+    const target=$("crm-meta-comments-summary"),button=$("crm-meta-comments-sync");
+    if(!target)return;
+    if(sync){button.disabled=true;button.textContent="Importing…";target.textContent="Reading recent public Facebook Page comments…";}
+    else target.textContent="Loading previously imported public comments…";
+    try{
+      if(sync){
+        const result=await api(base()+"/crm/meta-comments/sync",{method:"POST",body:"{}"});
+        target.dataset.lastSync=String(result.imported||0);
+      }
+      const result=await api(base()+"/crm/meta-comments");
+      const comments=result.comments||[];
+      if(!comments.length){
+        target.textContent=sync?"No eligible public comments were returned. Check that the connected Page has recent posts and pages_read_engagement permission.":"No public comments imported yet.";
+        return;
+      }
+      target.innerHTML='<p><strong>'+Number(result.count||0)+' public comments imported</strong></p><ul class="crm-history">'+comments.slice(0,8).map(row=>{
+        const meta=row.metadata&&typeof row.metadata==="object"?row.metadata:{};
+        return '<li><strong>'+esc(String(meta.message||""))+'</strong><small>Facebook · '+new Date(row.occurredAt).toLocaleString()+(meta.postPermalink?' · <a href="'+esc(String(meta.postPermalink))+'" target="_blank" rel="noopener noreferrer">View post</a>':'')+'</small></li>';
+      }).join("")+'</ul><p class="footnote">Comments are stored without author names and remain unlinked from customer profiles. Import is limited to the latest 10 Page posts and up to 50 comments per post.</p>';
+    }catch(error){target.textContent="Meta comments unavailable: "+error.message;}
+    finally{if(button){button.disabled=false;button.textContent="Import public comments";}}
   }
   async function loadCustomerVoice(){
     if(!requireWorkspace())return;
