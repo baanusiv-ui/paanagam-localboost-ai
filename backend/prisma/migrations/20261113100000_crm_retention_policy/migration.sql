@@ -1,1 +1,1 @@
-ALTER TABLE "Business" ADD COLUMN "customerRetentionMonths" INTEGER NOT NULL DEFAULT 36;\n
+ALTER TABLE "Business" ADD COLUMN "customerRetentionMonths" INTEGER NOT NULL DEFAULT 36;
