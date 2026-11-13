@@ -243,7 +243,7 @@
       ].filter(Boolean).join(" ");
       imagePrompt.value=prompt.slice(0,800);
       imagePrompt.dispatchEvent(new Event("input",{bubbles:true}));
-      if(imageSize)imageSize.value=d.format==="feed"?"1:1":d.format==="portrait"?"4:5":"9:16";
+      if(imageSize)imageSize.value=d.format==="feed"?"1:1":d.format==="portrait"?"9:16":"9:16";
       if(resolution)resolution.value="2K";
       const submit=form.querySelector("#poyo-image-save");
       if(!submit)return;
