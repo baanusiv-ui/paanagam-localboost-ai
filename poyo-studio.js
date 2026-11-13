@@ -158,6 +158,15 @@
     if(!root||!engine||root.dataset.guidedStudio==="ready")return;
     const campaign=root.querySelector(".creative-layout");
     const image=document.getElementById("poyo-image-panel");
+    const imageCreate=document.createElement("div");imageCreate.className="panel";
+    const imageHeader=image?.querySelector(".panel-heading");
+    const imageForm=image?.querySelector("#poyo-image-form");
+    const imageMessage=document.getElementById("poyo-image-message");
+    if(imageHeader)imageCreate.append(imageHeader);if(imageForm)imageCreate.append(imageForm);if(imageMessage)imageCreate.append(imageMessage);
+    const imageJobsPanel=document.createElement("div");imageJobsPanel.className="panel";
+    const imageJobsHeader=image?.querySelector(".panel-heading");
+    const imageJobsList=document.getElementById("poyo-image-task-list");
+    if(imageJobsHeader)imageJobsPanel.append(imageJobsHeader);if(imageJobsList)imageJobsPanel.append(imageJobsList);
     const videoForm=engine.querySelector("#poyo-draft-form")?.closest(".panel");
     const imageJobs=image?.querySelector("#poyo-image-task-list")?.closest(".panel-heading")?.parentElement;
     const videoJobs=document.getElementById("poyo-task-list")?.closest(".panel");
@@ -174,7 +183,7 @@
     panes.className="lb-studio-panes";
     const specs=[
       ["campaign","Campaign post",campaign],
-      ["image","Create image",image],
+      ["image","Create image",imageCreate],
       ["video","Create video",videoForm],
       ["library","Saved work",null],
       ["settings","Connections",null]
@@ -217,7 +226,6 @@
     library.append(savedCopy);
     const creativeLibrary=campaign.querySelector("#creative-library")?.closest(".panel");
     if(creativeLibrary)library.append(creativeLibrary);
-    const imageJobsPanel=image.querySelector("#poyo-image-task-list")?.closest(".panel");
     if(imageJobsPanel)library.append(imageJobsPanel);
     library.append(videoJobs);
 
@@ -228,6 +236,7 @@
     settings.append(settingsCopy);
     if(integrations)settings.append(integrations);
     if(meta)settings.append(meta);
+    settings.append(advanced);
 
     /* Move the existing content into one simple navigation without cloning IDs. */
     const heading=root.querySelector(".section-heading");
