@@ -134,7 +134,7 @@ export function registerPoyoRoutes(app: FastifyInstance, db: PrismaClient, requi
         select: { id: true, status: true, modelId: true, estimatedCredits: true, submittedAt: true }
       });
       await db.activityEvent.create({
-        data: { businessId: business.id, actorUserId: request.userId, eventType: isImage ? "POYO_IMAGE_SUBMITTED" : "POYO_VIDEO_SUBMITTED", entityType: isImage ? "POYO_IMAGE" : "POYO_VIDEO", entityId: task.id, summary: isImage ? "Owner submitted a Nano Banana 2.1 image generation job" : "Owner submitted a Wan 2.2 Fast video generation job", metadata: { modelId: task.modelId, resolution: isImage ? input.resolution : "480p", estimatedCredits: task.estimatedCredits } }
+        data: { businessId: business.id, actorUserId: request.userId, eventType: isImage ? "POYO_IMAGE_SUBMITTED" : "POYO_VIDEO_SUBMITTED", entityType: isImage ? "POYO_IMAGE" : "POYO_VIDEO", entityId: task.id, summary: isImage ? "Owner submitted a Nano Banana 2.1 image generation job" : "Owner submitted a Wan 2.2 Fast video generation job", metadata: { modelId: task.modelId, resolution: isImage ? (typeof rawInput.resolution === "string" && ["1K", "2K", "4K"].includes(rawInput.resolution) ? rawInput.resolution : "2K") : "480p", estimatedCredits: task.estimatedCredits } }
       });
       return reply.code(202).send({ task: updated, providerTaskId: submitted.taskId, estimatedCredits: task.estimatedCredits, resolution: input.resolution, message: "Generation submitted. Final output is not approved or published." });
     } catch (error) {
