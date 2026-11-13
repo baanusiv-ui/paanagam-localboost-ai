@@ -110,26 +110,34 @@ export async function getLocalAiStatus() {
 }
 
 export async function generateLocalConsultant(report: IntelligenceReport, language: "Tamil" | "English" | "Tamil + English") {
-  const baseUrl = localBaseUrl();
-  const model = localModel();
-  if (!baseUrl) throw new Error("Local AI is not configured. Set OLLAMA_BASE_URL in backend/.env and restart the API.");
-  const messages = buildConsultantMessages(report, language);
-  const response = await fetch(baseUrl + "/api/chat", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      model,
-      messages,
-      stream: false,
-      format: "json",
-      options: { temperature: 0.2 }
-    }),
-    signal: AbortSignal.timeout(60000)
+  const generated = await generateAiJson({
+    task: "growth-consultant",
+    messages: buildConsultantMessages(report, language),
+    temperature: 0.2,
+    maxOutputTokens: 900,
+    responseSchema: {
+      type: "OBJECT",
+      properties: {
+        executiveSummary: { type: "STRING" },
+        recommendations: {
+          type: "ARRAY",
+          items: {
+            type: "OBJECT",
+            properties: {
+              title: { type: "STRING" },
+              priority: { type: "STRING", enum: ["HIGH", "MEDIUM", "INFO"] },
+              action: { type: "STRING" },
+              reason: { type: "STRING" },
+              evidenceIds: { type: "ARRAY", items: { type: "STRING" } },
+              confidence: { type: "STRING", enum: ["HIGH", "MEDIUM", "LOW"] }
+            },
+            required: ["title", "priority", "action", "reason", "evidenceIds", "confidence"]
+          }
+        }
+      },
+      required: ["executiveSummary", "recommendations"]
+    }
   });
-  const data = await response.json() as { message?: { content?: string }; error?: string };
-  if (!response.ok) throw new Error(data.error || "Local Ollama request failed with HTTP " + response.status);
-  const content = data.message?.content;
-  if (!content) throw new Error("Local AI returned an empty response. Try again or check the model.");
   const allowedIds = report.insights.flatMap(item => item.evidence.recordIds);
   const result = parseConsultantOutput(generated.raw, allowedIds);
   return {
