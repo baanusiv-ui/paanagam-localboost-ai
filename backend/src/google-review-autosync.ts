@@ -150,6 +150,34 @@ async function syncBusiness(business: {
         create: { businessId: business.id, recordType: "REVIEW_ITEM", externalId, payload: payload as Prisma.InputJsonValue, source: "GOOGLE_API", recordedAt },
         update: { payload: payload as Prisma.InputJsonValue, source: "GOOGLE_API", recordedAt }
       });
+      // CRM receives a review activity without linking it to a customer. Google review
+      // display names are intentionally not retained or matched to POS identities.
+      await prisma.customerEvent.upsert({
+        where: { businessId_source_externalId: { businessId: business.id, source: "GOOGLE_BUSINESS_PROFILE", externalId } },
+        create: {
+          businessId: business.id,
+          customerId: null,
+          eventType: "REVIEW_SUBMITTED",
+          source: "GOOGLE_BUSINESS_PROFILE",
+          externalId,
+          occurredAt: recordedAt,
+          metadata: {
+            rating: item.rating,
+            reviewText: item.reviewText,
+            reviewSource: "Google Business Profile",
+            provenance: "GOOGLE_API"
+          } as Prisma.InputJsonValue
+        },
+        update: {
+          occurredAt: recordedAt,
+          metadata: {
+            rating: item.rating,
+            reviewText: item.reviewText,
+            reviewSource: "Google Business Profile",
+            provenance: "GOOGLE_API"
+          } as Prisma.InputJsonValue
+        }
+      });
     }
     await writeStatus(prisma, business.id, {
       status: "SUCCESS", checkedAt: importedAt.toISOString(), importedCount: unique.length,
