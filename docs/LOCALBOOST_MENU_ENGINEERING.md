@@ -27,3 +27,6 @@ The authenticated business-scoped `GET /v1/businesses/:businessId/menu-sales-int
 2. Customer cohort analysis using privacy-safe aggregate POS data.
 3. Review-to-menu issue correlation with human verification and approved recipe facts.
 4. Campaign attribution using measured results rather than inferred lift.
+
+## Date filter behavior
+Records with an explicit `date` or `business_date` field use that business date. Snapshot records without either field use their saved `recordedAt` date; choose an unfiltered range when comparing the latest menu snapshot with a longer sales period.
