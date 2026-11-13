@@ -205,18 +205,26 @@
     const videoForm=engine.querySelector("#poyo-draft-form")?.closest(".panel");
     const videoPrompt=videoForm?.querySelector("#poyo-prompt");
     const outputType=document.getElementById("creative-output-type");
-    const routeCampaignOutput=()=>{
+    const routeCampaignOutput=(activate=false)=>{
       if(!campaignPreview)return;
       const target=outputType?.value==="video"&&videoForm?videoForm:imageCreate;
       const title=target===videoForm?videoOutputTitle:imageOutputTitle;
       target.append(title,campaignPreview);
       campaignPreview.hidden=campaignPreview.classList.contains("hidden");
       campaignPreview.classList.toggle("lb-video-campaign-output",target===videoForm);
+      /* After a successful copy-generation submit, open the destination tab.
+         The preview remains in the selected pane; this makes the move visible
+         instead of leaving the result inside a hidden tab. */
+      if(activate){
+        const destination=target===videoForm?"Create video":"Create image";
+        const tab=[...root.querySelectorAll(".lb-studio-tab")].find(button=>button.textContent===destination);
+        if(tab)tab.click();
+      }
     };
-    if(outputType)outputType.addEventListener("change",routeCampaignOutput);
+    if(outputType)outputType.addEventListener("change",()=>routeCampaignOutput(false));
     if(campaignForm){
       campaignForm.addEventListener("submit",()=>{
-        window.setTimeout(routeCampaignOutput,0);
+        window.setTimeout(()=>routeCampaignOutput(true),0);
       });
     }
     routeCampaignOutput();
