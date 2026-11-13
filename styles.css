@@ -233,3 +233,9 @@ footer{padding:36px 0 24px}
 #content-view .lb-studio-pane .lb-video-campaign-output #creative-image-save,
 #content-view .lb-studio-pane .lb-video-campaign-output #creative-asset-url,
 #content-view .lb-studio-pane .lb-video-campaign-output #creative-save{display:none!important}
+
+/* AI provider connection status in the persistent sidebar footer. */
+.ai-status-card .status-dot{background:#d69b57}
+.ai-status-card.ai-ready .status-dot{background:#63bd83;box-shadow:0 0 0 3px rgba(99,189,131,.12)}
+.ai-status-card.ai-warning .status-dot{background:#df9a55}
+.ai-status-card small{line-height:1.35}
