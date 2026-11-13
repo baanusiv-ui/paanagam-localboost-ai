@@ -6,7 +6,7 @@ import { registerCrmRoutes } from "./routes.js";
 
 function harness(overrides: Record<string, unknown> = {}) {
   const db = {
-    business: { findFirst: async () => ({ id: "biz-owned", ownerId: "user-1" }) },
+    business: { findFirst: async () => ({ id: "biz-owned", ownerId: "user-1" }), findUnique: async () => ({ customerRetentionMonths: 36 }), update: async ({ data }: { data: Record<string, unknown> }) => data },
     customer: {
       findMany: async () => [],
       create: async ({ data }: { data: Record<string, unknown> }) => ({ id: "cus-1", ...data }),
@@ -14,8 +14,10 @@ function harness(overrides: Record<string, unknown> = {}) {
       update: async ({ data }: { data: Record<string, unknown> }) => ({ id: "cus-1", ...data })
     },
     customerConsent: { create: async ({ data }: { data: Record<string, unknown> }) => ({ id: "consent-1", ...data }) },
-    customerEvent: { create: async ({ data }: { data: Record<string, unknown> }) => ({ id: "event-1", ...data }), deleteMany: async () => ({ count: 0 }) },\n    activityEvent: { create: async ({ data }: { data: Record<string, unknown> }) => ({ id: "audit-1", ...data }) },
-    business: { findFirst: async () => ({ id: "biz-owned", ownerId: "user-1" }), findUnique: async () => ({ customerRetentionMonths: 36 }), update: async ({ data }: { data: Record<string, unknown> }) => data },\n    $transaction: async (callback: (tx: any) => unknown) => callback(db)
+    customerEvent: { create: async ({ data }: { data: Record<string, unknown> }) => ({ id: "event-1", ...data }), deleteMany: async () => ({ count: 0 }) },
+    activityEvent: { create: async ({ data }: { data: Record<string, unknown> }) => ({ id: "audit-1", ...data }) },
+    business: { findFirst: async () => ({ id: "biz-owned", ownerId: "user-1" }), findUnique: async () => ({ customerRetentionMonths: 36 }), update: async ({ data }: { data: Record<string, unknown> }) => data },
+    $transaction: async (callback: (tx: any) => unknown) => callback(db)
   };
   Object.assign(db, overrides);
   const app = Fastify();
