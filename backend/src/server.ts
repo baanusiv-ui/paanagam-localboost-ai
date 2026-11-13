@@ -1917,11 +1917,29 @@ app.post("/v1/businesses/:businessId/social-posts", { preHandler: requireUser, c
     if (!asset) return reply.code(404).send({ error: "Creative image not found in this business workspace." });
     if (body.data.channel === "INSTAGRAM" && !["image/jpeg", "image/png"].includes(asset.mimeType)) return reply.code(415).send({ error: "Instagram image publishing currently accepts JPEG or PNG artwork." });
   }
-  const post = await prisma.socialPost.upsert({
-    where: { businessId_channel_sourceDraftId: { businessId: business.id, channel: body.data.channel, sourceDraftId: body.data.sourceDraftId } },
-    create: { businessId: business.id, channel: body.data.channel, sourceDraftId: body.data.sourceDraftId, caption: body.data.caption, assetId: body.data.assetId ?? null },
-    update: {}
-  });
+  const uniquePost = { businessId_channel_sourceDraftId: { businessId: business.id, channel: body.data.channel, sourceDraftId: body.data.sourceDraftId } };
+  const existing = await prisma.socialPost.findUnique({ where: uniquePost });
+  let post;
+  if (existing) {
+    if (["APPROVED", "PUBLISHING", "RECONCILIATION_REQUIRED", "PUBLISHED"].includes(existing.status)) {
+      return reply.code(409).send({ error: "This campaign already has an approved or published post. Create a new campaign revision instead of changing the approved content." });
+    }
+    const changed = await prisma.socialPost.updateMany({
+      where: { id: existing.id, businessId: business.id, status: { in: ["DRAFT", "REJECTED", "FAILED"] } },
+      data: { caption: body.data.caption, assetId: body.data.assetId ?? null, status: "DRAFT", approvedAt: null, approvedByUserId: null, publishError: null }
+    });
+    if (!changed.count) return reply.code(409).send({ error: "This post changed while it was being saved. Reload the approval queue and try again." });
+    post = await prisma.socialPost.findUniqueOrThrow({ where: { id: existing.id } });
+  } else {
+    try {
+      post = await prisma.socialPost.create({
+        data: { businessId: business.id, channel: body.data.channel, sourceDraftId: body.data.sourceDraftId, caption: body.data.caption, assetId: body.data.assetId ?? null }
+      });
+    } catch (error) {
+      if ((error as { code?: string })?.code === "P2002") return reply.code(409).send({ error: "A post for this campaign and channel was created concurrently. Reload the approval queue." });
+      throw error;
+    }
+  }
   await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "SOCIAL_DRAFT_CREATED", entityType: "SOCIAL_POST", entityId: post.id, summary: "Social post draft added to the approval centre", metadata: { channel: post.channel, hasImage: Boolean(post.assetId) } });
   return reply.code(201).send({ post });
 });
@@ -1979,6 +1997,7 @@ app.post("/v1/businesses/:businessId/social-posts/:postId/publish", { preHandler
   const claimed = await prisma.socialPost.updateMany({ where: { id: post.id, businessId: business.id, status: "APPROVED" }, data: { status: "PUBLISHING", publishError: null } });
   if (!claimed.count) return reply.code(409).send({ error: "This post is already being processed or is no longer approved." });
   let shareToken: string | null = null;
+  let metaPublishAttempted = false;
   try {
     let externalPostId = "";
     const accessToken = decryptSecret(connection.pageAccessTokenEncrypted);
@@ -1988,10 +2007,11 @@ app.post("/v1/businesses/:businessId/social-posts/:postId/publish", { preHandler
     }
     if (post.channel === "FACEBOOK") {
       const result: { id?: string; post_id?: string } = post.asset
-        ? await metaRequest<{ id?: string; post_id?: string }>(connection.pageId + "/photos", accessToken, "POST", { url: env.META_PUBLIC_API_BASE_URL.replace(/\/$/, "") + "/v1/meta/media/" + shareToken, caption: post.caption, published: "true" })
-        : await metaRequest<{ id?: string; post_id?: string }>(connection.pageId + "/feed", accessToken, "POST", { message: post.caption });
+        ? (metaPublishAttempted = true, await metaRequest<{ id?: string; post_id?: string }>(connection.pageId + "/photos", accessToken, "POST", { url: env.META_PUBLIC_API_BASE_URL.replace(/\/$/, "") + "/v1/meta/media/" + shareToken, caption: post.caption, published: "true" }))
+        : (metaPublishAttempted = true, await metaRequest<{ id?: string; post_id?: string }>(connection.pageId + "/feed", accessToken, "POST", { message: post.caption }));
       externalPostId = result.post_id || result.id || "";
     } else {
+      metaPublishAttempted = true;
       const container = await metaRequest<{ id?: string }>(connection.instagramUserId + "/media", accessToken, "POST", { image_url: env.META_PUBLIC_API_BASE_URL.replace(/\/$/, "") + "/v1/meta/media/" + shareToken, caption: post.caption });
       if (!container.id) throw new Error("Meta did not return an Instagram media container id.");
       let ready = false;
@@ -2007,18 +2027,26 @@ app.post("/v1/businesses/:businessId/social-posts/:postId/publish", { preHandler
       externalPostId = published.id || "";
     }
     if (!externalPostId) throw new Error("Meta did not return a published post identifier.");
-    const updated = await prisma.socialPost.update({ where: { id: post.id }, data: { status: "PUBLISHED", externalPostId, publishedAt: new Date(), publishError: null } });
+    let permalinkUrl: string | null = null;
     try {
-      await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "SOCIAL_POST_PUBLISHED", entityType: "SOCIAL_POST", entityId: post.id, summary: "Owner-triggered social post published through Meta", metadata: { channel: post.channel, externalPostId } });
+      const details = await metaRequest<{ permalink_url?: string }>(externalPostId, accessToken, "GET", { fields: "permalink_url" });
+      if (typeof details.permalink_url === "string" && /^https:\/\//i.test(details.permalink_url)) permalinkUrl = details.permalink_url;
+    } catch (lookupError) {
+      request.log.warn({ error: lookupError instanceof Error ? lookupError.message : "unknown", externalPostId }, "Meta permalink lookup unavailable after successful publish");
+    }
+    const updated = await prisma.socialPost.update({ where: { id: post.id }, data: { status: "PUBLISHED", externalPostId, permalinkUrl, publishedAt: new Date(), publishError: null } });
+    try {
+      await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "SOCIAL_POST_PUBLISHED", entityType: "SOCIAL_POST", entityId: post.id, summary: "Owner-triggered social post published through Meta", metadata: { channel: post.channel, externalPostId, permalinkUrl } });
     } catch (auditError) {
       request.log.error({ error: auditError instanceof Error ? auditError.message : "unknown", postId: post.id }, "Social publish activity event could not be recorded");
     }
     return { post: updated, published: true };
   } catch (error) {
     const reason = error instanceof Error ? error.message : "Meta publishing failed";
-    await prisma.socialPost.update({ where: { id: post.id }, data: { status: "FAILED", publishError: reason.slice(0, 500) } });
-    await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: "SOCIAL_POST_PUBLISH_FAILED", entityType: "SOCIAL_POST", entityId: post.id, summary: "Meta publishing failed; owner action is required to retry", metadata: { channel: post.channel, reason: reason.slice(0, 240) } });
-    return reply.code(502).send({ error: reason });
+    const finalStatus = metaPublishAttempted ? "RECONCILIATION_REQUIRED" : "FAILED";
+    await prisma.socialPost.update({ where: { id: post.id }, data: { status: finalStatus, publishError: (metaPublishAttempted ? "Meta may have accepted this post. Do not retry until the Page is checked. " : "") + reason.slice(0, 400) } });
+    await recordActivity({ businessId: business.id, actorUserId: request.userId!, eventType: metaPublishAttempted ? "SOCIAL_POST_RECONCILIATION_REQUIRED" : "SOCIAL_POST_PUBLISH_FAILED", entityType: "SOCIAL_POST", entityId: post.id, summary: metaPublishAttempted ? "Meta publish outcome is uncertain; manual reconciliation is required before retry" : "Meta publishing failed before an external publish attempt", metadata: { channel: post.channel, reason: reason.slice(0, 240), retrySafe: !metaPublishAttempted } });
+    return reply.code(502).send({ error: reason, status: finalStatus, retrySafe: !metaPublishAttempted });
   } finally {
     if (shareToken) await prisma.metaMediaShare.deleteMany({ where: { token: shareToken } });
   }
