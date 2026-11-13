@@ -52,9 +52,9 @@ export const POYO_MODEL_CATALOGUE: PoyoModelDefinition[] = [
     useCases: ["Paanagam campaign artwork", "product visuals", "reference-image editing"],
     resolutions: ["1K", "2K", "4K"],
     estimatedCredits: 2,
-    schemaVerified: false,
+    schemaVerified: true,
     priceVerified: true,
-    enabledForGeneration: false
+    enabledForGeneration: true
   },
   {
     id: "gpt-image-2",
