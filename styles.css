@@ -222,3 +222,14 @@ footer{padding:36px 0 24px}
 #content-view .lb-use-campaign-brief{width:100%;margin:0 0 10px;min-height:42px}
 #content-view #creative-preview .creative-provider-comparison{grid-template-columns:minmax(0,1fr)!important}
 @media(min-width:900px){#content-view #creative-preview .creative-provider-comparison{grid-template-columns:minmax(0,1fr)!important}}
+
+/* Campaign output selector and selected-workflow presentation */
+#content-view .lb-campaign-output-choice{display:block;margin:12px 0}
+#content-view .lb-campaign-output-choice select{display:block;width:100%;margin-top:6px}
+#content-view .lb-studio-pane .lb-video-campaign-output .form-actions,
+#content-view .lb-studio-pane .lb-video-campaign-output .creative-provider-comparison,
+#content-view .lb-studio-pane .lb-video-campaign-output #creative-provider-metrics,
+#content-view .lb-studio-pane .lb-video-campaign-output #creative-image-download,
+#content-view .lb-studio-pane .lb-video-campaign-output #creative-image-save,
+#content-view .lb-studio-pane .lb-video-campaign-output #creative-asset-url,
+#content-view .lb-studio-pane .lb-video-campaign-output #creative-save{display:none!important}
