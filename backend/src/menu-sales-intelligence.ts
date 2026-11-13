@@ -1,6 +1,6 @@
 export type MenuSalesRecord = { id: string; recordType: "MENU_ITEM" | "DAILY_SALES"; payload: Record<string, unknown>; recordedAt: Date | string; source?: string };
 const number = (value: unknown): number | null => { if (value === null || value === undefined || value === "") return null; const n = Number(value); return Number.isFinite(n) && n >= 0 ? n : null; };
-const dateText = (value: unknown, fallback: Date | string): string => { const raw = typeof value === "string" && /^\\d{4}-\\d{2}-\\d{2}$/.test(value) ? value : fallback; const d = new Date(raw); return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0,10); };
+const dateText = (value: unknown, fallback: Date | string): string => { const raw = typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : fallback; const d = new Date(raw); return Number.isNaN(d.getTime()) ? "" : d.toISOString().slice(0,10); };
 const money = (n: number) => Math.round(n * 100) / 100;
 
 type MenuAccumulator = { name: string; units: number; grossSales: number | null; contributionTotal: number | null; pricedUnits: number; costedUnits: number; records: string[] };
