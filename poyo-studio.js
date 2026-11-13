@@ -121,9 +121,11 @@
       if(urls.length>10||!urls.every(v=>/^https:\/\//i.test(v)))throw new Error("Use up to 10 publicly accessible HTTPS reference URLs.");
       const modelInput={size:$("poyo-image-size").value,resolution,...(urls.length?{image_urls:urls}:{})};
       const result=await api(base()+"/poyo/tasks",{method:"POST",body:JSON.stringify({mediaType:"IMAGE",modelId:"nano-banana-2.1",prompt,modelInput})});
-      $("poyo-image-prompt").value="";$("poyo-image-refs").value="";
-      await loadTasks();message("poyo-image-message","Image draft saved. Estimated "+(result.task?.estimatedCredits??(resolution==="1K"?4:resolution==="4K"?10:6))+" credits. No PoYo request was sent and no credits were used.");
-    }catch(err){message("poyo-image-message","Could not save image draft: "+err.message,true);}finally{button.disabled=false;}
+      const keepPrompt=$("poyo-image-form")?.dataset.keepPromptAfterSave === "true";
+      if(!keepPrompt){$("poyo-image-prompt").value="";$("poyo-image-refs").value="";}
+      if($("poyo-image-form")) delete $("poyo-image-form").dataset.keepPromptAfterSave;
+      await loadTasks();message("poyo-image-message","Image draft saved. The campaign prompt remains visible for review. Estimated "+(result.task?.estimatedCredits??(resolution==="1K"?4:resolution==="4K"?10:6))+" credits. No PoYo request was sent and no credits were used.");
+    }catch(err){if($("poyo-image-form")) delete $("poyo-image-form").dataset.keepPromptAfterSave;message("poyo-image-message","Could not save image draft: "+err.message,true);}finally{button.disabled=false;}
   });
   async function handleTaskAction(e){
     const button=e.target.closest("button");if(!button)return;
@@ -247,6 +249,8 @@
       if(resolution)resolution.value="2K";
       const submit=form.querySelector("#poyo-image-save");
       if(!submit)return;
+      /* Preserve the transferred prompt in the editor after the no-cost draft is saved. */
+      form.dataset.keepPromptAfterSave="true";
       submit.disabled=true;
       try{
         if(typeof form.requestSubmit==="function")form.requestSubmit(submit);else submit.click();
