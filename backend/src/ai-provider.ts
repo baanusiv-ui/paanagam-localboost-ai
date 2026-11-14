@@ -17,7 +17,7 @@ type GenerateOptions = {
 const cloudBaseUrl = "https://ollama.com";
 const cloudModel = () => (process.env.OLLAMA_CLOUD_MODEL || "glm-5.3-flash").trim();
 const localBaseUrl = () => (process.env.OLLAMA_BASE_URL || "").replace(/\/$/, "");
-const localModel = () => (process.env.OLLAMA_MODEL || "qwen2.5:7b").trim();
+const localModel = () => (process.env.OLLAMA_MODEL || "qwen3.5:4b").trim();
 const geminiModel = () => (process.env.GEMINI_TEXT_MODEL || "gemini-3.1-flash-lite").trim();
 const geminiFallbackEnabled = () => process.env.GEMINI_FALLBACK_ENABLED?.trim().toLowerCase() === "true";
 
