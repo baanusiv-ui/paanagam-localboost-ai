@@ -14,9 +14,9 @@ const input = {
 test("local social content prompt carries supplied evidence and forbids invented facts", () => {
   const messages = buildLocalSocialContentMessages(input);
   assert.equal(messages.length, 2);
-  assert.match(messages[0].content, /Never invent prices/);
+  assert.match(messages[0]!.content, /Never invent prices/);
   assert.match(messages[0].content, /Tamil \+ English/);
-  const payload = JSON.parse(messages[1].content);
+  const payload = JSON.parse(messages[1]!.content);
   assert.equal(payload.businessName, "Paanagam");
   assert.equal(payload.evidence, input.evidence);
 });
