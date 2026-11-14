@@ -287,45 +287,7 @@
         imagePrompt.dispatchEvent(new Event("input",{bubbles:true}));
       }
     };
-    window.addEventListener("localboost:poyo-asset-selected",async event=>{
-      const assetId=String(event.detail?.assetId||"").trim();
-      if(!assetId||!campaignPreview)return;
-      const messageNode=document.getElementById("creative-message");
-      try{
-        if(messageNode)messageNode.textContent="Loading selected PoYo image into this campaign…";
-        const response=await fetch(API()+"/v1/businesses/"+encodeURIComponent(businessId())+"/poyo/assets/"+encodeURIComponent(assetId)+"/content",{headers:{authorization:"Bearer "+token()}});
-        if(!response.ok)throw new Error("Could not load the selected image ("+response.status+").");
-        const blob=await response.blob();
-        if(!["image/png","image/jpeg","image/webp"].includes(blob.type))throw new Error("The selected asset is not a supported image.");
-        const oldUrl=campaignPreview.dataset.poyoObjectUrl;
-        if(oldUrl)URL.revokeObjectURL(oldUrl);
-        const objectUrl=URL.createObjectURL(blob);
-        campaignPreview.dataset.poyoObjectUrl=objectUrl;
-        let preview=document.getElementById("creative-poyo-image-preview");
-        if(!preview){
-          preview=document.createElement("img");
-          preview.id="creative-poyo-image-preview";
-          preview.alt="Selected PoYo campaign artwork";
-          preview.style.cssText="display:block;width:100%;max-height:520px;object-fit:contain;border-radius:12px;margin:12px 0;background:#f3f0e9";
-          const heading=[...campaignPreview.querySelectorAll("h4")].find(node=>/image|artwork/i.test(node.textContent));
-          if(heading)heading.insertAdjacentElement("afterend",preview);else campaignPreview.prepend(preview);
-        }
-        preview.src=objectUrl;
-        const download=document.getElementById("creative-image-download");
-        if(download){
-          download.disabled=false;
-          download.onclick=()=>{const a=document.createElement("a");a.href=objectUrl;a.download="paanagam-campaign-artwork."+({ "image/jpeg":"jpg","image/webp":"webp","image/png":"png"}[blob.type]||"png");a.click();};
-        }
-        const assetUrl=document.getElementById("creative-asset-url");
-        if(assetUrl)assetUrl.value=API()+"/v1/businesses/"+encodeURIComponent(businessId())+"/poyo/assets/"+encodeURIComponent(assetId)+"/content";
-        campaignPreview.classList.remove("hidden");
-        campaignPreview.hidden=false;
-        if(messageNode)messageNode.textContent="PoYo image attached to this campaign. Review the artwork and caption before saving; nothing has been published.";
-        routeCampaignOutput(true);
-      }catch(error){
-        if(messageNode)messageNode.textContent="Could not use this image in the campaign: "+error.message;
-      }
-    });
+    /* PoYo image selection is handled once by Campaign Studio. */
     routeCampaignOutput();
     if(campaignPreview&&typeof MutationObserver!=="undefined"){
       const previewObserver=new MutationObserver(()=>{routeCampaignOutput();});
