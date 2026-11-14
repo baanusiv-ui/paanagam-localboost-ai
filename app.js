@@ -47,7 +47,7 @@
     });
     $("#crumb-title").textContent = titles[name];
     $("#page-title").textContent = name === "overview" ? "Good morning, Paanagam" : titles[name];
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: "instant" });
   }
 
   function setConnectionState(connected, label) {
