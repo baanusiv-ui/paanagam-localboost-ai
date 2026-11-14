@@ -119,7 +119,7 @@
     e.preventDefault();const button=$("poyo-image-save");if(!button)return;button.disabled=true;
     try{
       const prompt=$("poyo-image-prompt").value.trim(),resolution=$("poyo-image-resolution").value;
-      if(!prompt||prompt.length>800)throw new Error("Enter an image prompt of up to 800 characters.");
+      if(!prompt||prompt.length>4000)throw new Error("Image prompt must be between 1 and 4,000 characters.");
       const urls=$("poyo-image-refs").value.split(/\r?\n/).map(v=>v.trim()).filter(Boolean);
       if(urls.length>10||!urls.every(v=>/^https:\/\//i.test(v)))throw new Error("Use up to 10 publicly accessible HTTPS reference URLs.");
       const modelInput={size:$("poyo-image-size").value,resolution,...(urls.length?{image_urls:urls}:{})};
@@ -237,47 +237,56 @@
         window.setTimeout(()=>routeCampaignOutput(true),0);
       });
     }
+    const buildPaanagamImagePrompt = (d={}) => {
+      const topic=String(d.topic||"Paanagam café campaign").trim();
+      const brief=String(d.designerBrief||d.brief||"").trim();
+      const headline=String(d.headline||"").trim();
+      const facts=String(d.offer||"").trim();
+      const caption=String(d.caption||"").trim();
+      const coffee=/coffee|filter|காபி|காபியும்/i.test(topic+" "+brief);
+      const lines=[
+        "Create a premium, photorealistic commercial food-and-beverage campaign photograph for PAANAGAM (பானகம்), an authentic South Indian café.",
+        "CAMPAIGN SUBJECT: "+topic+".",
+        headline?"CAMPAIGN CREATIVE DIRECTION (not text to render): "+headline:"",
+        brief?"ART DIRECTION: "+brief:"",
+        coffee?"HERO SUBJECT: One authentic South Indian stainless-steel filter-coffee tumbler with matching dabarah, filled with freshly brewed filter coffee. Show a realistic coffee surface, delicate natural steam and true-to-life stainless-steel reflections. Keep the tumbler and dabarah correctly shaped, proportional, clean and fully visible.":"HERO SUBJECT: Depict only the exact product, food or experience specified in the campaign brief. Preserve realistic proportions, ingredients, serving ware and material textures. Do not add unmentioned products or props.",
+        "COMPOSITION: Vertical 9:16 portrait social creative. Professional three-quarter close-up at natural table height. One clear hero subject, visually dominant and tack-sharp. Place the subject around the central-lower area with balanced breathing room around it. Keep all important objects fully inside the frame; no accidental cropping. Use deliberate foreground, middle-ground and softly separated background.",
+        "CAMERA: Premium full-frame commercial food photography, 50mm or 85mm lens perspective, natural optical depth of field, crisp fine detail on the hero subject, realistic perspective and no wide-angle distortion.",
+        "LIGHTING: Soft directional early-morning window light from one side, warm natural highlights, controlled shadows, accurate white balance, subtle atmospheric depth and physically realistic reflections. Steam, if present, must look delicate and natural, never exaggerated.",
+        "PAANAGAM ART DIRECTION: Warm mustard-yellow accents, warm ivory, dark walnut and restrained earthy tones. Welcoming, authentic South Indian café mood; premium but approachable for a Tamil Nadu neighbourhood audience. Use understated rustic café context, never a cluttered set.",
+        "BACKGROUND: Tasteful café environment softly out of focus. Keep it quiet and low contrast so it cannot compete with the hero subject. No unrelated objects, busy patterns or distracting signage.",
+        "IMAGE QUALITY: Extremely crisp, high-detail, photorealistic commercial advertising image; realistic food texture, metal, liquid, light and shadow; clean professional retouching; natural colour grading; balanced exposure; high dynamic range; 2K output.",
+        "LAYOUT RULE: Do not render any words, letters, Tamil or English typography, captions, slogans, prices, offers, dates, logos, badges, watermarks, labels or UI. Leave clean negative space for LocalBoost to add approved brand text later as editable design layers.",
+        "STRICT NEGATIVE INSTRUCTIONS: No people, hands or faces unless explicitly requested in the brief; no duplicate cups or products; no malformed utensils; no floating objects; no extra ingredients; no fake brand marks; no cartoon, illustration, 3D render, plastic CGI appearance, oversharpening, artificial steam, blur on the hero subject, distorted geometry or invented claims.",
+        facts?"VERIFIED CAMPAIGN FACTS FOR CONTEXT ONLY (do not render as text or invent beyond these): "+facts:"",
+        caption?"SEPARATE SOCIAL CAPTION CONTEXT — NOT IMAGE TEXT; do not write or render this caption in the image: "+caption:"",
+        "FINAL INTENT: A single striking, authentic, premium Paanagam campaign photograph that looks captured by an experienced professional food-advertising photographer."
+      ].filter(Boolean);
+      return lines.join("\n\n");
+    };
     window.addEventListener("localboost:campaign-copy-ready",async event=>{
       const d=event.detail||{}, imagePrompt=document.getElementById("poyo-image-prompt"), imageSize=document.getElementById("poyo-image-size"), resolution=document.getElementById("poyo-image-resolution"), form=document.getElementById("poyo-image-form");
       if(!imagePrompt||!form||!d.topic)return;
-      const prompt=[
-        "Create a photorealistic South Indian café campaign image for PAANAGAM (பானகம்).",
-        "Campaign: "+d.topic,
-        d.headline?"Headline direction: "+d.headline:"",
-        d.designerBrief?"Creative brief: "+d.designerBrief:"",
-        d.caption?"Campaign message context: "+d.caption:"",
-        d.offer?"Verified details only: "+d.offer:"",
-        "Visual style: authentic South Indian filter coffee experience, traditional stainless-steel tumbler and davara where relevant, warm natural café lighting, mustard yellow, warm ivory and dark walnut palette, welcoming premium local café atmosphere.",
-        "Composition: strong hero subject, clean uncluttered layout, vertical social-media composition with negative space for readable Tamil brand typography.",
-        "Do not invent prices, discounts, dates, addresses, menu items or factual claims. Do not generate fake logos or garbled text. Brand spelling: பானகம். Tagline: காபியும் கதையும்."
-      ].filter(Boolean).join(" ");
-      imagePrompt.value=prompt.slice(0,800);
+      imagePrompt.value=buildPaanagamImagePrompt(d);
       imagePrompt.dispatchEvent(new Event("input",{bubbles:true}));
-      if(imageSize)imageSize.value=d.format==="feed"?"1:1":d.format==="portrait"?"9:16":"9:16";
+      if(imageSize)imageSize.value=d.format==="feed"?"1:1":"9:16";
       if(resolution)resolution.value="2K";
       const submit=form.querySelector("#poyo-image-save");
       if(!submit)return;
-      /* Preserve the transferred prompt in the editor after the no-cost draft is saved. */
       form.dataset.keepPromptAfterSave="true";
       submit.disabled=true;
-      try{
-        if(typeof form.requestSubmit==="function")form.requestSubmit(submit);else submit.click();
-      }finally{
-        window.setTimeout(()=>{if(submit.isConnected)submit.disabled=false;},1500);
-      }
+      try{if(typeof form.requestSubmit==="function")form.requestSubmit(submit);else submit.click();}
+      finally{window.setTimeout(()=>{if(submit.isConnected)submit.disabled=false;},1500);}
     });
     const syncCampaignBriefToImagePrompt=()=>{
       const brief=document.getElementById("creative-preview-brief")?.textContent?.trim();
       const imagePrompt=document.getElementById("poyo-image-prompt");
       if(brief&&imagePrompt){
-        imagePrompt.value=brief+" Create a polished Paanagam campaign visual. Use only verified menu and product facts. Do not invent prices, offers or claims.";
+        const currentTopic=document.getElementById("creative-topic")?.value?.trim()||"Paanagam café campaign";
+        imagePrompt.value=buildPaanagamImagePrompt({topic:currentTopic,designerBrief:brief});
         imagePrompt.dispatchEvent(new Event("input",{bubbles:true}));
       }
     };
-    if(campaignPreview&&typeof MutationObserver!=="undefined"){
-      const briefObserver=new MutationObserver(()=>syncCampaignBriefToImagePrompt());
-      briefObserver.observe(campaignPreview,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:["class"]});
-    }
     routeCampaignOutput();
     if(campaignPreview&&typeof MutationObserver!=="undefined"){
       const previewObserver=new MutationObserver(()=>{routeCampaignOutput();});
