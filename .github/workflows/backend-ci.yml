@@ -22,6 +22,7 @@ on:
       - "creative-studio.js"
       - "poyo-studio.js"
       - "social-publishing.js"
+      - "distribution-planner.js"
       - "growth-goals.js"
       - "growth-goals.css"
       - "launch-planner.js"
@@ -49,6 +50,7 @@ on:
       - "creative-studio.js"
       - "poyo-studio.js"
       - "social-publishing.js"
+      - "distribution-planner.js"
       - "growth-goals.js"
       - "growth-goals.css"
       - "launch-planner.js"
@@ -78,11 +80,11 @@ jobs:
       - run: npm run security:check
       - name: Check dashboard JavaScript syntax
         working-directory: .
-        run: node --check app.js && node --check growth.js && node --check growth-intelligence.js && node --check review-intelligence.js && node --check paanagam-education.js && node --check gbp-owner.js && node --check creative-studio.js && node --check poyo-studio.js && node --check social-publishing.js && node --check growth-goals.js && node --check launch-planner.js && node --check auth-client.js && node --check crm.js
+        run: node --check app.js && node --check growth.js && node --check growth-intelligence.js && node --check review-intelligence.js && node --check paanagam-education.js && node --check gbp-owner.js && node --check creative-studio.js && node --check poyo-studio.js && node --check social-publishing.js && node --check distribution-planner.js && node --check growth-goals.js && node --check launch-planner.js && node --check auth-client.js && node --check crm.js
 
       - name: Validate Render dashboard bundle and manual-deploy guard
         working-directory: .
         run: |
-          grep -q 'cp index.html styles.css growth-intelligence.css review-intelligence.css paanagam-education.css gbp-owner.css app.js growth.js growth-intelligence.js review-intelligence.js paanagam-education.js gbp-owner.js creative-studio.js poyo-studio.js social-publishing.js growth-goals.js growth-goals.css launch-planner.js launch-planner.css config.js auth-client.js crm.css crm.js public-dist/' render.yaml
-          for asset in index.html styles.css growth-intelligence.css review-intelligence.js review-intelligence.css paanagam-education.js paanagam-education.css gbp-owner.css app.js auth-client.js growth.js growth-intelligence.js gbp-owner.js creative-studio.js poyo-studio.js social-publishing.js growth-goals.js growth-goals.css launch-planner.js launch-planner.css crm.css crm.js config.js; do test -f "$asset"; done
+          grep -q 'cp index.html styles.css growth-intelligence.css review-intelligence.css paanagam-education.css gbp-owner.css app.js growth.js growth-intelligence.js review-intelligence.js paanagam-education.js gbp-owner.js creative-studio.js poyo-studio.js social-publishing.js distribution-planner.js growth-goals.js growth-goals.css launch-planner.js launch-planner.css config.js auth-client.js crm.css crm.js public-dist/' render.yaml
+          for asset in index.html styles.css growth-intelligence.css review-intelligence.js review-intelligence.css paanagam-education.js paanagam-education.css gbp-owner.css app.js auth-client.js growth.js growth-intelligence.js gbp-owner.js creative-studio.js poyo-studio.js social-publishing.js distribution-planner.js growth-goals.js growth-goals.css launch-planner.js launch-planner.css crm.css crm.js config.js; do test -f "$asset"; done
           test "$(grep -c 'autoDeployTrigger: off' render.yaml)" -eq 2

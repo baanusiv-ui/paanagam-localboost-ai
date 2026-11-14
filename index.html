@@ -234,6 +234,44 @@ We look forward to welcoming you!</textarea></label>
       <section class="view-panel hidden" id="reviews-view"><div class="empty-state"><div class="empty-icon">✳</div><h2>Review intelligence</h2><p>No reviews have been imported or supplied yet. Connect an authorised source or provide review data to analyse real customer feedback.</p><span class="tag pending-tag">Waiting for verified source</span></div></section>
       <section class="view-panel hidden" id="content-view">
         <div class="section-heading"><div><h2>Creative studio</h2><p>Generate social copy, prepare creative briefs, attach finished artwork and save to the selected business library.</p></div><span class="tag pending-tag">Approval required</span></div>
+        <section class="panel" id="content-distribution-panel" style="margin-bottom:16px">
+          <div class="panel-heading"><div><h3>Content distribution planner · Paanagam</h3><p>One campaign strategy across selected channels. Strategy is saved per business workspace.</p></div><span class="tag confirmed">Approval before publishing</span></div>
+          <div class="content-grid">
+            <article class="metric-card">
+              <strong>Distribution channels</strong>
+              <div class="creative-form" style="margin-top:10px">
+                <label><input type="checkbox" id="distribution-INSTAGRAM" checked> Instagram</label>
+                <label><input type="checkbox" id="distribution-FACEBOOK" checked> Facebook</label>
+                <label><input type="checkbox" id="distribution-WHATSAPP" checked> WhatsApp</label>
+                <label><input type="checkbox" id="distribution-GOOGLE_BUSINESS" checked> Google Business</label>
+                <label><input type="checkbox" id="distribution-YOUTUBE_SHORTS" checked> YouTube Shorts</label>
+              </div>
+            </article>
+            <article class="metric-card">
+              <strong>Campaign objectives</strong>
+              <p><span class="tag confirmed">Brand awareness</span></p>
+              <p><span class="tag confirmed">Engagement & followers</span></p>
+              <p><span class="tag confirmed">Local customer acquisition</span></p>
+              <label for="distribution-radius">Primary local reach radius</label>
+              <select id="distribution-radius"><option value="10">10 km</option><option value="20">20 km</option><option value="30" selected>30 km</option><option value="50">50 km</option></select>
+            </article>
+            <article class="metric-card">
+              <strong>Content language</strong>
+              <p class="tamil">தமிழ் முதலில் · English next</p>
+              <small>Tamil-first captions and voice hooks, followed by English adaptation.</small>
+            </article>
+            <article class="metric-card">
+              <strong>Publishing control</strong>
+              <p><span class="tag confirmed">Owner approval required</span></p>
+              <small>Every platform version must be reviewed. Saving a strategy or draft never publishes content.</small>
+            </article>
+          </div>
+          <h4 style="margin:16px 0 8px">Channel readiness</h4>
+          <div id="distribution-readiness" class="content-grid"></div>
+          <div class="form-actions" style="margin-top:14px"><button class="primary-button" id="distribution-save" type="button">Save Paanagam distribution strategy</button></div>
+          <p class="form-message" id="distribution-status" role="status">Loading distribution strategy…</p>
+          <p class="footnote">Important: WhatsApp and YouTube Shorts are selected in the strategy but are not yet connected for direct publishing. Google Business continues through its existing owner-approved workflow. Instagram and Facebook use the existing Meta approval queue. No unsupported channel is silently marked as published.</p>
+        </section>
         <div class="creative-layout">
           <div class="panel">
             <form id="creative-form" class="creative-form">
@@ -389,7 +427,7 @@ We look forward to welcoming you!</textarea></label>
       window.LOCALBOOST_NEON_AUTH_URL = "https://ep-tiny-credit-az25azf0.neonauth.c-3.ap-southeast-1.aws.neon.tech/localboost_staging/auth";
     }
   </script>
-  <script src="app.js"></script><script src="growth.js"></script><script src="growth-intelligence.js"></script><script src="review-intelligence.js"></script><script src="paanagam-education.js"></script><script src="gbp-owner.js"></script><script src="creative-studio.js"></script><script src="poyo-studio.js"></script><script src="social-publishing.js"></script><script>
+  <script src="app.js"></script><script src="growth.js"></script><script src="growth-intelligence.js"></script><script src="review-intelligence.js"></script><script src="paanagam-education.js"></script><script src="gbp-owner.js"></script><script src="creative-studio.js"></script><script src="poyo-studio.js"></script><script src="social-publishing.js"></script><script src="distribution-planner.js"></script><script>
 (() => {
   "use strict";
   const $ = id => document.getElementById(id);
