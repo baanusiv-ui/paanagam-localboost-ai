@@ -119,7 +119,7 @@
     e.preventDefault();const button=$("poyo-image-save");if(!button)return;button.disabled=true;
     try{
       const prompt=$("poyo-image-prompt").value.trim(),resolution=$("poyo-image-resolution").value;
-      if(!prompt||prompt.length>800)throw new Error("Enter an image prompt of up to 800 characters.");
+      if(!prompt||prompt.length>4000)throw new Error("Image prompt must be between 1 and 4,000 characters.");
       const urls=$("poyo-image-refs").value.split(/\r?\n/).map(v=>v.trim()).filter(Boolean);
       if(urls.length>10||!urls.every(v=>/^https:\/\//i.test(v)))throw new Error("Use up to 10 publicly accessible HTTPS reference URLs.");
       const modelInput={size:$("poyo-image-size").value,resolution,...(urls.length?{image_urls:urls}:{})};
