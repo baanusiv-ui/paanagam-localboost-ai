@@ -44,7 +44,7 @@ export const PAANAGAM_FILTER_COFFEE_V1: RecipeEvidence = Object.freeze({
   status: "OWNER_CONFIRMED",
   sourceLabel: "Paanagam owner-confirmed coffee decoction and serving SOP",
   verifiedAt: "2026-11-12",
-  language: ["ta", "en"],
+  language: ["ta", "en"] as const,
   batch: {
     quantities: [
       { ingredient: "Coffee powder", quantity: 250, unit: "g", role: "BATCH" },
