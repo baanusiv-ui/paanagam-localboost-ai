@@ -330,7 +330,7 @@
       const pane=document.createElement("section");
       pane.className="lb-studio-pane";
       pane.id="lb-studio-"+id;
-      pane.hidden=index!==0;
+      pane.hidden=index!==1;
       if(node)pane.appendChild(node);
       paneMap[id]=pane;
       panes.appendChild(pane);
@@ -338,7 +338,7 @@
       tab.type="button";tab.className="lb-studio-tab";
       tab.textContent=label;tab.setAttribute("role","tab");
       tab.setAttribute("aria-controls",pane.id);
-      tab.setAttribute("aria-selected",index===0?"true":"false");
+      tab.setAttribute("aria-selected",index===1?"true":"false");
       tab.addEventListener("click",()=>{
         Object.entries(paneMap).forEach(([key,p])=>p.hidden=key!==id);
         nav.querySelectorAll("button").forEach(b=>b.setAttribute("aria-selected",b===tab?"true":"false"));
