@@ -34,7 +34,7 @@ const localBaseUrl = () => (process.env.OLLAMA_BASE_URL || "").replace(/\/$/, ""
 const localModel = () => (process.env.OLLAMA_MODEL || "qwen3.5:4b").trim();
 const ollamaHeaders = () => ({
   "content-type": "application/json",
-  ...(process.process.env.OLLAMA_ACCESS_CLIENT_ID && process.process.env.OLLAMA_ACCESS_CLIENT_SECRET ? {
+  ...(process.env.OLLAMA_ACCESS_CLIENT_ID && process.env.OLLAMA_ACCESS_CLIENT_SECRET ? {
     "CF-Access-Client-Id": process.env.OLLAMA_ACCESS_CLIENT_ID,
     "CF-Access-Client-Secret": process.env.OLLAMA_ACCESS_CLIENT_SECRET
   } : {})
