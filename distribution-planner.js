@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  const $ = id => document.getElementById(id);
+  const API = () => (window.LOCALBOOST_API_BASE || "").replace(/\/$/, "");
   const API = () => (window.LOCALBOOST_API_BASE || "").replace(/\\/$/, "");
   const TOKEN = "localboost_access_token";
   const BUSINESS = "localboost_business_id";
