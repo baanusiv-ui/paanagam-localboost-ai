@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { env } from "./env.js";
 
 type ReportInsight = {
   id: string;
@@ -31,11 +30,11 @@ const outputSchema = z.object({
   }).strict()).max(5)
 }).strict();
 
-const localBaseUrl = () => env.OLLAMA_BASE_URL.replace(/\/$/, "");
-const localModel = () => env.OLLAMA_MODEL.trim();
+const localBaseUrl = () => (process.env.OLLAMA_BASE_URL || "").replace(/\/$/, "");
+const localModel = () => (process.env.OLLAMA_MODEL || "qwen3.5:4b").trim();
 const ollamaHeaders = () => ({
   "content-type": "application/json",
-  ...(env.OLLAMA_ACCESS_CLIENT_ID && env.OLLAMA_ACCESS_CLIENT_SECRET ? {
+  ...(process.env.OLLAMA_ACCESS_CLIENT_ID && process.env.OLLAMA_ACCESS_CLIENT_SECRET ? {
     "CF-Access-Client-Id": env.OLLAMA_ACCESS_CLIENT_ID,
     "CF-Access-Client-Secret": env.OLLAMA_ACCESS_CLIENT_SECRET
   } : {})
