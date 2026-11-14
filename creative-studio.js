@@ -502,17 +502,14 @@
         const slot=slots[i];
         const menuItem=menu[i%Math.max(menu.length,1)];
         const review=reviews[i%Math.max(reviews.length,1)];
-        const evidenceBrief=[
-          "DATE: "+date+" (Asia/Kolkata).",
-          "POST SLOT: "+slot.slot+".",
-          "STRATEGY: "+slot.angle,
-          "CUSTOMER REVIEW EVIDENCE (actual saved comments; owner validation shown): "+(review?JSON.stringify(review):"No written reviews saved."),
-          "RECURRING REVIEW THEMES: "+(themes.length?JSON.stringify(themes):"No recurring themes detected."),
-          "APPROVED MENU RECORD: "+(menuItem?JSON.stringify(menuItem):"No menu item saved."),
-          "AVAILABLE MENU FACTS: "+JSON.stringify(menu),
-          "CUSTOMER EXPECTATIONS: infer cautiously from the supplied review text only. Label inference as a question or opportunity, not a proven universal preference.",
-          "Create Tamil-first copy with a concise English version. Do not invent testimonial quotes, prices, offers, ingredients, availability, service claims, customer names or outcomes."
-        ].join("\n");
+        const evidenceFacts = [
+          "Date "+date+" (IST); "+slot.slot+".",
+          "Angle: "+slot.angle.slice(0,80)+".",
+          "Review: "+(review?review.text.slice(0,110):"No written review saved.")+(review&&review.rating?" (rating "+review.rating+"/5)":""),
+          "Themes: "+(themes.slice(0,3).map(x=>x.name+" "+x.count).join(", ")||"none detected")+".",
+          "Menu: "+(menuItem?[menuItem.name,menuItem.price].filter(Boolean).join(" · "):"no saved menu item")+"."
+        ].join(" ");
+        const evidenceBrief = evidenceFacts.slice(0,350)+" Only use supplied facts; do not invent claims, prices, ingredients or availability. Tamil first + English.";
         const topic="Paanagam daily customer-led social post — "+slot.slot+" — "+slot.angle;
         const result=await api(base()+"/google-content/draft",{method:"POST",body:JSON.stringify({topic,offer:evidenceBrief,language:"Tamil + English",format:i===3?"PORTRAIT":"SQUARE",tone:i===2?"PROFESSIONAL":"WARM"})});
         const caption=result.postCopy||result.caption||result.copy||result.postText||"";
