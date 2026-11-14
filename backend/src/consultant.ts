@@ -31,7 +31,14 @@ const outputSchema = z.object({
 }).strict();
 
 const localBaseUrl = () => (process.env.OLLAMA_BASE_URL || "").replace(/\/$/, "");
-const localModel = () => (process.env.OLLAMA_MODEL || "qwen2.5:7b").trim();
+const localModel = () => (process.env.OLLAMA_MODEL || "qwen3.5:4b").trim();
+const ollamaHeaders = () => ({
+  "content-type": "application/json",
+  ...(process.env.OLLAMA_ACCESS_CLIENT_ID && process.env.OLLAMA_ACCESS_CLIENT_SECRET ? {
+    "CF-Access-Client-Id": process.env.OLLAMA_ACCESS_CLIENT_ID,
+    "CF-Access-Client-Secret": process.env.OLLAMA_ACCESS_CLIENT_SECRET
+  } : {})
+});
 
 export function buildConsultantMessages(report: IntelligenceReport, language: "Tamil" | "English" | "Tamil + English") {
   const compactReport = {
@@ -93,7 +100,7 @@ export async function getLocalAiStatus() {
     };
   }
   try {
-    const response = await fetch(baseUrl + "/api/tags", { signal: AbortSignal.timeout(2500) });
+    const response = await fetch(baseUrl + "/api/tags", { headers: ollamaHeaders(), signal: AbortSignal.timeout(8000) });
     if (!response.ok) throw new Error("Ollama returned HTTP " + response.status);
     const data = await response.json() as { models?: Array<{ name?: string }> };
     const installed = (data.models ?? []).some(item => item.name === model || item.name === model + ":latest");
@@ -104,7 +111,7 @@ export async function getLocalAiStatus() {
   } catch {
     return {
       configured: true, reachable: false, modelInstalled: false, model,
-      message: "Cannot reach Ollama. Start Ollama on Windows and check OLLAMA_BASE_URL (Docker Desktop: http://host.docker.internal:11434)."
+      message: "Cannot reach Ollama. Check the Windows tunnel, Cloudflare Access credentials, and OLLAMA_BASE_URL."
     };
   }
 }
@@ -116,7 +123,7 @@ export async function generateLocalConsultant(report: IntelligenceReport, langua
   const messages = buildConsultantMessages(report, language);
   const response = await fetch(baseUrl + "/api/chat", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: ollamaHeaders(),
     body: JSON.stringify({
       model,
       messages,
