@@ -9,7 +9,7 @@ import { getPoyoTaskStatus, isPoyoConfigured, submitPoyoGeneration } from "./poy
 const createDraftSchema = z.object({
   mediaType: z.enum(["IMAGE", "VIDEO", "AUDIO"]),
   modelId: z.string().trim().min(1).max(160),
-  prompt: z.string().trim().min(1).max(800),
+  prompt: z.string().trim().min(1).max(4000),
   modelInput: z.record(z.unknown()).default({})
 });
 
@@ -108,7 +108,7 @@ export function registerPoyoRoutes(app: FastifyInstance, db: PrismaClient, requi
     const isImage = task.mediaType === "IMAGE" && task.modelId === "nano-banana-2.1";
     const isVideo = task.mediaType === "VIDEO" && ["wan2.2-text-to-video-fast", "wan2.2-image-to-video-fast"].includes(task.modelId);
     if (!isImage && !isVideo) return reply.code(400).send({ error: "Choose Nano Banana 2.1 for images or a verified Wan 2.2 Fast model for video." });
-    const input: Record<string, unknown> = { prompt: task.prompt.slice(0, 800) };
+    const input: Record<string, unknown> = { prompt: task.prompt.slice(0, 4000) };
     if (isImage) {
       const size = ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"].includes(String(rawInput.size)) ? String(rawInput.size) : "1:1";
       const resolution = ["1K", "2K", "4K"].includes(String(rawInput.resolution)) ? String(rawInput.resolution) : "2K";
