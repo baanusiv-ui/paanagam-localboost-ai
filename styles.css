@@ -236,3 +236,34 @@ footer{padding:36px 0 24px}
 
 /* Keep the compact Meta connection indicator hidden until a saved connection is confirmed. */
 #sidebar-meta-status[hidden], .meta-connection-panel[hidden] { display: none !important; }
+
+
+/* LocalBoost responsive command-centre polish: compact navigation, fast view changes. */
+:root{--nav-width:238px}
+@media(min-width:721px){
+ .sidebar{width:var(--nav-width);padding:22px 14px 18px}
+ .brand{padding-bottom:25px}
+ .nav-list{gap:3px;margin-top:18px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+ .nav-item{min-height:39px;padding:9px 10px;font-size:11px;gap:10px}
+ .main{margin-left:var(--nav-width);padding-left:clamp(22px,3vw,42px);padding-right:clamp(22px,3vw,42px)}
+ .topbar{position:sticky;top:0;z-index:10;background:var(--bg)}
+}
+@media(max-width:720px){
+ .sidebar{width:min(82vw,286px);padding:16px 12px 14px}
+ .brand{padding-bottom:18px}
+ .nav-list{gap:3px;margin-top:12px}
+ .nav-item{min-height:42px;padding:0 11px;font-size:12px;border-radius:7px}
+ .sidebar-bottom{margin-top:12px}
+ .connection-card{padding:9px;margin-bottom:10px}
+ .main{padding-left:12px;padding-right:12px}
+ .topbar{position:sticky;top:0;z-index:12;background:var(--bg)}
+ .page-heading{padding-top:17px}
+ .metric-card,.panel{box-shadow:none}
+ .nav-item:focus-visible,.mobile-menu-toggle:focus-visible{outline:2px solid #d7a66a;outline-offset:2px}
+}
+@media(min-width:721px) and (max-width:1100px){
+ .main{padding-left:22px;padding-right:22px}
+ .metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .content-grid{grid-template-columns:minmax(0,1fr)}
+}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
