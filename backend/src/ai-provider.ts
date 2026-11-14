@@ -19,6 +19,7 @@ const cloudModel = () => (process.env.OLLAMA_CLOUD_MODEL || "glm-5.3-flash").tri
 const localBaseUrl = () => (process.env.OLLAMA_BASE_URL || "").replace(/\/$/, "");
 const localModel = () => (process.env.OLLAMA_MODEL || "qwen2.5:7b").trim();
 const geminiModel = () => (process.env.GEMINI_TEXT_MODEL || "gemini-3.1-flash-lite").trim();
+const geminiFallbackEnabled = () => process.env.GEMINI_FALLBACK_ENABLED?.trim().toLowerCase() === "true";
 
 function asPrompt(messages: AiMessage[]) {
   return messages.map(message => message.role.toUpperCase() + ":\n" + message.content).join("\n\n");
@@ -74,7 +75,7 @@ export async function generateAiJson(options: GenerateOptions) {
   if (apiKey) attempts.push({ provider: "OLLAMA_CLOUD", model: cloudModel(), run: () => callOllama(cloudBaseUrl, cloudModel(), options.messages, options.temperature ?? 0.2) });
   const localUrl = localBaseUrl();
   if (localUrl) attempts.push({ provider: "LOCAL_OLLAMA", model: localModel(), run: () => callOllama(localUrl, localModel(), options.messages, options.temperature ?? 0.2) });
-  if (process.env.GEMINI_API_KEY?.trim()) attempts.push({ provider: "GOOGLE_GEMINI", model: geminiModel(), run: () => callGemini(options.messages, options.responseSchema, options.maxOutputTokens ?? 700) });
+  if (geminiFallbackEnabled() && process.env.GEMINI_API_KEY?.trim()) attempts.push({ provider: "GOOGLE_GEMINI", model: geminiModel(), run: () => callGemini(options.messages, options.responseSchema, options.maxOutputTokens ?? 700) });
   if (!attempts.length) throw new Error("AI is not configured. Add OLLAMA_API_KEY and OLLAMA_CLOUD_MODEL in Render; configure GEMINI_API_KEY for fallback.");
   const failures: string[] = [];
   for (const attempt of attempts) {
@@ -110,7 +111,7 @@ export async function getAiProviderStatus() {
   const localUrl = localBaseUrl();
   const local = localUrl ? await probeOllama(localUrl, localModel()) : { reachable: false, modelAvailable: false };
   const primaryReady = cloud.reachable && cloud.modelAvailable;
-  const fallbackConfigured = Boolean(process.env.GEMINI_API_KEY?.trim());
+  const fallbackConfigured = geminiFallbackEnabled() && Boolean(process.env.GEMINI_API_KEY?.trim());
   const localReady = local.reachable && local.modelAvailable;
   return {
     configured: Boolean(apiKey || localUrl || fallbackConfigured),
@@ -127,6 +128,6 @@ export async function getAiProviderStatus() {
         ? "Cloud Ollama is not ready; local Ollama is available."
         : fallbackConfigured
           ? "Ollama is unavailable; Gemini fallback is configured."
-          : "No AI provider is currently reachable. Configure Ollama Cloud and Gemini fallback."
+          : "No AI provider is currently reachable. Configure Ollama Cloud; enable Gemini fallback explicitly if desired."
   };
 }
