@@ -180,7 +180,11 @@
         locationSelect.value = match.name;
         $("#import-google-location").disabled = false;
         message("google-import-message", "Paanagam location verified. Saving the selected location for review auto-sync…");
-        await importGoogleLocation();
+        const saved = await importGoogleLocation();
+        if (!saved) {
+          message("google-import-message", "The verified Paanagam listing could not be saved. Review sync was not started; check the connection and retry.", true);
+          return false;
+        }
         window.LocalBoostReviewIntelligence?.syncNow?.();
         return true;
       } catch (error) {
@@ -236,8 +240,10 @@
       });
       message("google-import-message", result.imported + " evidence fields imported from the selected Google listing. No profile changes were made.");
       await runAudit();
+      return true;
     } catch (error) {
       message("google-import-message", error.message, true);
+      return false;
     } finally {
       button.disabled = false;
       button.textContent = "Import selected listing evidence";
