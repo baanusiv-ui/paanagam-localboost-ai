@@ -50,7 +50,7 @@ export const PAANAGAM_FILTER_COFFEE_V1: RecipeEvidence = Object.freeze({
       { ingredient: "Coffee powder", quantity: 250, unit: "g", role: "BATCH" },
       { ingredient: "Water", quantity: 1100, unit: "ml", role: "BATCH" }
     ] as const,
-    expectedUsableOutput: { quantity: 1000, unit: "ml", qualifier: "approximately" }
+    expectedUsableOutput: { quantity: 1000, unit: "ml" as const, qualifier: "approximately" as const }
   },
   serving: {
     quantities: [
@@ -58,7 +58,7 @@ export const PAANAGAM_FILTER_COFFEE_V1: RecipeEvidence = Object.freeze({
       { ingredient: "Milk", quantity: 75, unit: "ml", role: "SERVING" },
       { ingredient: "Sugar", quantity: 5, unit: "g", role: "SERVING" }
     ] as const,
-    expectedServingVolume: { quantity: 100, unit: "ml", qualifier: "approximately" }
+    expectedServingVolume: { quantity: 100, unit: "ml" as const, qualifier: "approximately" as const }
   },
   allowedClaims: [
     "The recorded decoction batch uses 250 g coffee powder and 1,100 ml water.",
