@@ -143,7 +143,9 @@
         await api(base()+"/poyo/tasks/"+encodeURIComponent(id)+"/refresh",{method:"POST",body:"{}"});
         message(kind==="image"?"poyo-image-message":"poyo-studio-message",noun+" job status refreshed.");
       }
-      await loadTasks({refreshPending:true});
+      // The action above already submitted/refreshed this task. Fetch saved task state only;
+      // do not immediately call the provider status endpoint a second time (PoYo rate-limits it).
+      await loadTasks();
     }catch(err){message(kind==="image"?"poyo-image-message":"poyo-studio-message","PoYo action failed: "+err.message,true);}finally{if(button.isConnected)button.disabled=false;}
   }
   $("poyo-task-list")?.addEventListener("click",handleTaskAction);
