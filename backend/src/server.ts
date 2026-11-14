@@ -644,6 +644,17 @@ app.post("/v1/businesses/:businessId/creative/image", {
 
 app.get("/health", async () => ({ ok: true, service: "localboost-api", version: "0.1.0" }));
 
+// Database readiness is separate from the process liveness check so Render
+// does not restart a healthy API process during a transient database outage.
+app.get("/ready", async (_request, reply) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return { ok: true, service: "localboost-api", database: "connected" };
+  } catch {
+    return reply.code(503).send({ ok: false, service: "localboost-api", database: "unavailable" });
+  }
+});
+
 app.get("/v1/businesses", { preHandler: requireUser }, async (request) => {
   return prisma.business.findMany({
     where: { ownerId: request.userId! },
