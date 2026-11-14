@@ -337,24 +337,54 @@
       setMessage("Canva disconnect failed: "+err.message,true);
     } finally { button.disabled=false; button.textContent="Disconnect Canva"; }
   });
+  let poyoCampaignPreviewUrl = "";
   window.addEventListener("localboost:poyo-asset-selected",async event=>{
-    const detail=event.detail||{}, assetId=String(detail.assetId||""), topic=String(detail.prompt||"").trim().slice(0,120);
+    const detail=event.detail||{}, assetId=String(detail.assetId||"").trim();
+    const topic=$("creative-topic")?.value?.trim()||"";
+    const offer=$("creative-offer")?.value?.trim()||"";
     if(!ready||!assetId||!businessId()){setMessage("Select a business and wait for the campaign library to load before using a generated image.",true);return;}
-    setMessage("Connecting the saved PoYo image to a new campaign and generating its caption…");
+    if(!topic){setMessage("Enter the campaign topic or product in Campaign post first, then use the generated image again.",true);$("creative-topic")?.focus();return;}
+    const saveButton=$("creative-save");
+    if(saveButton)saveButton.disabled=true;
+    setMessage("Attaching the selected PoYo image and preparing campaign copy…");
     try{
-      const languageValue=$("creative-language")?.value||"both", languageMap={ta:"Tamil",en:"English",both:"Tamil + English"};
+      const languageValue=$("creative-language")?.value||"ta", languageMap={ta:"Tamil",en:"English",both:"Tamil + English"};
       const formatValue=$("creative-format")?.value||"feed", formatMap={feed:"SQUARE",portrait:"PORTRAIT",story:"STORY"};
-      const platform=$("creative-platform")?.value||"Facebook";
-      const result=await api(base()+"/google-content/draft",{method:"POST",body:JSON.stringify({topic:topic||"Generated campaign artwork",offer:"",language:languageMap[languageValue]||"Tamil + English",format:formatMap[formatValue]||"SQUARE",tone:"WARM"})});
-      current={id:"creative-studio:"+((crypto.randomUUID&&crypto.randomUUID())||Date.now()),kind:"LOCALBOOST_SOCIAL_CREATIVE",topic:topic||"Generated campaign artwork",offer:"",platform,format:formatValue,language:languageMap[languageValue]||"Tamil + English",caption:result.postCopy||result.caption||result.copy||result.postText||"",headline:result.headline||"",designerBrief:result.creativeBrief||result.imageBrief||"",assetId,assetUrl:"",status:"DRAFT",provenance:"POYO_GENERATED_ASSET",createdAt:new Date().toISOString()};
-      if(!current.caption)throw new Error("Caption service returned no usable copy.");
-      $("creative-preview")?.classList.remove("hidden");
-      if($("creative-preview-copy"))$("creative-preview-copy").textContent=current.caption;
-      if($("creative-preview-brief"))$("creative-preview-brief").textContent="PoYo generated image attached from the business creative library. Review the caption and artwork before saving.";
-      if($("creative-save"))$("creative-save").disabled=false;
-      if($("creative-asset-url"))$("creative-asset-url").value="";
-      setMessage("PoYo image attached to the campaign. Review the image and caption, then Save campaign to create the channel drafts.");
-    }catch(error){setMessage("Could not create a campaign from the generated image: "+error.message,true);}
+      const platform=$("creative-platform")?.value||"Instagram + Facebook";
+      const [result,response]=await Promise.all([
+        api(base()+"/google-content/draft",{method:"POST",body:JSON.stringify({topic,offer,language:languageMap[languageValue]||"Tamil",format:formatMap[formatValue]||"SQUARE",tone:({warm:"WARM",traditional:"TRADITIONAL",offer:"OFFER_LED"})[$("creative-tone")?.value]||"WARM"})}),
+        fetch(API()+base()+"/poyo/assets/"+encodeURIComponent(assetId)+"/content",{headers:{authorization:"Bearer "+sessionStorage.getItem(TOKEN)}})
+      ]);
+      if(!response.ok)throw new Error("Could not load the selected image ("+response.status+").");
+      const blob=await response.blob();
+      if(!["image/png","image/jpeg","image/webp"].includes(blob.type))throw new Error("The selected asset is not a supported image.");
+      const caption=result.postCopy||result.caption||result.copy||result.postText||"";
+      if(!caption.trim())throw new Error("Caption service returned no usable copy.");
+      current={id:"creative-studio:"+((crypto.randomUUID&&crypto.randomUUID())||Date.now()),kind:"LOCALBOOST_SOCIAL_CREATIVE",topic,offer,platform,format:formatValue,language:languageMap[languageValue]||"Tamil",caption,headline:result.headline||"",designerBrief:result.creativeBrief||result.imageBrief||result.designerBrief||"",assetId,assetUrl:"",status:"DRAFT",provenance:"POYO_GENERATED_ASSET",createdAt:new Date().toISOString()};
+      if(poyoCampaignPreviewUrl)URL.revokeObjectURL(poyoCampaignPreviewUrl);
+      poyoCampaignPreviewUrl=URL.createObjectURL(blob);
+      let preview=$("creative-poyo-image-preview");
+      if(!preview){
+        preview=document.createElement("img");preview.id="creative-poyo-image-preview";preview.alt="Selected PoYo campaign artwork";
+        preview.style.cssText="display:block;width:100%;max-height:520px;object-fit:contain;border-radius:12px;margin:12px 0;background:#f3f0e9";
+        const heading=[...$("creative-preview").querySelectorAll("h4")].find(node=>/image|artwork/i.test(node.textContent));
+        if(heading)heading.insertAdjacentElement("afterend",preview);else $("creative-preview").prepend(preview);
+      }
+      preview.src=poyoCampaignPreviewUrl;
+      const download=$("creative-image-download");
+      if(download){download.disabled=false;download.onclick=()=>{const a=document.createElement("a");a.href=poyoCampaignPreviewUrl;a.download="paanagam-campaign-artwork."+({"image/jpeg":"jpg","image/webp":"webp","image/png":"png"}[blob.type]||"png");a.click();};}
+      $("creative-preview").classList.remove("hidden");
+      $("creative-preview-copy").textContent=current.caption;
+      $("creative-preview-brief").textContent=current.designerBrief||"PoYo generated artwork attached from this business workspace.";
+      $("creative-asset-url").value="";
+      if(saveButton)saveButton.disabled=false;
+      const campaignTab=[...document.querySelectorAll("#content-view .lb-studio-tab")].find(tab=>tab.textContent.trim()==="Campaign post");
+      if(campaignTab)campaignTab.click();
+      setMessage("Image attached to Campaign post. Review the topic, offer, artwork and caption, then save to the approval queue. Nothing is published.");
+    }catch(error){
+      if(saveButton)saveButton.disabled=false;
+      setMessage("Could not create a campaign from the generated image: "+error.message,true);
+    }
   });
   window.addEventListener("localboost:business-ready",()=>{load();loadDesignIntegrations();});
   window.addEventListener("localboost:signed-out",()=>{drafts=[];current=null;ready=false;render();setMessage("Signed out. Cloud creative library is locked.");});
