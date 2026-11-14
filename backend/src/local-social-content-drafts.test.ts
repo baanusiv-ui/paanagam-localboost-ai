@@ -15,7 +15,7 @@ test("local social content prompt carries supplied evidence and forbids invented
   const messages = buildLocalSocialContentMessages(input);
   assert.equal(messages.length, 2);
   assert.match(messages[0]!.content, /Never invent prices/);
-  assert.match(messages[0].content, /Tamil \+ English/);
+  assert.match(messages[0]!.content, /Tamil \+ English/);
   const payload = JSON.parse(messages[1]!.content);
   assert.equal(payload.businessName, "Paanagam");
   assert.equal(payload.evidence, input.evidence);
@@ -23,6 +23,6 @@ test("local social content prompt carries supplied evidence and forbids invented
 
 test("prompt bounds long source evidence before sending it to the model", () => {
   const messages = buildLocalSocialContentMessages({ ...input, evidence: "x".repeat(3000) });
-  const payload = JSON.parse(messages[1].content);
+  const payload = JSON.parse(messages[1]!.content);
   assert.equal(payload.evidence.length, 1800);
 });
