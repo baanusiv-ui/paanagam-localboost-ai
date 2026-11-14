@@ -408,11 +408,10 @@
   };
   const istDate = () => new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
   const val = (p, keys) => { for(const k of keys){const x=p?.[k];if(x!==undefined&&x!==null&&String(x).trim())return String(x).trim();}return ""; };
-  let installed=false, generating=false;
+  let generating=false;
   function mount(){
     const root=$("content-view");
-    if(!root||installed)return;
-    installed=true;
+    if(!root||root.querySelector("#ai-daily-content-planner"))return;
     const panel=document.createElement("section");
     panel.id="ai-daily-content-planner";
     panel.className="panel";
@@ -434,7 +433,6 @@
     root.prepend(panel);
     $("ai-plan-analyse").addEventListener("click",()=>analyse(false));
     $("ai-plan-generate").addEventListener("click",()=>analyse(true));
-    window.addEventListener("localboost:business-ready",()=>{installed=false;mount();});
     window.addEventListener("localboost:signed-out",()=>{const s=$("ai-plan-status");if(s)s.textContent="Signed out · business evidence is not available.";});
   }
   async function readEvidence(){
