@@ -26,8 +26,8 @@ test("missing attribution means no ROI or paid upgrade recommendation", () => {
 test("incremental budget never exceeds cash or reinvestment pool", () => {
   const result = calculateAiInvestment({ ...base, marketingSpend: 100, aiToolSpend: 100 });
   assert.equal(result.incrementalBudgetCeiling, 1800);
-  assert.ok(result.incrementalBudgetCeiling <= result.cashAvailable);
-  assert.ok(result.incrementalBudgetCeiling <= result.reinvestmentPool);
+  assert.ok(result.incrementalBudgetCeiling <= Number(result.cashAvailable));
+  assert.ok(result.incrementalBudgetCeiling <= Number(result.reinvestmentPool));
 });
 test("rejects invalid period and reinvestment rate", () => {
   assert.throws(() => calculateAiInvestment({ ...base, reinvestmentRatePercent: 31 }), /0 and 30/);
