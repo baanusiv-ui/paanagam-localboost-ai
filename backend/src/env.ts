@@ -17,10 +17,16 @@ const schema = z.object({
   GOOGLE_REDIRECT_URI: z.string().url().optional().default("http://localhost:4100/v1/google/callback"),
   OLLAMA_BASE_URL: z.string().default("").refine(value => {
     if (!value) return true;
-    try { const url = new URL(value); return ["http:", "https:"].includes(url.protocol) && ["localhost", "127.0.0.1", "::1", "host.docker.internal"].includes(url.hostname); }
-    catch { return false; }
-  }, "OLLAMA_BASE_URL must point to localhost or host.docker.internal"),
-  OLLAMA_MODEL: z.string().trim().min(1).default("qwen2.5:7b"),
+    try {
+      const url = new URL(value);
+      const localHost = ["localhost", "127.0.0.1", "::1", "host.docker.internal"].includes(url.hostname);
+      const approvedTunnel = url.protocol === "https:" && url.hostname === "ollama.96degree.co.in";
+      return (localHost && ["http:", "https:"].includes(url.protocol) || approvedTunnel) && !url.username && !url.password;
+    } catch { return false; }
+  }, "OLLAMA_BASE_URL must use a local address or the approved HTTPS Cloudflare hostname"),
+  OLLAMA_ACCESS_CLIENT_ID: z.string().optional().default(""),
+  OLLAMA_ACCESS_CLIENT_SECRET: z.string().optional().default(""),
+  OLLAMA_MODEL: z.string().trim().min(1).default("qwen3.5:4b"),
   META_APP_ID: z.string().optional().default(""),
   META_APP_SECRET: z.string().optional().default(""),
   META_REDIRECT_URI: z.string().url().optional().default("http://localhost:4100/v1/meta/callback"),
