@@ -169,7 +169,8 @@ export function registerPoyoRoutes(app: FastifyInstance, db: PrismaClient, requi
       const outputFile = (remote.files || []).find(file => file.file_type?.toLowerCase() === expectedType && typeof file.file_url === "string");
       if (!outputFile || !outputFile.file_url) return reply.code(502).send({ error: "PoYo marked the task complete but did not return the expected media file." });
       const outputUrl = new URL(outputFile.file_url);
-      if (outputUrl.protocol !== "https:" || outputUrl.hostname !== "storage.poyo.ai") return reply.code(502).send({ error: "PoYo returned an unexpected storage host." });
+      const allowedOutputHosts = task.mediaType === "IMAGE" ? ["storage.poyo.ai", "cdn.doculator.org"] : ["storage.poyo.ai"];
+      if (outputUrl.protocol !== "https:" || !allowedOutputHosts.includes(outputUrl.hostname)) return reply.code(502).send({ error: "PoYo returned an unexpected media storage host." });
       const response = await fetch(outputUrl, { redirect: "error", signal: AbortSignal.timeout(30_000) });
       if (!response.ok) return reply.code(502).send({ error: "Generated video could not be downloaded from PoYo storage." });
       const declaredLength = Number(response.headers.get("content-length") || 0);

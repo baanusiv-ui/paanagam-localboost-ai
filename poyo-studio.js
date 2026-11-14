@@ -6,7 +6,7 @@
   const businessId = () => sessionStorage.getItem(BUSINESS), token = () => sessionStorage.getItem(TOKEN);
   const base = () => "/v1/businesses/" + encodeURIComponent(businessId());
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  let modelCatalogue = [], generationEnabled = false, pollTimer = null, mediaUrls = [];
+  let modelCatalogue = [], generationEnabled = false, pollTimer = null, mediaUrls = [], pendingRefreshInFlight = false;
   async function api(path, options = {}) {
     if (!token() || !businessId()) throw new Error("Sign in and select a business workspace first.");
     const headers = { authorization: "Bearer " + token(), ...(options.body ? {"content-type":"application/json"} : {}), ...(options.headers || {}) };
@@ -75,10 +75,13 @@
     if(!businessId()||!token())return;
     try{
       let result=await api(base()+"/poyo/tasks"), tasks=result.tasks||[];
-      if(refreshPending){
-        const pending=tasks.filter(t=>["SUBMITTED","PROCESSING"].includes(t.status));
-        for(const task of pending){try{await api(base()+"/poyo/tasks/"+encodeURIComponent(task.id)+"/refresh",{method:"POST",body:"{}"});}catch{}}
-        if(pending.length){result=await api(base()+"/poyo/tasks");tasks=result.tasks||[];}
+      if(refreshPending && !pendingRefreshInFlight){
+        pendingRefreshInFlight=true;
+        try{
+          const pending=tasks.filter(t=>["SUBMITTED","PROCESSING"].includes(t.status));
+          for(const task of pending){try{await api(base()+"/poyo/tasks/"+encodeURIComponent(task.id)+"/refresh",{method:"POST",body:"{}"});}catch{}}
+          if(pending.length){result=await api(base()+"/poyo/tasks");tasks=result.tasks||[];}
+        }finally{pendingRefreshInFlight=false;}
       }
       revokeMediaUrls();
       const renderTask=t=>{
