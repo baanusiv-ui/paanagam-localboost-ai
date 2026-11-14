@@ -511,7 +511,7 @@
         ].join(" ");
         const evidenceBrief = evidenceFacts.slice(0,350)+" Only use supplied facts; do not invent claims, prices, ingredients or availability. Tamil first + English.";
         const topic="Paanagam daily customer-led social post — "+slot.slot+" — "+slot.angle;
-        const result=await api(base()+"/google-content/draft",{method:"POST",body:JSON.stringify({topic,offer:evidenceBrief,language:"Tamil + English",format:i===3?"PORTRAIT":"SQUARE",tone:i===2?"PROFESSIONAL":"WARM"})});
+        const result=await api(base()+"/ai-content/draft",{method:"POST",body:JSON.stringify({topic,evidence:evidenceBrief,language:"Tamil + English",format:i===3?"PORTRAIT":"SQUARE",tone:i===2?"PROFESSIONAL":"WARM"})});
         const caption=result.postCopy||result.caption||result.copy||result.postText||"";
         if(!caption.trim())throw new Error("AI returned an empty caption for "+slot.slot);
         const draft={
