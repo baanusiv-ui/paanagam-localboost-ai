@@ -117,7 +117,47 @@ async function callGemini(messages: AiMessage[], responseSchema: JsonSchema, max
   return content;
 }
 
+
+async function callOpenRouterText(messages: AiMessage[], maxOutputTokens: number, temperature: number) {
+  const apiKey = process.env.OPENROUTER_API_KEY?.trim();
+  if (!apiKey) throw new Error("OpenRouter is required for campaign captions. OPENROUTER_API_KEY is not configured.");
+  const model = (process.env.OPENROUTER_TEXT_MODEL || "openai/gpt-4.1").trim();
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      authorization: "Bearer " + apiKey,
+      "content-type": "application/json",
+      "HTTP-Referer": process.env.OPENROUTER_SITE_URL || "https://paanagam-localboost-dashboard.onrender.com",
+      "X-Title": "LocalBoost AI"
+    },
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature: Math.max(0.55, temperature),
+      max_tokens: maxOutputTokens,
+      response_format: { type: "json_object" }
+    }),
+    signal: AbortSignal.timeout(120000)
+  });
+  const contentType = response.headers.get("content-type") || "";
+  const responseText = await response.text();
+  let data: { choices?: Array<{ message?: { content?: string | Array<{ type?: string; text?: string }> } }>; error?: { message?: string } } = {};
+  if (contentType.toLowerCase().includes("application/json")) {
+    try { data = JSON.parse(responseText) as typeof data; }
+    catch { throw new Error("OpenRouter returned malformed JSON for GPT caption generation."); }
+  }
+  if (!response.ok) throw new Error("GPT caption generation failed (HTTP " + response.status + ")" + (data.error?.message ? ": " + data.error.message.slice(0, 240) : ". Check OpenRouter access and credits."));
+  const content = data.choices?.[0]?.message?.content;
+  const raw = typeof content === "string" ? content.trim()
+    : Array.isArray(content) ? content.map(part => part.text || "").join("").trim() : "";
+  if (!raw) throw new Error("GPT returned an empty campaign caption.");
+  return { raw, provider: "OPENROUTER_GPT", model, fallbackUsed: false };
+}
+
 export async function generateAiJson(options: GenerateOptions) {
+  if (options.task === "google-content-draft" || options.task === "local-social-content-draft") {
+    return callOpenRouterText(options.messages, options.maxOutputTokens ?? 700, options.temperature ?? 0.65);
+  }
   const attempts: Array<{ provider: string; model: string; run: () => Promise<string> }> = [];
   const apiKey = process.env.OLLAMA_API_KEY?.trim();
   if (apiKey) attempts.push({ provider: "OLLAMA_CLOUD", model: cloudModel(), run: () => callOllama(cloudBaseUrl, cloudModel(), options.messages, options.temperature ?? 0.2) });
