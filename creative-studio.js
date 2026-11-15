@@ -464,13 +464,13 @@
     panel.style.cssText="margin:0 0 20px;padding:20px;border:1px solid var(--border,#e6dfd5);border-radius:16px;background:var(--surface,#fff)";
     panel.innerHTML=`
       <div style="display:flex;gap:14px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap">
-        <div><span class="eyebrow">AI CONTENT INTELLIGENCE</span><h2 style="margin:5px 0">Daily content plan</h2><p style="margin:0;max-width:720px">AI analyses owner-validated customer reviews, saved menu records and customer expectations to prepare four evidence-led posts. No manual topic required.</p></div>
+        <div><span class="eyebrow">AI CONTENT INTELLIGENCE</span><h2 style="margin:5px 0">Daily content plan</h2><p style="margin:0;max-width:720px">AI analyses owner-validated customer reviews, saved menu records and customer expectations to prepare five evidence-led posts. No manual topic required.</p></div>
         <span class="tag pending-tag">Owner approval required</span>
       </div>
       <div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:18px 0">
         <label style="min-width:170px">Plan date<input id="ai-plan-date" type="date" value="${istDate()}" style="display:block;width:100%;margin-top:6px"></label>
         <button id="ai-plan-analyse" class="secondary-button" type="button">Analyse business evidence</button>
-        <button id="ai-plan-generate" class="primary-button" type="button">Generate today's 4 posts</button>
+        <button id="ai-plan-generate" class="primary-button" type="button">Generate today's 5 channel drafts</button>
       </div>
       <p id="ai-plan-status" role="status" style="margin:8px 0;color:var(--muted,#746d64)">Ready to analyse saved business evidence. AI service availability will be checked when generating.</p>
       <div id="ai-plan-insights" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px"></div>
@@ -536,13 +536,14 @@
       if(!reviews.length&&!menu.length){$("ai-plan-status").textContent="Cannot create evidence-led posts yet: add owner-validated reviews or saved menu items first. No fabricated content will be generated.";return;}
       const date=$("ai-plan-date").value||istDate();
       const slots=[
-        {slot:"Morning · customer voice",angle:"A customer-led morning welcome or service expectation. Use a real positive review only if one exists; otherwise make it a helpful customer question/answer." ,channel:"Instagram"},
+        {slot:"Morning · customer voice",angle:"A customer-led morning welcome or service expectation. Use a real positive review only if one exists; otherwise make it a helpful customer question/answer.",channel:"Instagram"},
         {slot:"Midday · menu spotlight",angle:"Highlight one actual saved menu item. Use only saved item name, description and price; never invent availability or ingredients.",channel:"Facebook"},
+        {slot:"Afternoon · community message",angle:"Create a concise, useful WhatsApp customer update based only on verified business evidence. Keep it conversational and suitable for direct sharing; do not invent offers or timings.",channel:"WhatsApp"},
         {slot:"Evening · expectation answered",angle:"Address the strongest recurring customer expectation or concern from review evidence. Be transparent and do not claim an issue is fixed unless owner-validated.",channel:"Google Business Profile"},
         {slot:"Night · discovery & conversation",angle:"Create a short-form discovery or engagement post linking menu choice to a genuine customer need. Avoid fake testimonials.",channel:"YouTube Shorts"}
       ];
       const cards=[];
-      $("ai-plan-status").textContent="Generating four evidence-grounded Tamil-first + English drafts with the configured hybrid AI provider. This may take a few minutes…";
+      $("ai-plan-status").textContent="Generating five evidence-grounded Tamil-first + English channel drafts with the configured hybrid AI provider. This may take a few minutes…";
       for(let i=0;i<slots.length;i++){
         const slot=slots[i];
         const menuItem=menu[i%Math.max(menu.length,1)];
@@ -556,12 +557,12 @@
         ].join(" ");
         const evidenceBrief = evidenceFacts.slice(0,350)+" Only use supplied facts; do not invent claims, prices, ingredients or availability. Tamil first + English.";
         const topic="Paanagam daily customer-led social post — "+slot.slot+" — "+slot.angle;
-        const result=await api(base()+"/ai-content/draft",{method:"POST",body:JSON.stringify({topic,evidence:evidenceBrief,language:"Tamil + English",format:i===3?"PORTRAIT":"SQUARE",tone:i===2?"PROFESSIONAL":"WARM"})});
+        const result=await api(base()+"/ai-content/draft",{method:"POST",body:JSON.stringify({topic,evidence:evidenceBrief,language:"Tamil + English",format:i===4?"PORTRAIT":"SQUARE",tone:i===2?"PROFESSIONAL":"WARM"})});
         const caption=result.postCopy||result.caption||result.copy||result.postText||"";
         if(!caption.trim())throw new Error("AI returned an empty caption for "+slot.slot);
         const draft={
           id:"creative-studio:daily:"+date+":"+i,
-          kind:"LOCALBOOST_AI_DAILY_POST",topic,offer:evidenceBrief,platform:slot.channel,format:i===3?"portrait":"feed",
+          kind:"LOCALBOOST_AI_DAILY_POST",topic,offer:evidenceBrief,platform:slot.channel,format:i===4?"portrait":"feed",
           language:"Tamil + English",caption,headline:result.headline||slot.slot,
           designerBrief:result.creativeBrief||result.imageBrief||"",
           sourceEvidence:{reviewCount:reviews.length,menuCount:menu.length,reviewThemes:themes,reviewSample:review?review.text:"",menuItem:menuItem||null},
@@ -569,10 +570,10 @@
         };
         await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:draft.id,payload:draft,recordedAt:draft.createdAt})});
         cards.push(draft);
-        $("ai-plan-status").textContent="Generated and saved "+cards.length+" of 4 private drafts…";
+        $("ai-plan-status").textContent="Generated and saved "+cards.length+" of 5 private drafts…";
         $("ai-plan-posts").innerHTML=cards.map(renderCard).join("");
       }
-      $("ai-plan-status").textContent="Daily plan ready · 4 drafts saved for "+date+". All require your review; nothing has been queued or published.";
+      $("ai-plan-status").textContent="Daily plan ready · 5 channel drafts saved for "+date+". All require your review; nothing has been queued or published.";
     }catch(error){$("ai-plan-status").textContent="Daily plan incomplete: "+error.message+". Any drafts already saved remain private; retry only after checking them in the library.";}
     finally{generating=false;analyseButton.disabled=false;generateButton.disabled=false;}
   }
