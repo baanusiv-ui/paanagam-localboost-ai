@@ -5,6 +5,7 @@ export type ImageDraftInput = {
   topic: string;
   offer?: string;
   creativeBrief?: string;
+  caption?: string;
   language: "Tamil" | "English" | "Tamil + English";
   format: "SQUARE" | "PORTRAIT" | "STORY";
 };
@@ -28,6 +29,7 @@ export async function generateOpenRouterCampaignImage(input: ImageDraftInput) {
     "Campaign subject: " + input.topic.slice(0, 180) + ".",
     input.offer ? "Offer context: " + input.offer.slice(0, 240) + "." : "",
     input.creativeBrief ? "Creative direction: " + input.creativeBrief.slice(0, 500) + "." : "",
+    input.caption ? "Exact social caption context (use only to understand the campaign mood and subject; do not render any words): " + input.caption.slice(0, 1800) : "",
     "Brand palette: mustard yellow, warm ivory, coffee brown and dark walnut, with subtle traditional kolam-inspired atmosphere.",
     "Make the main subject clear, attractive and fully visible. Compose with deliberate negative space for a brand and campaign text overlay.",
     "Generate the visual artwork only. Do not include text, letters, Tamil or English characters, numbers, logos, watermarks, signage, menus, labels, prices or invented claims.",
