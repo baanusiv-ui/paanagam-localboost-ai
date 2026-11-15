@@ -304,36 +304,82 @@
     const pickRandom=(items)=>items[Math.floor(Math.random()*items.length)];
     const buildRandomCommercialPrompt=(d={})=>{
       const shop=String(d.businessName||d.shopName||d.brandName||"PAANAGAM (பானகம்)").trim();
-      const topic=String(d.topic||"neighbourhood café brand").trim();
+      const topic=String(d.topic||"Paanagam café campaign").trim();
       const caption=String(d.caption||"").trim();
-      const concept=pickRandom([
-        {name:"Signature storefront and illuminated signage",scene:"A wide-angle commercial exterior view of a contemporary urban tea café storefront. The fascia is clad in matte black composite ACP panels with subtle vertical walnut wood-slat accents. The shop name, '"+shop+"', appears as clean minimalist 3D acrylic letters with warm-white face illumination. Beside it, a custom warm-amber LED flex neon icon depicts a steaming earthen kulhad tea cup. Floor-to-ceiling clear glass reveals a warmly lit, inviting modern café interior."},
-        {name:"Organic herbal tea and kulhad chai boutique storefront",scene:"A cozy and natural storefront entrance for an organic herbal tea and kulhad chai boutique named '"+shop+"'. The rectangular sign panel has textured warm terracotta-red plaster bordered by dark bamboo trim. The brand name appears in hand-carved natural light-wood 3D lettering with a gentle warm halo backlight. A delicate illustrative emblem of fresh green tea leaves curling around an earthen clay cup sits centered above the text. Soft ground spotlights and hanging wicker pendant lamps create an inviting earthy tea-garden aesthetic. Realistic daytime commercial photography."},
-        {name:"Premium café interior",scene:"A refined contemporary South Indian café interior with a dramatic counter, warm ivory walls, dark walnut fluted panels, mustard accents, pendant lighting, tactile natural materials and a beautifully illuminated brand wall displaying '"+shop+"' as dimensional lettering. Wide-angle architectural composition, inviting seating and realistic spatial depth."},
-        {name:"Hero product advertising",scene:"An editorial commercial hero photograph of the campaign's featured drink or food, beautifully styled on a dark walnut café counter with authentic serving ware, subtle steam, rich realistic textures and elegant warm reflections. A softly blurred premium café environment gives the product centre stage."},
-        {name:"Street-side café lifestyle campaign",scene:"A cinematic street-level view of a lively but tasteful South Indian neighbourhood café at blue hour, warm light glowing through full-height glass, a few naturally arranged café details, refined signage and welcoming atmosphere. The brand '"+shop+"' is clearly visible on the fascia."},
-        {name:"Architectural brand identity mock-up",scene:"A premium architectural branding mock-up showing the café façade, dimensional logo signage, material junctions, illuminated icon, glass frontage and considered storefront proportions. Contemporary commercial design presentation, crisp detailing and realistic construction materials."},
-        {name:"Food and beverage menu hero",scene:"A premium commercial still-life campaign featuring the exact food or beverage from the campaign topic, with carefully arranged ingredients and serving details, a strong focal point, beautiful natural texture and sophisticated café styling. Avoid adding unmentioned products."},
-        {name:"Promotional campaign key visual",scene:"A bold, polished commercial campaign key visual for a neighbourhood café, with one clear visual hero, layered but uncluttered composition, warm cinematic lighting, tasteful brand-colour accents and generous negative space reserved for editable promotional typography."}
+      const brief=String(d.designerBrief||d.brief||"").trim();
+      const subject=topic||"the exact featured Paanagam product";
+      const concepts=[
+        {name:"Signature filter-coffee hero",kind:"product",scene:"A freshly poured South Indian filter coffee in a traditional stainless-steel tumbler and dabarah, captured at the exact moment a silky stream settles into the cup. Show delicate steam, crema-like bubbles and authentic metal reflections. Coffee is the unmistakable hero."},
+        {name:"Coffee bean and decoction story",kind:"ingredient",scene:"An art-directed ingredient story showing roasted coffee beans, freshly ground coffee, a traditional South Indian metal filter and a small glass of rich decoction arranged in a tactile, editorial still life. Every ingredient and tool is realistic and purposeful."},
+        {name:"Iced coffee refreshment",kind:"product",scene:"A chilled coffee in a clear elegant glass, beads of condensation, visible ice and creamy coffee layers, photographed in bright natural light with a restrained café background. Make the drink look genuinely cold, refreshing and delicious."},
+        {name:"Tea pour moment",kind:"product",scene:"A dramatic yet authentic South Indian tea-pouring moment into a glass or traditional cup, with a graceful amber tea stream, delicate natural movement and warm highlights. Keep the vessel and liquid physically believable."},
+        {name:"Kulhad chai product portrait",kind:"product",scene:"A rustic earthen kulhad filled with rich steaming chai, tactile clay texture, subtle tea surface detail and a softly blurred tea-garden-inspired setting. The cup is the single hero."},
+        {name:"Food menu hero",kind:"food",scene:"A mouth-watering editorial food photograph of the exact dish in the campaign brief, served in appropriate South Indian tableware. Show realistic texture, appetising detail and a carefully styled but restrained garnish. Do not add dishes that were not specified."},
+        {name:"Crispy snack close-up",kind:"food",scene:"An extreme appetising close-up of the exact snack or fried item in the brief, showing crisp golden texture, delicate crumbs and natural highlights. Use authentic serving paper or a simple plate, never a cluttered spread."},
+        {name:"Combo meal overhead",kind:"food",scene:"A beautifully organised overhead food composition of the exact combo specified in the brief. Each component is clearly visible in its own realistic serving vessel, with balanced spacing and an inviting South Indian meal aesthetic. Do not invent extra items."},
+        {name:"Packaging and takeaway identity",kind:"packaging",scene:"A premium product-packaging visualisation for the featured Paanagam item: thoughtfully designed takeaway cup, food box or carry bag with realistic paper, print, folds and closures. Use the brand palette and reserve a clean logo placement; do not invent product claims."},
+        {name:"New product launch key visual",kind:"campaign",scene:"A high-impact launch-campaign key visual built around one unmistakable hero product. Use a bold focal point, expressive lighting, confident negative space and a refined visual metaphor that makes the product feel new and desirable."},
+        {name:"Limited-time offer creative",kind:"campaign",scene:"A polished promotional art direction for a limited-time café offer, with the featured product as the hero and a clear uncluttered area reserved for editable offer copy, price and dates. Do not invent or render any offer details."},
+        {name:"Festival and seasonal campaign",kind:"campaign",scene:"A tasteful South Indian seasonal celebration expressed through subtle festive materials, warm lamps, fresh flowers or regional decorative details around the exact featured product. Keep the product dominant and avoid clichés or excessive decoration."},
+        {name:"Tamil heritage brand storytelling",kind:"story",scene:"A cinematic editorial scene connecting a South Indian coffee or tea ritual with everyday Tamil culture: traditional brass or stainless-steel details, kolam-inspired geometry, warm wood and authentic local atmosphere. Keep the featured product central."},
+        {name:"Behind-the-counter craft",kind:"story",scene:"A documentary-style close-up of the craft behind the featured drink or dish: precise preparation, authentic utensils, realistic ingredients and a clean working counter. Show hands only if they are natural and anatomically correct; focus on genuine process."},
+        {name:"Lifestyle serving moment",kind:"lifestyle",scene:"A warm, candid café lifestyle scene where the exact featured drink or dish is beautifully presented on a table in a welcoming South Indian neighbourhood café. Human presence may appear softly in context, but the product remains the clear focal point."},
+        {name:"Creative illustrated product character",kind:"illustration",scene:"A charming, premium hand-crafted illustration that turns the exact featured cup or food item into a friendly expressive character while preserving its recognisable shape and ingredients. Wholesome, stylish and suitable for a family-friendly café campaign."},
+        {name:"Storefront and architectural identity",kind:"architecture",scene:"A distinctive contemporary South Indian café frontage combining warm ivory plaster, mustard accents, dark walnut, tactile terracotta and inviting light. Include the brand name only as a carefully designed sign element; create a believable, buildable space."},
+        {name:"Café interior atmosphere",kind:"architecture",scene:"An inviting small-footprint café interior with a thoughtful service counter, warm practical lighting, natural textures, compact seating and a strong brand wall. Show realistic circulation and human-scale proportions, not an oversized luxury restaurant."},
+        {name:"Graphic editorial product poster",kind:"graphic",scene:"A modern editorial poster composition using a large photorealistic cut-out of the exact featured product, bold geometric colour fields, subtle texture and generous negative space for editable Tamil and English campaign typography."},
+        {name:"Minimal premium product still life",kind:"product",scene:"A minimal luxury still life of the exact featured product on a sculptural plinth or tactile natural surface. Strong shape, beautiful material contrast, controlled shadows and refined colour blocking create a memorable product portrait."}
+      ];
+      const concept=pickRandom(concepts);
+      const lighting=pickRandom([
+        "soft golden-hour window light with gentle directional shadows",
+        "dramatic low-key studio lighting with controlled warm highlights",
+        "bright, fresh morning daylight with natural colour and soft shadows",
+        "moody café tungsten glow with subtle amber reflections",
+        "clean diffused editorial studio light with accurate product colour",
+        "sunlit tropical daylight with delicate leaf shadows"
       ]);
-      const materials=pickRandom(["matte black ACP, vertical walnut slats, brushed brass and clear glass","warm ivory plaster, dark walnut, mustard enamel and ribbed glass","charcoal metal, natural teak, amber acrylic and polished concrete","textured limewash, fluted timber, warm metal trim and floor-to-ceiling glazing"]);
-      const lighting=pickRandom(["twilight blue-hour ambience with warm-white signage glow and amber interior light","soft early-morning daylight with gentle architectural shadows","cinematic evening illumination, warm practical lights and restrained reflections","overcast daylight with balanced exposure and crisp material definition"]);
-      const camera=pickRandom(["wide-angle 24mm architectural commercial photography, eye-level perspective","three-quarter street perspective, 28mm tilt-shift architectural lens","straight-on symmetrical façade view, professional commercial real-estate photography","low three-quarter hero angle with realistic vertical lines and controlled perspective"]);
-      const finish=pickRandom(["photorealistic commercial mock-up, crisp edges, physically accurate materials and premium retouching","high-end architectural visualisation that looks like a real photographed completed project","ultra-detailed commercial brand presentation, realistic illumination, natural reflections and precise geometry"]);
-      const format=String(d.format||"9:16").toLowerCase()==="feed"?"1:1":"9:16";
+      const camera=pickRandom([
+        "tight 85mm macro-style product portrait with shallow natural depth of field",
+        "45-degree editorial food-photography angle at table height",
+        "clean overhead flat-lay with deliberate geometric spacing",
+        "50mm eye-level commercial lifestyle perspective",
+        "low three-quarter hero angle with realistic scale and controlled perspective",
+        "cinematic close-up with foreground depth and a softly separated background"
+      ]);
+      const composition=pickRandom([
+        "one dominant hero subject, simple visual hierarchy and generous negative space",
+        "editorial asymmetry with balanced supporting ingredients and a clear focal point",
+        "bold central product framing with a refined graphic background",
+        "layered foreground, middle-ground and softly separated background, without clutter"
+      ]);
+      const palette=pickRandom([
+        "mustard yellow, warm ivory, dark walnut and coffee brown",
+        "terracotta, leaf green, warm cream and natural clay",
+        "deep espresso, copper, amber and soft charcoal",
+        "fresh ivory, pale wood, muted green and golden highlights",
+        "rich coffee brown, toasted caramel and restrained brass"
+      ]);
+      const format=String(d.format||"9:16").toLowerCase()==="feed"?"1:1":(["16:9","9:16"].includes(d.format)?d.format:"9:16");
+      const signage=concept.kind==="architecture";
       return [
-        "Create an original, high-end commercial creative for "+shop+".",
-        "CREATIVE CONCEPT: "+concept.name+".",
+        "Create an original, premium commercial visual for "+shop+".",
+        "RANDOM CREATIVE CATEGORY: "+concept.kind.toUpperCase()+" — "+concept.name+".",
+        "HERO SUBJECT: "+subject+". Depict the exact product, dish, drink or experience named in the campaign brief. If the topic is broad, choose one clear Paanagam product rather than combining unrelated products.",
         "SCENE AND ART DIRECTION: "+concept.scene,
-        "BRAND CONTEXT: "+topic+". Preserve the supplied business identity. Use a considered palette of mustard yellow, warm ivory, dark walnut and restrained amber accents where appropriate.",
-        "MATERIAL PALETTE: "+materials+".",
-        "LIGHTING AND ATMOSPHERE: "+lighting+".",
-        "CAMERA AND COMPOSITION: "+camera+". Vertical "+format+" composition, strong visual hierarchy, realistic scale, clean framing and carefully balanced negative space. Keep the main subject fully inside frame.",
-        "IMAGE FINISH: "+finish+".",
-        caption?"CAMPAIGN MESSAGE CONTEXT ONLY — use this to guide the visual mood, do not reproduce or invent text: "+caption:"",
-        "TEXT AND LOGO CONTROL: Render the shop name only where signage is explicitly part of the scene. Do not invent other words, prices, menu items, slogans, phone numbers, Tamil lettering, labels or watermarks. Leave promotional copy areas clean for approved editable overlays.",
-        "NEGATIVE PROMPT: no gibberish typography, misspelled signage, fake logos, distorted architecture, bent verticals, warped glass, duplicated objects, clutter, artificial plastic textures, oversaturated colours, stock-photo watermarks or UI elements.",
-        "FINAL RESULT: A distinctive, photorealistic, scroll-stopping commercial creative that looks professionally art-directed and suitable for a real café brand."
+        brief?"CAMPAIGN ART DIRECTION: "+brief:"",
+        "BRAND PERSONALITY: Contemporary South Indian neighbourhood café, rooted in Tamil culture; welcoming, memorable, premium but approachable.",
+        "COLOUR DIRECTION: "+palette+". Use Paanagam brand colours thoughtfully rather than forcing every colour into every scene.",
+        "LIGHTING: "+lighting+".",
+        "CAMERA: "+camera+".",
+        "COMPOSITION: "+composition+". Adapt framing to the subject; keep the hero fully visible and important details away from crop edges. Create visual depth without distracting props.",
+        "FORMAT: "+format+" aspect ratio, designed for a social promotional slide. For product portraits, prioritise the product; for campaigns, preserve a clean text-safe area; for architecture, show the full relevant space.",
+        "MATERIAL AND PRODUCT ACCURACY: Photorealistic liquid, food texture, steam, metal, ceramic, clay, paper and wood. Correct proportions, believable serving vessels and natural reflections. Never add ingredients, menu items, packaging features or claims that are not in the brief.",
+        "BRAND MARK CONTROL: "+(signage?"The PAANAGAM name may appear only as a correctly spelled architectural sign.":"Do not force a storefront, billboard or signboard into this concept. Keep the product itself central.")+" Do not fabricate logos or Tamil lettering.",
+        "TEXT CONTROL: Do not render captions, slogans, prices, offer details, dates, phone numbers, pseudo-letters or watermarks. Leave suitable clean space for approved editable Tamil and English overlays in LocalBoost.",
+        caption?"CAPTION CONTEXT ONLY — use the message to guide emotion and visual intent; do not reproduce it as image text: "+caption:"",
+        "NEGATIVE PROMPT: no generic billboard unless the selected concept is architecture, no unrelated props or extra dishes, no duplicate products, no malformed cups or utensils, no distorted food, no fake logos, no gibberish typography, no plastic CGI look, no excessive decoration, no stock watermark.",
+        "FINAL RESULT: A distinctive, scroll-stopping, professionally art-directed creative that clearly communicates the selected product or campaign idea at first glance."
       ].filter(Boolean).join("\n\n").slice(0,4000);
     };
     randomCreativeButton.addEventListener("click",()=>{
