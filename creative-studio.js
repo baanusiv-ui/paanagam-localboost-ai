@@ -73,7 +73,14 @@
       $("creative-save").disabled=false;
       setMessage("Campaign caption generated. Preparing the matching image prompt for your review…");
       window.dispatchEvent(new CustomEvent("localboost:campaign-copy-ready",{detail:{topic:current.topic,offer:current.offer,platform:current.platform,format:current.format,language:current.language,tone,caption:current.caption,headline:current.headline,designerBrief:current.designerBrief}}));
-      setMessage("Caption and matching image prompt are ready. Review both, then choose Generate GPT Image or Generate image when you are ready.");
+      // Fully automate the default campaign path: GPT caption -> GPT Image -> saved campaign draft -> Approval Centre.
+      // The final save queues eligible channels for owner review only; it never approves or publishes.
+      setMessage("GPT caption ready. Automatically generating matching GPT Image artwork…");
+      await generateAndSaveGptImage();
+      const saveButton=$("creative-save");
+      if(!saveButton || saveButton.disabled) throw new Error("GPT artwork was created, but the campaign could not be queued for review.");
+      saveButton.click();
+      setMessage("GPT caption and matching image generated and saved. Eligible posts are being added to the Approval Centre. Nothing is approved or published.");
     } catch(err){setMessage("Generation failed: "+err.message,true);}
     finally{$("creative-generate").disabled=false;}
   });
@@ -196,7 +203,7 @@
     if(button)button.disabled=false;
     return current;
   }
-  const gptImageButton=$("creative-image-gemini"); if(gptImageButton){gptImageButton.textContent="Generate GPT Image";gptImageButton.setAttribute("aria-label","Generate artwork with OpenAI GPT Image");}
+  const gptImageButton=$("creative-image-gemini"); if(gptImageButton){gptImageButton.textContent="Regenerate GPT Image";gptImageButton.setAttribute("aria-label","Generate artwork with OpenAI GPT Image");}
   $("creative-image-gemini")?.addEventListener("click",async()=>{
     try{await generateAndSaveGptImage();}
     catch(err){setMessage("GPT Image generation failed: "+err.message,true);const button=$("creative-image-gemini");if(button)button.disabled=false;}
