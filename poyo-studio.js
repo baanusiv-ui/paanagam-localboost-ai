@@ -121,7 +121,7 @@
       const prompt=$("poyo-image-prompt").value.trim(),resolution=$("poyo-image-resolution").value;
       if(!prompt||prompt.length>4000)throw new Error("Image prompt must be between 1 and 4,000 characters.");
       const urls=$("poyo-image-refs").value.split(/\r?\n/).map(v=>v.trim()).filter(Boolean);
-      if(urls.length>10||!urls.every(v=>/^https:\/\/\//i.test(v)))throw new Error("Use up to 10 publicly accessible HTTPS reference URLs.");
+      if(urls.length>10||!urls.every(v=>/^https:\/\//i.test(v)))throw new Error("Use up to 10 publicly accessible HTTPS reference URLs.");
       const campaignContext=lastCampaignImageBrief?{topic:String(lastCampaignImageBrief.topic||"").slice(0,300),caption:String(lastCampaignImageBrief.caption||"").slice(0,2000),offer:String(lastCampaignImageBrief.offer||"").slice(0,500),format:String(lastCampaignImageBrief.format||"").slice(0,40)}:undefined;
       const modelInput={size:$("poyo-image-size").value,resolution,...(urls.length?{image_urls:urls}:{}),...(campaignContext?{campaign:campaignContext}:{})};
       const result=await api(base()+"/poyo/tasks",{method:"POST",body:JSON.stringify({mediaType:"IMAGE",modelId:"nano-banana-2.1",prompt,modelInput})});
@@ -131,6 +131,7 @@
     }catch(err){message("poyo-image-message","Could not save image draft: "+err.message,true);}
     finally{button.disabled=false;}
   });
+    const buildPaanagamImagePrompt = (d={}) => {
       const topic=String(d.topic||"Paanagam café campaign").trim();
       const brief=String(d.designerBrief||d.brief||"").trim();
       const headline=String(d.headline||"").trim();
