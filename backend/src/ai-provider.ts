@@ -37,11 +37,26 @@ async function callOllama(baseUrl: string, model: string, messages: AiMessage[],
     headers["CF-Access-Client-Id"] = accessId;
     headers["CF-Access-Client-Secret"] = accessSecret;
   }
+  const isLocal = baseUrl !== cloudBaseUrl;
+  // Local Ollama runs on the owner's PC and may need more time over the secure tunnel.
+  // Keep the local generation budget bounded so small models can finish reliably.
+  const timeoutMs = isLocal
+    ? Math.max(120000, Number(process.env.OLLAMA_REQUEST_TIMEOUT_MS) || 300000)
+    : 120000;
+  const numPredict = isLocal
+    ? Math.max(128, Number(process.env.OLLAMA_NUM_PREDICT) || 256)
+    : undefined;
   const response = await fetch(baseUrl + "/api/chat", {
     method: "POST",
     headers,
-    body: JSON.stringify({ model, messages, stream: false, format: "json", options: { temperature } }),
-    signal: AbortSignal.timeout(120000)
+    body: JSON.stringify({
+      model,
+      messages,
+      stream: false,
+      format: "json",
+      options: { temperature, ...(numPredict ? { num_predict: numPredict } : {}) }
+    }),
+    signal: AbortSignal.timeout(timeoutMs)
   });
   const data = await response.json() as { message?: { content?: string }; error?: string };
   if (!response.ok) throw Object.assign(new Error(data.error || "Ollama request failed with HTTP " + response.status), { status: response.status });
