@@ -1711,11 +1711,12 @@ app.get("/v1/google/callback", async (request, reply) => {
   if (!query.data.code) return reply.code(400).send({ error: "Missing authorisation code" });
 
   const oauthState = await prisma.oAuthState.findUnique({ where: { state: query.data.state } });
-  if (!oauthState || oauthState.expiresAt.getTime() < Date.now()) {
-    if (oauthState) await prisma.oAuthState.delete({ where: { id: oauthState.id } });
-    return reply.code(400).send({ error: "OAuth state is invalid or expired. Start the connection again." });
-  }
-  await prisma.oAuthState.delete({ where: { id: oauthState.id } });
+  if (!oauthState) return reply.code(400).send({ error: "OAuth state is invalid or expired. Start the connection again." });
+  // Atomically consume the unexpired state so concurrent/replayed callbacks cannot both exchange the code.
+  const consumedState = await prisma.oAuthState.deleteMany({
+    where: { id: oauthState.id, expiresAt: { gt: new Date() } }
+  });
+  if (consumedState.count !== 1) return reply.code(400).send({ error: "OAuth state is invalid, expired or already used. Start the connection again." });
 
   const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
@@ -1855,11 +1856,12 @@ app.get("/v1/meta/callback", async (request, reply) => {
   if (query.data.error) return reply.redirect(env.APP_BASE_URL + "/?meta=cancelled");
   if (!query.data.code) return reply.code(400).send({ error: "Missing Meta authorisation code" });
   const state = await prisma.metaOAuthState.findUnique({ where: { state: query.data.state } });
-  if (!state || state.expiresAt.getTime() < Date.now()) {
-    if (state) await prisma.metaOAuthState.delete({ where: { id: state.id } });
-    return reply.code(400).send({ error: "Meta OAuth state is invalid or expired. Start the connection again." });
-  }
-  await prisma.metaOAuthState.delete({ where: { id: state.id } });
+  if (!state) return reply.code(400).send({ error: "Meta OAuth state is invalid or expired. Start the connection again." });
+  // Atomically consume the unexpired state so concurrent/replayed callbacks cannot both exchange the code.
+  const consumedState = await prisma.metaOAuthState.deleteMany({
+    where: { id: state.id, expiresAt: { gt: new Date() } }
+  });
+  if (consumedState.count !== 1) return reply.code(400).send({ error: "Meta OAuth state is invalid, expired or already used. Start the connection again." });
   const tokenUrl = new URL("https://graph.facebook.com/" + env.META_GRAPH_API_VERSION + "/oauth/access_token");
   tokenUrl.search = new URLSearchParams({ client_id: env.META_APP_ID, client_secret: env.META_APP_SECRET, redirect_uri: env.META_REDIRECT_URI, code: query.data.code }).toString();
   const shortResponse = await fetch(tokenUrl, { signal: AbortSignal.timeout(20000) });
