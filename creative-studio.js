@@ -73,6 +73,7 @@
       $("creative-save").disabled=false;
       setMessage("Campaign caption generated. Preparing the matching image prompt for your review…");
       window.dispatchEvent(new CustomEvent("localboost:campaign-copy-ready",{detail:{topic:current.topic,offer:current.offer,platform:current.platform,format:current.format,language:current.language,tone,caption:current.caption,headline:current.headline,designerBrief:current.designerBrief}}));
+      try { await generateAndSaveGptImage(); } catch(imageError) { setMessage("Caption draft is ready, but automatic GPT Image generation failed: "+imageError.message+". Use Retry image to try again.",true); const retry=$("creative-image-gemini"); if(retry){retry.textContent="Retry GPT Image";retry.disabled=false;} }
     } catch(err){setMessage("Generation failed: "+err.message,true);}
     finally{$("creative-generate").disabled=false;}
   });
@@ -161,27 +162,44 @@
     }catch(err){setMessage("Canva artwork generation failed: "+err.message,true);}
     finally{button.disabled=false;}
   });
+  async function generateAndSaveGptImage() {
+    if(!current) throw new Error("Generate the campaign caption first.");
+    const preview=$("creative-gemini-preview");
+    const button=$("creative-image-gemini");
+    if(button) button.disabled=true;
+    if(preview){preview.src="";preview.classList.add("hidden");}
+    $("creative-gemini-download") && ($("creative-gemini-download").disabled=true);
+    setMessage("Caption ready. GPT Image is automatically creating matching campaign artwork…");
+    const formatMap={feed:"SQUARE",portrait:"PORTRAIT",story:"STORY"};
+    const result=await api(base()+"/creative/image",{method:"POST",body:JSON.stringify({
+      provider:"OPENAI",topic:current.topic,offer:current.offer,creativeBrief:current.designerBrief,
+      caption:current.caption,language:current.language,format:formatMap[$("creative-format").value]||"SQUARE"
+    })});
+    const composed=await composeCampaignArtwork(result.imageDataUrl);
+    const comma=composed.indexOf(","), header=composed.slice(0,comma);
+    const mimeType=(header.match(/^data:(image\\/(?:jpeg|png|webp));base64$/)||[])[1];
+    const dataBase64=composed.slice(comma+1);
+    if(!mimeType||!dataBase64) throw new Error("Generated image data is invalid.");
+    const saved=await api(base()+"/creative-assets",{method:"POST",body:JSON.stringify({
+      fileName:"gpt-image-"+Date.now()+".jpg",mimeType,dataBase64,altText:current.topic+" — "+current.caption.slice(0,160)
+    })});
+    current.assetId=saved.asset.id;current.assetName=saved.asset.fileName;
+    current.imageProvider="OPENAI_GPT_IMAGE";current.imageModel=result.model;current.imageGeneratedAt=result.generatedAt;
+    if(preview){preview.src=composed;preview.classList.remove("hidden");preview.dataset.downloadUrl=composed;}
+    $("creative-gemini-download") && ($("creative-gemini-download").disabled=false);
+    $("creative-gemini-save") && ($("creative-gemini-save").disabled=true);
+    const metrics=$("creative-provider-metrics");
+    if(metrics)metrics.textContent="OpenAI GPT Image · "+result.model+" · generated and saved to business library.";
+    current.updatedAt=new Date().toISOString();
+    await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:current.id,payload:current,recordedAt:current.updatedAt})});
+    setMessage("Matching GPT Image artwork generated and saved with the caption as a campaign draft. Review it, then use Save to Approval Centre when ready. Nothing is approved or published.");
+    if(button)button.disabled=false;
+    return current;
+  }
   const gptImageButton=$("creative-image-gemini"); if(gptImageButton){gptImageButton.textContent="Generate GPT Image";gptImageButton.setAttribute("aria-label","Generate artwork with OpenAI GPT Image");}
   $("creative-image-gemini")?.addEventListener("click",async()=>{
-    if(!ready||!current){setMessage("Generate campaign copy first, then create its artwork.",true);return;}
-    const button=$("creative-image-gemini"), preview=$("creative-gemini-preview"), startedAt=Date.now();
-    button.disabled=true; $("creative-gemini-download").disabled=true; preview.src=""; preview.classList.add("hidden");
-    setMessage("Generating campaign artwork with OpenAI GPT Image…");
-    try{
-      const formatMap={feed:"SQUARE",portrait:"PORTRAIT",story:"STORY"};
-      const result=await api(base()+"/creative/image",{method:"POST",body:JSON.stringify({
-        provider:"OPENAI",topic:current.topic,offer:current.offer,creativeBrief:current.designerBrief,
-        language:current.language,format:formatMap[$("creative-format").value]||"SQUARE"
-      })});
-      const composed=await composeCampaignArtwork(result.imageDataUrl);
-      preview.src=composed; preview.classList.remove("hidden"); preview.dataset.downloadUrl=composed;
-      $("creative-gemini-download").disabled=false; $("creative-gemini-save").disabled=false;
-      const seconds=((Date.now()-startedAt)/1000).toFixed(1);
-      const metrics=$("creative-provider-metrics");
-      if(metrics) metrics.textContent="OpenAI GPT Image · "+result.model+" · "+seconds+" s · "+result.mimeType+" · temporary preview.";
-      setMessage("GPT Image artwork generated and branded locally. Review and download it; nothing has been saved or published.");
-    }catch(err){setMessage("GPT Image generation failed: "+err.message,true);}
-    finally{button.disabled=false;}
+    try{await generateAndSaveGptImage();}
+    catch(err){setMessage("GPT Image generation failed: "+err.message,true);const button=$("creative-image-gemini");if(button)button.disabled=false;}
   });
   $("creative-gemini-save")?.addEventListener("click",async()=>{
     const button=$("creative-gemini-save"), preview=$("creative-gemini-preview");
