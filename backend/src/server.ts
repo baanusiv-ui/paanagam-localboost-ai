@@ -652,7 +652,7 @@ app.post("/v1/businesses/:businessId/creative/image", {
     creativeBrief: z.string().trim().max(1200).optional(),
     language: z.enum(["Tamil", "English", "Tamil + English"]).default("Tamil + English"),
     format: z.enum(["SQUARE", "PORTRAIT", "STORY"]).default("SQUARE"),
-    provider: z.literal("OPENROUTER").default("OPENROUTER")
+    provider: z.literal("OPENAI").default("OPENAI")
   }).safeParse(request.body);
   if (!params.success || !body.success) return reply.code(400).send({ error: "Invalid creative image request" });
   const business = await ownedBusiness(request.userId!, params.data.businessId);
