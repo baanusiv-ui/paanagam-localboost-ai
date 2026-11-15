@@ -122,8 +122,7 @@
       if(!prompt||prompt.length>4000)throw new Error("Image prompt must be between 1 and 4,000 characters.");
       const urls=$("poyo-image-refs").value.split(/\r?\n/).map(v=>v.trim()).filter(Boolean);
       if(urls.length>10||!urls.every(v=>/^https:\/\//i.test(v)))throw new Error("Use up to 10 publicly accessible HTTPS reference URLs.");
-      const campaignContext=lastCampaignImageBrief?{topic:String(lastCampaignImageBrief.topic||"").slice(0,300),caption:String(lastCampaignImageBrief.caption||"").slice(0,2000),offer:String(lastCampaignImageBrief.offer||"").slice(0,500),format:String(lastCampaignImageBrief.format||"").slice(0,40)}:undefined;
-      const modelInput={size:$("poyo-image-size").value,resolution,...(urls.length?{image_urls:urls}:{}),...(campaignContext?{campaign:campaignContext}:{})};
+      const modelInput={size:$("poyo-image-size").value,resolution,...(urls.length?{image_urls:urls}:{})};
       const result=await api(base()+"/poyo/tasks",{method:"POST",body:JSON.stringify({mediaType:"IMAGE",modelId:"nano-banana-2.1",prompt,modelInput})});
       if(!result.task?.id)throw new Error("LocalBoost did not return a saved image draft ID.");
       await loadTasks();
@@ -131,7 +130,143 @@
     }catch(err){message("poyo-image-message","Could not save image draft: "+err.message,true);}
     finally{button.disabled=false;}
   });
+
+  async function handleTaskAction(e){
+    const button=e.target.closest("button");if(!button)return;
+    const generate=button.dataset.generate,approve=button.dataset.approve,refresh=button.dataset.refresh,useCampaign=button.dataset.useCampaign,id=generate||approve||refresh;if(useCampaign){window.dispatchEvent(new CustomEvent("localboost:poyo-asset-selected",{detail:{assetId:useCampaign,prompt:button.dataset.prompt||""}}));message("poyo-image-message","Saved image handed to Campaign Studio. Review the generated caption before saving.");return;}if(!id)return;
+    button.disabled=true;const kind=button.dataset.kind||"video",noun=kind==="image"?"image":"video";
+    try{
+      if(generate){
+        if(!generationEnabled)throw new Error("Paid generation is paused.");
+        const result=await api(base()+"/poyo/tasks/"+encodeURIComponent(id)+"/submit",{method:"POST",body:"{}"});
+        message(kind==="image"?"poyo-image-message":"poyo-studio-message","PoYo "+noun+" job submitted. Estimated cost: "+(result.estimatedCredits??"not supplied")+" credits. Waiting for preview…");
+      }else if(approve){
+        await api(base()+"/poyo/tasks/"+encodeURIComponent(id)+"/approve",{method:"POST",body:"{}"});
+        message(kind==="image"?"poyo-image-message":"poyo-studio-message","Owner approval recorded. The "+noun+" has not been published.");
+      }else{
+        await api(base()+"/poyo/tasks/"+encodeURIComponent(id)+"/refresh",{method:"POST",body:"{}"});
+        message(kind==="image"?"poyo-image-message":"poyo-studio-message",noun+" job status refreshed.");
+      }
+      // The action above already submitted/refreshed this task. Fetch saved task state only;
+      // do not immediately call the provider status endpoint a second time (PoYo rate-limits it).
+      await loadTasks();
+    }catch(err){message(kind==="image"?"poyo-image-message":"poyo-studio-message","PoYo action failed: "+err.message,true);}finally{if(button.isConnected)button.disabled=false;}
+  }
+  $("poyo-task-list")?.addEventListener("click",handleTaskAction);
+  $("poyo-image-task-list")?.addEventListener("click",handleTaskAction);
+  $("poyo-refresh")?.addEventListener("click",()=>loadTasks({refreshPending:true}));
+  $("poyo-image-refresh")?.addEventListener("click",()=>loadTasks({refreshPending:true}));
+  async function init(){if(!businessId()||!token())return;await loadModels();await loadTasks({refreshPending:true});}
+  window.addEventListener("localboost:business-ready",init);
+  window.addEventListener("localboost:signed-out",()=>{
+    if(pollTimer){clearInterval(pollTimer);pollTimer=null;}revokeMediaUrls();
+    if($("poyo-task-list"))$("poyo-task-list").innerHTML='<p class="empty-copy">Sign in to view PoYo video jobs.</p>';
+    if($("poyo-image-task-list"))$("poyo-image-task-list").innerHTML='<p class="empty-copy">Sign in to view image jobs.</p>';
+  });
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",init);else init();
+})();
+
+/* Guided Content Studio navigation. Existing feature nodes are moved, not rebuilt,
+   so their original event handlers, IDs, forms and approval safeguards remain intact. */
+(() => {
+  "use strict";
+  function setupContentStudio() {
+    const root=document.getElementById("content-view");
+    const engine=document.getElementById("poyo-creative-panel");
+    if(!root||!engine||root.dataset.guidedStudio==="ready")return;
+    const campaign=root.querySelector(".creative-layout");
+    const image=document.getElementById("poyo-image-panel");
+    const imageCreate=document.createElement("div");imageCreate.className="panel";
+    const imageHeader=image?.querySelector(".panel-heading");
+    const imageForm=image?.querySelector("#poyo-image-form");
+    const imageMessage=document.getElementById("poyo-image-message");
+    const campaignPreview=document.getElementById("creative-preview");
+    const campaignForm=document.getElementById("creative-form");
+    const campaignOutput=document.createElement("label");
+    campaignOutput.className="lb-campaign-output-choice";
+    campaignOutput.htmlFor="creative-output-type";
+    campaignOutput.innerHTML='Create as<select id="creative-output-type"><option value="image">Image</option><option value="video">Video</option></select>';
+    if(campaignForm){
+      const generateButton=campaignForm.querySelector("#creative-generate");
+      if(generateButton)generateButton.insertAdjacentElement("beforebegin",campaignOutput);
+      else campaignForm.append(campaignOutput);
+    }
+    if(imageHeader)imageCreate.append(imageHeader);
+    if(imageForm)imageCreate.append(imageForm);
+    if(imageMessage)imageCreate.append(imageMessage);
+    const imageOutputTitle=document.createElement("h3");
+    imageOutputTitle.textContent="Campaign copy & image artwork";
+    imageOutputTitle.className="lb-studio-output-title";
+    imageCreate.append(imageOutputTitle);
+    const videoOutputTitle=document.createElement("h3");
+    videoOutputTitle.textContent="Campaign copy & video brief";
+    videoOutputTitle.className="lb-studio-output-title";
+    if(campaignPreview)campaignPreview.hidden=true;
+    const imageJobsPanel=document.createElement("div");imageJobsPanel.className="panel";
+    const imageJobsHeader=document.createElement("div");imageJobsHeader.className="panel-heading";
+    imageJobsHeader.innerHTML='<div><h3>Image generation queue</h3><p>Generate and review campaign images here. Paid generation starts only when you press Generate.</p></div>';
+    const imageJobsList=document.getElementById("poyo-image-task-list");
+    imageJobsPanel.append(imageJobsHeader);if(imageJobsList)imageJobsPanel.append(imageJobsList);
+    /* Keep the task cards and their Generate actions beside the image prompt. */
+    imageCreate.append(imageJobsPanel);
+    const videoForm=engine.querySelector("#poyo-draft-form")?.closest(".panel");
+    const videoPrompt=videoForm?.querySelector("#poyo-prompt");
+    const outputType=document.getElementById("creative-output-type");
+    const routeCampaignOutput=(activate=false)=>{
+      if(!campaignPreview)return;
+      const target=outputType?.value==="video"&&videoForm?videoForm:imageCreate;
+      const title=target===videoForm?videoOutputTitle:imageOutputTitle;
+      target.append(title,campaignPreview);
+      campaignPreview.hidden=campaignPreview.classList.contains("hidden");
+      campaignPreview.classList.toggle("lb-video-campaign-output",target===videoForm);
+      /* After a successful copy-generation submit, open the destination tab.
+         The preview remains in the selected pane; this makes the move visible
+         instead of leaving the result inside a hidden tab. */
+      if(activate){
+        const destination=target===videoForm?"Create video":"Create image";
+        const tab=[...root.querySelectorAll(".lb-studio-tab")].find(button=>button.textContent===destination);
+        if(tab)tab.click();
+      }
+    };
+    if(outputType)outputType.addEventListener("change",()=>routeCampaignOutput(false));
+    if(campaignForm){
+      campaignForm.addEventListener("submit",()=>{
+        window.setTimeout(()=>routeCampaignOutput(true),0);
+      });
+    }
+    let lastCampaignImageBrief = null;
+    const imageStyleLabel=document.createElement("label");
+    imageStyleLabel.className="lb-image-style-choice";
+    imageStyleLabel.htmlFor="poyo-image-style";
+    imageStyleLabel.textContent="Artwork style preset";
+    const imageStyle=document.createElement("select");
+    imageStyle.id="poyo-image-style";
+    imageStyle.innerHTML='<option value="photo">Premium café product photography</option><option value="cute-cups">Cute illustrated tea & coffee characters</option>';
+    imageStyleLabel.appendChild(imageStyle);
+    const imagePromptField=document.getElementById("poyo-image-prompt");
+    const presetImageForm=document.getElementById("poyo-image-form");
+    const promptLabel=imagePromptField?.closest("label");
+    if(promptLabel)promptLabel.insertAdjacentElement("beforebegin",imageStyleLabel);
+    else if(presetImageForm)presetImageForm.insertBefore(imageStyleLabel,presetImageForm.firstChild);
     const buildPaanagamImagePrompt = (d={}) => {
+      const selectedStyle=document.getElementById("poyo-image-style")?.value||"photo";
+      if(selectedStyle==="cute-cups"){
+        const topic=String(d.topic||"Tea and coffee moments at Paanagam").trim();
+        const facts=String(d.offer||"").trim();
+        return [
+          "Create a delightful, premium-quality, cute illustrated social-media campaign image for PAANAGAM (பானகம்), a South Indian tea and coffee café.",
+          "MAIN SCENE: Two adorable anthropomorphic drink cups sitting side by side on a warm wooden café counter: one transparent glass cup filled with rich amber South Indian tea, and one elegant ivory ceramic cup filled with creamy South Indian filter coffee with a beautiful latte-art heart. Give both cups expressive friendly cartoon faces, sparkling eyes, joyful smiles and tiny simple arms. The cups should feel charming, wholesome and instantly lovable, like polished character illustration for a family-friendly café brand.",
+          "REFERENCE STYLE: Match the visual language of a cheerful café greeting-card illustration: hand-painted warm wooden hanging sign, soft golden bokeh lights, lush subtle green leaves, coffee beans scattered naturally, small heart doodles and delicate steam curls. Rich warm colours, inviting depth and a polished, highly shareable Instagram aesthetic.",
+          "PAANAGAM BRAND PALETTE: mustard yellow, warm ivory, deep coffee brown, leaf green and restrained red accents. Keep the atmosphere rooted in a welcoming South Indian neighbourhood café, not a generic western coffee chain.",
+          "COMPOSITION: Portrait 9:16 Instagram Reel cover. Place the two friendly drink characters in the lower-middle foreground, large and clearly visible, with balanced breathing room. Include a tasteful blank wooden signboard near the top and small blank message cards held by the cups, with absolutely no writing on them. Keep every important object fully inside the frame.",
+          "ILLUSTRATION QUALITY: Beautifully rendered 2D-meets-3D storybook illustration, soft painterly textures, rounded appealing shapes, warm cinematic lighting, glossy but believable tea and coffee surfaces, crisp edges, expressive faces, professional commercial character design. Cute, not childish or cluttered.",
+          "CAMPAIGN SUBJECT: "+topic+".",
+          facts?"FACTS FOR CONTEXT ONLY (do not write these into the image): "+facts:"",
+          "TEXT CONTROL: Do not generate any text, letters, Tamil or English characters, numbers, logos, watermarks, labels or fake brand marks. Keep the signboard and cards completely blank so LocalBoost can add correct Tamil and English copy as editable text later.",
+          "STRICT NEGATIVE INSTRUCTIONS: No misspelled text, pseudo-letters, gibberish, extra cups, duplicate faces, malformed hands, extra limbs, distorted handles, spills, unrelated food, photorealistic human faces, dark horror mood, clutter, stock-photo watermark or UI elements.",
+          "FINAL INTENT: A heartwarming, instantly recognisable Tea & Coffee character illustration that makes viewers smile and feels distinctive to Paanagam."
+        ].filter(Boolean).join("\\n\\n");
+      }
       const topic=String(d.topic||"Paanagam café campaign").trim();
       const brief=String(d.designerBrief||d.brief||"").trim();
       const headline=String(d.headline||"").trim();
