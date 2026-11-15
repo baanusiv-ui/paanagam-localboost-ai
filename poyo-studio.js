@@ -302,7 +302,8 @@
     window.addEventListener("localboost:campaign-copy-ready",async event=>{
       const d=event.detail||{}, imagePrompt=document.getElementById("poyo-image-prompt"), imageSize=document.getElementById("poyo-image-size"), resolution=document.getElementById("poyo-image-resolution"), form=document.getElementById("poyo-image-form");
       if(!imagePrompt||!form||!d.topic)return;
-      lastCampaignImageBrief=d;\n      imagePrompt.value=buildPaanagamImagePrompt(d);
+      lastCampaignImageBrief=d;
+      imagePrompt.value=buildPaanagamImagePrompt(d);
       imagePrompt.dispatchEvent(new Event("input",{bubbles:true}));
       if(imageSize)imageSize.value=d.format==="feed"?"1:1":"9:16";
       if(resolution)resolution.value="2K";
