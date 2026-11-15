@@ -248,10 +248,10 @@
     imageStyle.innerHTML='<option value="photo">Premium café product photography</option><option value="cute-cups">Cute illustrated tea & coffee characters</option>';
     imageStyleLabel.appendChild(imageStyle);
     const imagePromptField=document.getElementById("poyo-image-prompt");
-    const imageForm=document.getElementById("poyo-image-form");
+    const presetImageForm=document.getElementById("poyo-image-form");
     const promptLabel=imagePromptField?.closest("label");
     if(promptLabel)promptLabel.insertAdjacentElement("beforebegin",imageStyleLabel);
-    else if(imageForm)imageForm.insertBefore(imageStyleLabel,imageForm.firstChild);
+    else if(presetImageForm)presetImageForm.insertBefore(imageStyleLabel,presetImageForm.firstChild);
     const buildPaanagamImagePrompt = (d={}) => {
       const selectedStyle=document.getElementById("poyo-image-style")?.value||"photo";
       if(selectedStyle==="cute-cups"){
