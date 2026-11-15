@@ -421,6 +421,13 @@ We look forward to welcoming you!</textarea></label>
   </div>
   <script src="config.js"></script>
   <script>
+    // Render's staging build command currently writes only the API URL to public-dist/config.js.
+    // Supply the staging Neon Auth endpoint here when that generated config omits it.
+    if (window.location.hostname === "paanagam-localboost-staging-dashboard.onrender.com" && !window.LOCALBOOST_NEON_AUTH_URL) {
+      window.LOCALBOOST_NEON_AUTH_URL = "https://ep-tiny-credit-az25azf0.neonauth.c-3.ap-southeast-1.aws.neon.tech/localboost_staging/auth";
+    }
+  </script>
+  <script>
     // Keep the PR #31 preview isolated from production services.
     if (window.location.hostname === "paanagam-localboost-dashboard-pr-31.onrender.com") {
       window.LOCALBOOST_API_BASE = "https://paanagam-localboost-api-pr-31.onrender.com";
