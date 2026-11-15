@@ -518,6 +518,59 @@
     finally { button.disabled = false; button.textContent = "Sync menu and sales"; }
   }
 
+
+  async function loadGoogleServices() {
+    if (!activeBusiness || !token()) return message("gbp-services-status", "Sign in and select Paanagam first.", true);
+    const button = $("#gbp-services-load");
+    button.disabled = true;
+    button.textContent = "Loading Google services…";
+    try {
+      const result = await api("/v1/businesses/" + encodeURIComponent(activeBusiness.id) + "/google-services");
+      const current = (result.serviceItems || []).map(item => {
+        const label = item.freeFormServiceItem?.label?.displayName || item.structuredServiceItem?.serviceTypeId || "Existing service";
+        return label + (item.freeFormServiceItem?.label?.description || item.structuredServiceItem?.description ? " — " + (item.freeFormServiceItem?.label?.description || item.structuredServiceItem?.description) : "");
+      });
+      $("#gbp-services-current").textContent = current.length ? "Current Google services (preserved): " + current.join(" · ") : "Google returned no existing service items.";
+      $("#gbp-services-eligibility").textContent = result.eligible ? "Eligible: Google allows this listing to modify services. Category: " + (result.categoryName || "Google primary category") : "Not eligible: Google does not allow service-list edits for this listing. No changes can be published through this API.";
+      $("#gbp-services-form").querySelectorAll("input, textarea, button[type=submit]").forEach(control => control.disabled = !result.eligible);
+      message("gbp-services-status", result.message || "Google service list loaded.");
+    } catch (error) {
+      message("gbp-services-status", error.message, true);
+    } finally {
+      button.disabled = false;
+      button.textContent = "Google சேவைகளைப் பெறு";
+    }
+  }
+
+  async function publishGoogleServices(event) {
+    event.preventDefault();
+    if (!activeBusiness || !token()) return message("gbp-services-status", "Sign in and select Paanagam first.", true);
+    const services = [1,2,3].map(index => ({
+      displayName: $("#gbp-service-name-" + index).value.trim(),
+      description: $("#gbp-service-description-" + index).value.trim()
+    }));
+    const invalid = services.find(service => !service.displayName || !service.description || service.description.length > 250);
+    if (invalid) return message("gbp-services-status", "Each service needs a name and a Tamil description of up to 250 characters.", true);
+    const preview = services.map((service, index) => (index + 1) + ". " + service.displayName + "\n" + service.description).join("\n\n");
+    if (!window.confirm("Publish these three services to the connected Paanagam Google Business Profile?\n\n" + preview + "\n\nExisting Google services will be preserved.")) return;
+    const button = $("#gbp-services-publish");
+    button.disabled = true;
+    button.textContent = "Publishing to Google…";
+    try {
+      const result = await api("/v1/businesses/" + encodeURIComponent(activeBusiness.id) + "/google-services", {
+        method: "POST",
+        body: JSON.stringify({ services, confirmed: true })
+      });
+      message("gbp-services-status", result.message + " Added: " + result.added + "; already present: " + result.alreadyPresent + ". Verified: " + result.verifiedServices.join(", "));
+      await loadGoogleServices();
+    } catch (error) {
+      message("gbp-services-status", error.message, true);
+    } finally {
+      button.disabled = false;
+      button.textContent = "Preview & publish services to Google";
+    }
+  }
+
   const mobileMenuButton = $("#mobile-menu-toggle");
   const mobileBackdrop = $("#mobile-nav-backdrop");
   function setMobileNav(open) {
@@ -537,6 +590,8 @@
   window.addEventListener("localboost:business-ready", refreshPosStatus);
   $("#local-seo-form").addEventListener("submit", generateLocalSeo);
   $("#connect-google").addEventListener("click", connectGoogle);
+  $("#gbp-services-load").addEventListener("click", loadGoogleServices);
+  $("#gbp-services-form").addEventListener("submit", publishGoogleServices);
   $("#load-google-locations").addEventListener("click", loadGoogleLocations);
   $("#google-location-select").addEventListener("change", () => { $("#import-google-location").disabled = !$("#google-location-select").value; });
   $("#import-google-location").addEventListener("click", importGoogleLocation);
