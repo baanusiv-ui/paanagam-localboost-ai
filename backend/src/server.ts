@@ -675,6 +675,8 @@ app.post("/v1/businesses/:businessId/creative/image", {
   }
 });
 
+app.get("/", async () => ({ service: "localboost-api", status: "online", health: "/health", readiness: "/ready", apiPrefix: "/v1" }));
+
 app.get("/health", async () => ({ ok: true, service: "localboost-api", version: "0.1.0" }));
 
 // Database readiness is separate from the process liveness check so Render
