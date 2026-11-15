@@ -982,6 +982,114 @@ app.post("/v1/businesses/:businessId/google-description", { preHandler: requireU
   }
 });
 
+// Read the selected Google Business Profile service list and eligibility before any write.
+app.get("/v1/businesses/:businessId/google-services", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  if (!params.success) return reply.code(400).send({ error: "Invalid business id" });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const connection = await prisma.googleConnection.findUnique({ where: { businessId: business.id } });
+  if (!connection?.googleLocationResourceName) return reply.code(409).send({ error: "Connect Google and import the verified Paanagam location first." });
+  if (!connection.scope.split(" ").includes("https://www.googleapis.com/auth/business.manage")) return reply.code(403).send({ error: "Google Business Profile edit permission is missing. Reconnect Google and grant business.manage access." });
+  try {
+    const resource = connection.googleLocationResourceName;
+    if (!resource.startsWith("locations/") || !/^[A-Za-z0-9_-]+$/.test(resource.slice("locations/".length))) throw new Error("The saved Google location reference is invalid. Re-import the verified Paanagam location.");
+    const accessToken = await googleAccessToken(business.id);
+    const location = await googleGet<{
+      metadata?: { canModifyServiceList?: boolean };
+      serviceItems?: Array<Record<string, unknown>>;
+      categories?: { primaryCategory?: { name?: string; displayName?: string } };
+    }>("https://mybusinessbusinessinformation.googleapis.com/v1/" + resource + "?readMask=metadata,serviceItems,categories", accessToken);
+    return {
+      eligible: location.metadata?.canModifyServiceList === true,
+      serviceItems: location.serviceItems ?? [],
+      categoryName: location.categories?.primaryCategory?.displayName ?? null,
+      message: location.metadata?.canModifyServiceList === true ? "Google allows this listing to edit its service list." : "Google does not currently allow service-list edits for this listing."
+    };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "Could not read Google services";
+    request.log.warn({ error: reason }, "Google Business Profile services read failed");
+    return reply.code(502).send({ error: reason });
+  }
+});
+
+// Append owner-approved custom services while preserving every existing Google service item.
+app.post("/v1/businesses/:businessId/google-services", { preHandler: requireUser }, async (request, reply) => {
+  const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
+  const body = z.object({
+    services: z.array(z.object({
+      displayName: z.string().trim().min(2).max(140),
+      description: z.string().trim().min(1).max(250)
+    })).min(1).max(10),
+    confirmed: z.literal(true)
+  }).safeParse(request.body);
+  if (!params.success || !body.success) return reply.code(400).send({ error: "Provide service names (up to 140 characters), Tamil descriptions (up to 250 characters), and explicit owner confirmation." });
+  const business = await ownedBusiness(request.userId!, params.data.businessId);
+  if (!business) return reply.code(404).send({ error: "Business not found" });
+  const connection = await prisma.googleConnection.findUnique({ where: { businessId: business.id } });
+  if (!connection?.googleLocationResourceName) return reply.code(409).send({ error: "Connect Google and import the verified Paanagam location first." });
+  if (!connection.scope.split(" ").includes("https://www.googleapis.com/auth/business.manage")) return reply.code(403).send({ error: "Google Business Profile edit permission is missing. Reconnect Google and grant business.manage access." });
+  try {
+    const resource = connection.googleLocationResourceName;
+    if (!resource.startsWith("locations/") || !/^[A-Za-z0-9_-]+$/.test(resource.slice("locations/".length))) throw new Error("The saved Google location reference is invalid. Re-import the verified Paanagam location.");
+    const accessToken = await googleAccessToken(business.id);
+    const location = await googleGet<{
+      metadata?: { canModifyServiceList?: boolean };
+      serviceItems?: Array<Record<string, any>>;
+      categories?: { primaryCategory?: { name?: string; displayName?: string } };
+    }>("https://mybusinessbusinessinformation.googleapis.com/v1/" + resource + "?readMask=metadata,serviceItems,categories", accessToken);
+    if (location.metadata?.canModifyServiceList !== true) return reply.code(409).send({ error: "Google says this listing is not eligible to modify its service list. No changes were made.", eligible: false });
+    const category = location.categories?.primaryCategory?.name;
+    if (!category) return reply.code(409).send({ error: "Google did not return the listing's primary category. No changes were made." });
+    const existing = location.serviceItems ?? [];
+    const existingNames = new Set(existing.map(item => String((item.freeFormServiceItem as any)?.label?.displayName ?? "").trim().toLocaleLowerCase()).filter(Boolean));
+    const additions = body.data.services.filter(service => !existingNames.has(service.displayName.trim().toLocaleLowerCase()));
+    const serviceItems = [
+      ...existing,
+      ...additions.map(service => ({
+        freeFormServiceItem: {
+          category,
+          label: { displayName: service.displayName, description: service.description, languageCode: "ta" }
+        }
+      }))
+    ];
+    if (additions.length) {
+      await googlePatch(
+        "https://mybusinessbusinessinformation.googleapis.com/v1/" + resource + "?updateMask=serviceItems",
+        accessToken,
+        { serviceItems }
+      );
+    }
+    const verified = await googleGet<{ serviceItems?: Array<Record<string, any>> }>(
+      "https://mybusinessbusinessinformation.googleapis.com/v1/" + resource + "?readMask=serviceItems",
+      accessToken
+    );
+    const publishedNames = new Set((verified.serviceItems ?? []).map(item => String((item.freeFormServiceItem as any)?.label?.displayName ?? "").trim().toLocaleLowerCase()));
+    const missing = body.data.services.filter(service => !publishedNames.has(service.displayName.trim().toLocaleLowerCase()));
+    if (missing.length) throw new Error("Google accepted the request but did not return all requested services on read-back: " + missing.map(item => item.displayName).join(", "));
+    await recordActivity({
+      businessId: business.id,
+      actorUserId: request.userId!,
+      eventType: "GBP_SERVICES_UPDATED",
+      entityType: "GBP_LOCATION",
+      entityId: resource,
+      summary: additions.length ? "Owner-approved Google Business Profile services added" : "Requested Google Business Profile services already existed",
+      metadata: { requestedCount: body.data.services.length, addedCount: additions.length, verifiedCount: body.data.services.length }
+    });
+    return {
+      updated: true,
+      added: additions.length,
+      alreadyPresent: body.data.services.length - additions.length,
+      verifiedServices: body.data.services.map(service => service.displayName),
+      message: additions.length ? "Google accepted the service-list update and the requested services were verified." : "All requested services already exist on the Google listing."
+    };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "Google Business Profile service update failed";
+    request.log.warn({ error: reason }, "Google Business Profile services update failed");
+    return reply.code(502).send({ error: reason });
+  }
+});
+
 // Google Business Profile posts use a separate approval queue. No Google write occurs before explicit owner approval and publish action.
 app.post("/v1/businesses/:businessId/google-posts/draft", { preHandler: requireUser }, async (request, reply) => {
   const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
