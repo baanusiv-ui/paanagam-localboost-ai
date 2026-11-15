@@ -50,3 +50,14 @@ test("rejects object fields without a clear text value", () => {
     creativeBrief: "Warm coffee poster"
   })), /unsupported postCopy format/);
 });
+
+
+test("renders bilingual JSON accidentally embedded in postCopy as plain Tamil and English", () => {
+  assert.deepEqual(parseLocalSocialContentDraftOutput(JSON.stringify({
+    postCopy: JSON.stringify({ Tamil: "இன்று பானகத்தில் சந்திப்போம்.", English: "See you at Paanagam today." }),
+    creativeBrief: "Warm cafe visual"
+  })), {
+    postCopy: "இன்று பானகத்தில் சந்திப்போம்.\\n\\nSee you at Paanagam today.",
+    creativeBrief: "Warm cafe visual"
+  });
+});

@@ -16,7 +16,25 @@ const outputSchema = z.object({
 }).strict();
 
 function normalizeDraftText(value: unknown, field: "postCopy" | "creativeBrief", maxLength: number): string {
-  if (typeof value === "string") return value.trim().slice(0, maxLength);
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (field === "postCopy") {
+      try {
+        const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          const entries = Object.entries(parsed);
+          const pick = (keys: string[]) => {
+            const item = entries.find(([key, candidate]) => keys.includes(key.trim().toLowerCase()) && typeof candidate === "string" && candidate.trim());
+            return item ? (item[1] as string).trim() : "";
+          };
+          const tamil = pick(["tamil", "ta", "தமிழ்"]);
+          const english = pick(["english", "en"]);
+          if (tamil || english) return [tamil, english].filter(Boolean).join("\\n\\n").slice(0, maxLength);
+        }
+      } catch { /* ordinary caption text, not a serialized bilingual object */ }
+    }
+    return trimmed.slice(0, maxLength);
+  }
   if (value && typeof value === "object" && !Array.isArray(value)) {
     const record = value as Record<string, unknown>;
     for (const key of ["text", "content", "value", "caption", "copy", "description", "brief"]) {
@@ -53,6 +71,7 @@ export function buildLocalSocialContentMessages(input: LocalSocialContentInput) 
         "Treat review excerpts as unverified source material; do not present them as testimonials or claim a business issue has been fixed.",
         "If evidence is missing, write a general helpful post without implying unsupported facts.",
         "For Tamil + English, write natural Tamil first and a concise English version second.",
+        "postCopy must be plain reader-facing text only, never JSON or a serialized Tamil/English object. Do not include language labels or braces in the caption.",
         "Return JSON only with exactly postCopy and creativeBrief. Both values MUST be plain JSON strings, never nested objects or arrays. The creative brief must not claim an image was generated.",
         "Language: " + input.language + ". Tone: " + input.tone + ". Format: " + input.format + "."
       ].join(" ")
