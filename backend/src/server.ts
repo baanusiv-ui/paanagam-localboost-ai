@@ -1048,7 +1048,6 @@ app.post("/v1/businesses/:businessId/google-services", { preHandler: requireUser
     const serviceItems = [
       ...existing,
       ...additions.map(service => ({
-        isOffered: true,
         freeFormServiceItem: {
           category,
           label: { displayName: service.displayName, description: service.description, languageCode: "ta" }
