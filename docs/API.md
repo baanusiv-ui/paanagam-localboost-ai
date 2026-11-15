@@ -26,7 +26,7 @@ Expected behavior:
 
 ## Endpoint inventory
 
-This inventory records the 42 routes present in `backend/src/server.ts`. The OpenAPI file now contains source-derived request/response contracts for the core identity, business workspace, evidence, and growth-record operations: `POST /v1/auth/register`, `POST /v1/auth/login`, `GET /v1/me`, `GET/POST /v1/businesses`, `GET/POST /v1/businesses/{businessId}/evidence`, and `GET/POST /v1/businesses/{businessId}/growth-records`. Remaining operations are currently route-index entries and must be completed from their Zod validation and actual response behavior before the OpenAPI file is treated as a complete client contract.
+The tables below are a maintained route index, not an exhaustive generated inventory. The production server also registers CRM, POS integration, Canva, PoYo and other module routes. The OpenAPI document is not yet a complete client contract: verify every route against its source Zod schema and response behavior before relying on it for generated clients.
 
 ### Health and identity
 
@@ -111,7 +111,7 @@ This inventory records the 42 routes present in `backend/src/server.ts`. The Ope
 
 ## Rate limits
 
-The server has a global limit of 100 requests per minute. The implementation also applies stricter route-specific limits to selected AI/draft and external-import operations. Confirm the exact route-level limit in source before designing client retry behavior; respect HTTP 429 responses and avoid aggressive retries.
+The server configures a global limit of 300 requests per minute. Selected sensitive operations override the global limit with stricter route-specific limits. Consult each route registration for the exact current limit. Confirm the exact route-level limit in source before designing client retry behavior; respect HTTP 429 responses and avoid aggressive retries.
 
 ## Error handling
 

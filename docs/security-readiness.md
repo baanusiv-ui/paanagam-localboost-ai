@@ -1,35 +1,43 @@
 # LocalBoost Security Readiness Review
 
-**Scope:** Static review of the current Fastify backend and repository configuration. This is not a penetration test, formal security audit, or production approval.
+**Scope:** Source-based static review of the production-branch Fastify backend, dashboard authentication integration and repository CI configuration. This is not a penetration test, independent security audit, or blanket production approval. Deployment status and release readiness are separate questions.
 
-## Verified controls in the current code
+## Verified implementation controls
 
-- Passwords are hashed and verified with Argon2id in `backend/src/security.ts`.
-- Access tokens are signed with HS256 and expire after 15 minutes.
-- The environment schema requires a JWT secret of at least 32 characters.
-- Google OAuth tokens are encrypted with AES-256-GCM; the configured encryption key must decode to exactly 32 bytes.
-- Fastify Helmet is enabled.
-- CORS accepts only configured origins from `CORS_ORIGIN`.
-- A global rate limit of 100 requests per minute is configured, with stricter limits on selected generation endpoints.
-- Every currently registered business-scoped route in `server.ts` has the `requireUser` pre-handler. A CI static check now enforces this for discovered route registrations.
-- Business ownership resolution is centralized in `modules/businesses/access.ts`, using both business ID and authenticated owner ID.
-- Evidence submitted by a client cannot claim the trusted Google API source; the route rejects that source and rejects invalid verification claims for demo/public observations.
-- Draft endpoints generate content but do not publish it. Google review import is an ingestion flow, not a reply-publishing operation.
+- Production owner authentication is delegated to Neon Auth. The API verifies signed access tokens against the configured Neon Auth issuer and remote JWKS.
+- After token verification, the API checks the matching `neon_auth.user` row, requires a verified email, and maps the external subject to a LocalBoost user.
+- Legacy Argon2id password helpers and HS256 token issuance remain in `backend/src/security.ts` for legacy tests. The production server does not register the legacy `/v1/auth/register` or `/v1/auth/login` handlers.
+- `JWT_SECRET` remains required by the environment schema because the legacy HS256 helper is initialized in the shared security module. It is not the production Neon Auth signing key. This unused production requirement is technical debt; remove it only after legacy test dependencies are safely separated.
+- Provider secrets stored by the backend use AES-256-GCM; the encryption key must decode to exactly 32 bytes.
+- Fastify Helmet is enabled. CORS is restricted to configured `CORS_ORIGIN` entries.
+- Fastify rate limiting is configured globally at 300 requests per minute, with stricter per-route overrides on selected sensitive operations.
+- Business-scoped routes are registered with the `requireUser` pre-handler. This confirms authentication is required; it does not, by itself, prove tenant authorization.
+- Business ownership checks use the authenticated LocalBoost user ID and business ID through the shared ownership helper in `modules/businesses/access.ts`.
+- Draft-generation and review-import operations are distinct from publishing. External publishing flows require an explicit owner action and are not triggered by draft generation.
+- Paanagam POS integration is a separately keyed, encrypted-credential, read-only import boundary. The connector imports menu and daily sales data into LocalBoost; it does not write back to POS.
 
-## Gaps to close before production
+## Remaining release-readiness gaps
 
-1. **Account lifecycle:** Email verification, password reset, refresh-token rotation/session revocation, and MFA are not implemented in the inspected baseline.
-2. **Tenant integration tests:** Add database-backed tests proving user A cannot read, update, archive, delete, or import data for user B across every business-scoped resource. The current CI guard checks authentication registration and unit tests the shared owner lookup; it does not replace full route-level authorization tests.
-3. **OAuth lifecycle:** Add dedicated tests for state expiry, one-time state consumption, callback error paths, account/business binding, and token refresh/revocation.
-4. **Operational security:** Configure production-only CORS origins, HTTPS and secure proxy settings, managed database backups and restore drills, secret rotation, monitoring, alerting, and incident response.
-5. **Dependency and supply-chain controls:** Add dependency scanning, lockfile review, and a scheduled vulnerability review.
-6. **Repository governance:** Main branch protection is currently disabled. Enable required CI checks and restrict direct pushes before multiple developers or production changes are involved.
-7. **API contract:** Complete source-derived OpenAPI request and response schemas for all remaining routes. The current CI validator checks structure and references, not semantic equivalence with every Zod schema.
+1. **Tenant isolation proof:** Current CI includes a source-level route guard and unit tests for the shared ownership helper. It does not yet provide database-backed, route-by-route cross-tenant tests for read, create, update, delete, export, import and retention operations. Add isolated test-database coverage before treating tenant isolation as proven.
+2. **OAuth lifecycle coverage:** Add tests for Google and Meta OAuth state expiry, one-time state use, callback errors, account/business binding, token refresh, disconnect and revoked-provider behavior. Do not use live customer accounts as test fixtures.
+3. **Neon Auth lifecycle assurance:** Neon Auth owns verification, recovery, session refresh/revocation and MFA. Verify the production provider configuration and document the enabled recovery and MFA policy; these controls are not implemented by LocalBoost's legacy identity routes.
+4. **Operational security evidence:** Confirm production-only CORS origins, HTTPS/proxy behavior, database backup retention and restore drills, encryption-key rotation procedure, alerting, log retention and incident response ownership. Source inspection alone cannot establish these operational controls.
+5. **Dependency and supply-chain controls:** Add automated dependency/security scanning and a documented remediation cadence. Review lockfile and CI action pinning.
+6. **Repository governance:** Branch-protection status could not be verified with the current GitHub integration permissions. Confirm required checks and restrict direct pushes using an authorized repository-admin path. Do not assume protection is enabled or disabled.
+7. **API contract completeness:** The OpenAPI validator checks structure, route counts/path parameters and local references; it does not prove semantic parity with every route's Zod schema and response. Complete source-derived schemas and add contract tests.
+8. **External integration verification:** No live end-to-end verification was performed here for Google Business Profile, Meta publishing, Canva, PoYo paid generation or the Paanagam POS connector. Confirm each provider in a controlled owner-approved test. No paid generation or external publishing should be triggered as part of a passive audit.
+9. **Unused legacy auth configuration:** `JWT_SECRET` and legacy password/token code remain even though production owner authentication uses Neon Auth. Remove the dead path in a separately tested change, not by changing production auth semantics during a documentation correction.
 
-## Integration boundary
+## Production status versus readiness
 
-Paanagam POS remains a separate system of record. The LocalBoost POS connector must be independently authorized, tenant-scoped, audited, and read-only in its initial release. Do not connect directly to the POS database or write data back to POS.
+The production dashboard and API have previously been observed deployed and serving health checks. That proves deployment/availability at the time checked; it does not establish full SaaS release readiness or the operational controls listed above. The production services are not independently security-certified by this review.
 
-## Release decision
+## Evidence required before declaring all gaps closed
 
-**Not production-ready based on this review.** Keep deployment disabled until the tenant integration tests, account lifecycle controls, OAuth tests, operational safeguards, API contract completion, and an independent security review are addressed. No production deployment was performed as part of this review.
+- Automated isolated-database tests proving cross-tenant denial for every business-scoped route and related child resource.
+- OAuth lifecycle tests and controlled provider connection/disconnection verification.
+- Confirmed Neon Auth recovery, session and MFA settings.
+- Backup restore evidence, monitoring/alerting checks, incident response ownership and key rotation procedure.
+- Dependency scan results and repository governance confirmation.
+- OpenAPI/source contract parity tests.
+- Controlled end-to-end verification of each enabled external integration, without publishing or spending credits without owner approval.
