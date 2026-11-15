@@ -464,7 +464,7 @@
     panel.style.cssText="margin:0 0 20px;padding:20px;border:1px solid var(--border,#e6dfd5);border-radius:16px;background:var(--surface,#fff)";
     panel.innerHTML=`
       <div style="display:flex;gap:14px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap">
-        <div><span class="eyebrow">AI CONTENT INTELLIGENCE</span><h2 style="margin:5px 0">Daily content plan</h2><p style="margin:0;max-width:720px">AI analyses real customer reviews, approved menu records and customer expectations to prepare four evidence-led posts. No manual topic required.</p></div>
+        <div><span class="eyebrow">AI CONTENT INTELLIGENCE</span><h2 style="margin:5px 0">Daily content plan</h2><p style="margin:0;max-width:720px">AI analyses owner-validated customer reviews, saved menu records and customer expectations to prepare four evidence-led posts. No manual topic required.</p></div>
         <span class="tag pending-tag">Owner approval required</span>
       </div>
       <div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:18px 0">
@@ -519,7 +519,7 @@
     ].map(([k,v])=>'<article style="padding:12px;border:1px solid var(--border,#e6dfd5);border-radius:12px"><small>'+esc(k)+'</small><strong style="display:block;font-size:20px;margin-top:5px">'+esc(v)+'</strong></article>').join("");
     const gap=[];
     if(!review.length)gap.push("No written customer reviews are saved. Review-led insights cannot be claimed.");
-    if(!menu.length)gap.push("No approved menu items are saved. Product-specific content will be limited.");
+    if(!menu.length)gap.push("No saved menu items are available. Product-specific content will be limited.");
     $("ai-plan-status").textContent=gap.length?"Evidence check complete · "+gap.join(" "):"Evidence check complete · "+review.length+" reviews and "+menu.length+" menu items available. Review themes: "+(themes.map(x=>x.name).join(", ")||"none detected")+".";
   }
   async function analyse(generate){
@@ -533,7 +533,7 @@
       const evidence=await readEvidence();showInsights(evidence);
       if(!generate)return;
       const reviews=reviewSummary(evidence.reviewRows), menu=menuSummary(evidence.menuRows), themes=themesFrom(reviews);
-      if(!reviews.length&&!menu.length){$("ai-plan-status").textContent="Cannot create evidence-led posts yet: add real reviews or approved menu items first. No fabricated content will be generated.";return;}
+      if(!reviews.length&&!menu.length){$("ai-plan-status").textContent="Cannot create evidence-led posts yet: add owner-validated reviews or saved menu items first. No fabricated content will be generated.";return;}
       const date=$("ai-plan-date").value||istDate();
       const slots=[
         {slot:"Morning · customer voice",angle:"A customer-led morning welcome or service expectation. Use a real positive review only if one exists; otherwise make it a helpful customer question/answer." ,channel:"Instagram"},
