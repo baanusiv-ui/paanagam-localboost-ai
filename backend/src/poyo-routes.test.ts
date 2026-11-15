@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import Fastify from "fastify";
 import type { PrismaClient } from "@prisma/client";
-import { registerPoyoRoutes } from "./poyo-routes.js";
 
 test("all PoYo business routes reject a foreign-owned business before touching task or asset data", async () => {
+  process.env.DATABASE_URL ??= "postgresql://localboost:localboost_dev@localhost:5432/localboost?schema=public";
+  process.env.JWT_SECRET ??= "test-only-localboost-jwt-secret-32-bytes-minimum";
+  process.env.TOKEN_ENCRYPTION_KEY_BASE64 ??= "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=";
+  const { registerPoyoRoutes } = await import("./poyo-routes.js");
   const ownershipLookups: unknown[] = [];
   const forbiddenCalls: string[] = [];
   const db = {
