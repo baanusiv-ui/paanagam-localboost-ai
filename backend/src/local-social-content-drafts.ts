@@ -33,7 +33,7 @@ function normalizeDraftText(value: unknown, field: "postCopy" | "creativeBrief",
 
 export function parseLocalSocialContentDraftOutput(raw: string) {
   let parsed: unknown;
-  try { parsed = JSON.parse(raw.trim().replace(/^\x60{3}(?:json)?\\s*/i, "").replace(/\\s*\x60{3}$/, "")); }
+  try { parsed = JSON.parse(raw.trim().replace(/^\x60{3}(?:json)?\s*/i, "").replace(/\s*\x60{3}$/, "")); }
   catch { throw new Error("AI provider returned invalid JSON for the social content draft."); }
   const result = outputSchema.parse(parsed);
   return {
