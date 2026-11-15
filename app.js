@@ -518,7 +518,6 @@
     finally { button.disabled = false; button.textContent = "Sync menu and sales"; }
   }
 
-
   async function loadGoogleServices() {
     if (!activeBusiness || !token()) return message("gbp-services-status", "Sign in and select Paanagam first.", true);
     const button = $("#gbp-services-load");
@@ -587,11 +586,11 @@
   $("#pos-connect-form").addEventListener("submit", connectPos);
   $("#pos-test-button").addEventListener("click", testPos);
   $("#pos-sync-button").addEventListener("click", syncPos);
+  $("#gbp-services-load").addEventListener("click", loadGoogleServices);
+  $("#gbp-services-form").addEventListener("submit", publishGoogleServices);
   window.addEventListener("localboost:business-ready", refreshPosStatus);
   $("#local-seo-form").addEventListener("submit", generateLocalSeo);
   $("#connect-google").addEventListener("click", connectGoogle);
-  $("#gbp-services-load").addEventListener("click", loadGoogleServices);
-  $("#gbp-services-form").addEventListener("submit", publishGoogleServices);
   $("#load-google-locations").addEventListener("click", loadGoogleLocations);
   $("#google-location-select").addEventListener("change", () => { $("#import-google-location").disabled = !$("#google-location-select").value; });
   $("#import-google-location").addEventListener("click", importGoogleLocation);
