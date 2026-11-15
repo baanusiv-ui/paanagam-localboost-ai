@@ -74,7 +74,8 @@ async function callOllama(baseUrl: string, model: string, messages: AiMessage[],
   } else {
     // Do not leak response bodies, which may contain provider or gateway details.
     // Distinguish Cloudflare Access/edge HTML from a valid Ollama JSON response.
-    const finalUrl = new URL(response.url);
+    let finalPath = "/api/chat";
+    try { finalPath = new URL(response.url || baseUrl).pathname; } catch { /* keep safe fallback path */ }
     const isHtml = /html/i.test(contentType) || /^\\s*<!doctype html|^\\s*<html/i.test(responseText);
     const reason = response.status === 401 || response.status === 403
       ? "Cloudflare Access or gateway denied the /api/chat request"
@@ -82,7 +83,7 @@ async function callOllama(baseUrl: string, model: string, messages: AiMessage[],
         ? "the tunnel returned an HTML page instead of Ollama JSON"
         : "the endpoint returned a non-JSON response";
     throw Object.assign(
-      new Error("Local Ollama " + reason + " (HTTP " + response.status + ", content-type " + (contentType || "unknown") + ", final path " + finalUrl.pathname + "). Check the Cloudflare Access application/policy and tunnel routing for POST /api/chat."),
+      new Error("Local Ollama " + reason + " (HTTP " + response.status + ", content-type " + (contentType || "unknown") + ", final path " + finalPath + "). Check the Cloudflare Access application/policy and tunnel routing for POST /api/chat."),
       { status: response.status }
     );
   }
