@@ -177,7 +177,7 @@
     })});
     const composed=await composeCampaignArtwork(result.imageDataUrl);
     const comma=composed.indexOf(","), header=composed.slice(0,comma);
-    const mimeType=(header.match(/^data:(image\\/(?:jpeg|png|webp));base64$/)||[])[1];
+    const mimeType=(header.match(/^data:(image\/(?:jpeg|png|webp));base64$/)||[])[1];
     const dataBase64=composed.slice(comma+1);
     if(!mimeType||!dataBase64) throw new Error("Generated image data is invalid.");
     const saved=await api(base()+"/creative-assets",{method:"POST",body:JSON.stringify({
