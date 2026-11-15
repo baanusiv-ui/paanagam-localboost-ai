@@ -66,3 +66,9 @@ input,select,textarea { border-radius:8px; }
 @media (max-width:390px) {
   .metric-grid { grid-template-columns:1fr; }
 }
+
+@media(max-width:720px){
+  body.mobile-nav-open .sidebar { transform:translateX(0); }
+  .sidebar-bottom { display:block; }
+  .profile-row { display:flex; }
+}
