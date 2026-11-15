@@ -83,3 +83,60 @@ test("Gemini is not called when the explicit paid-fallback switch is disabled", 
     if (previousLocal === undefined) delete process.env.OLLAMA_BASE_URL; else process.env.OLLAMA_BASE_URL = previousLocal;
   }
 });
+
+
+test("authentication failures stop instead of falling through to Gemini", async () => {
+  const names = ["OLLAMA_API_KEY", "OLLAMA_CLOUD_MODEL", "OLLAMA_BASE_URL", "GEMINI_API_KEY", "GEMINI_FALLBACK_ENABLED"] as const;
+  const previous = Object.fromEntries(names.map(name => [name, process.env[name]]));
+  const originalFetch = globalThis.fetch;
+  const calls: string[] = [];
+  process.env.OLLAMA_API_KEY = "test-cloud-key";
+  process.env.OLLAMA_CLOUD_MODEL = "test-model";
+  delete process.env.OLLAMA_BASE_URL;
+  process.env.GEMINI_API_KEY = "test-gemini-key";
+  process.env.GEMINI_FALLBACK_ENABLED = "true";
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    calls.push(String(input));
+    return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 });
+  }) as typeof fetch;
+  try {
+    await assert.rejects(() => generateAiJson({ task: "test", messages: [{ role: "user", content: "hello" }], responseSchema: schema }), /unauthorized/);
+    assert.deepEqual(calls, ["https://ollama.com/api/chat"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+    for (const name of names) {
+      const value = previous[name];
+      if (value === undefined) delete process.env[name]; else process.env[name] = value;
+    }
+  }
+});
+
+test("private local Ollama requests preserve Cloudflare Access headers", async () => {
+  const names = ["OLLAMA_API_KEY", "OLLAMA_BASE_URL", "OLLAMA_MODEL", "OLLAMA_ACCESS_CLIENT_ID", "OLLAMA_ACCESS_CLIENT_SECRET", "GEMINI_API_KEY", "GEMINI_FALLBACK_ENABLED"] as const;
+  const previous = Object.fromEntries(names.map(name => [name, process.env[name]]));
+  const originalFetch = globalThis.fetch;
+  process.env.OLLAMA_BASE_URL = "https://private-ollama.example";
+  process.env.OLLAMA_MODEL = "qwen2.5:7b";
+  process.env.OLLAMA_ACCESS_CLIENT_ID = "test-access-id";
+  process.env.OLLAMA_ACCESS_CLIENT_SECRET = "test-access-secret";
+  delete process.env.OLLAMA_API_KEY;
+  delete process.env.GEMINI_API_KEY;
+  process.env.GEMINI_FALLBACK_ENABLED = "false";
+  globalThis.fetch = (async (_input: string | URL | Request, init?: RequestInit) => {
+    const headers = init?.headers as Record<string, string>;
+    assert.equal(headers["CF-Access-Client-Id"], "test-access-id");
+    assert.equal(headers["CF-Access-Client-Secret"], "test-access-secret");
+    return new Response(JSON.stringify({ message: { content: JSON.stringify({ answer: "local" }) } }), { status: 200 });
+  }) as typeof fetch;
+  try {
+    const result = await generateAiJson({ task: "test", messages: [{ role: "user", content: "hello" }], responseSchema: schema });
+    assert.equal(result.provider, "LOCAL_OLLAMA");
+    assert.equal(result.raw, JSON.stringify({ answer: "local" }));
+  } finally {
+    globalThis.fetch = originalFetch;
+    for (const name of names) {
+      const value = previous[name];
+      if (value === undefined) delete process.env[name]; else process.env[name] = value;
+    }
+  }
+});
