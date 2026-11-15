@@ -90,7 +90,7 @@
         const isImage=t.mediaType==="IMAGE", resolution=isImage?(t.modelInput?.resolution||"2K"):"480p", assetId=preview?.split("/poyo/assets/")[1]?.split("/")[0]||"";
         const cost=t.estimatedCredits??(isImage?(resolution==="1K"?4:resolution==="4K"?10:6):6);
         const media=preview?(isImage?'<img alt="Generated campaign artwork preview" data-media-path="'+esc(preview)+'" style="display:block;width:100%;max-height:480px;object-fit:contain;margin-top:12px;border-radius:12px;background:#f3f0e9">':'<video controls playsinline preload="metadata" data-media-path="'+esc(preview)+'" style="display:block;width:100%;max-height:420px;margin-top:12px;border-radius:12px;background:#111"></video>'):"";
-        return '<article class="social-post-card"><div class="social-post-head"><strong>'+esc(t.modelId)+'</strong><span class="tag '+(t.status==="SUCCEEDED"?"confirmed":"pending-tag")+'">'+esc(t.status)+'</span></div><p>'+esc(t.prompt)+'</p><small>'+esc(resolution)+' · '+esc(cost)+' estimated credits · '+esc(new Date(t.createdAt).toLocaleString())+'</small>'+media+(t.errorMessage?'<p class="footnote">'+esc(t.errorMessage)+'</p>':"")+'<div class="form-actions">'+(t.status==="DRAFT"?'<button type="button" class="secondary-button" data-generate="'+esc(t.id)+'" data-kind="'+(isImage?"image":"video")+'"'+(generationEnabled?"":" disabled title=\"Paid generation is paused. Enable POYO_ENABLED to submit.\"")+'">Generate · '+esc(cost)+' credits'+(generationEnabled?"":" (paused)")+"</button>"+(generationEnabled?"":'<span class="footnote">Paid generation is paused. Drafts can still be saved and reviewed; no credits will be used.</span>'):"")+(pending?'<button type="button" class="secondary-button" data-refresh="'+esc(t.id)+'">Check status</button>':"")+(t.status==="SUCCEEDED"&&!approved?'<button type="button" class="secondary-button" data-approve="'+esc(t.id)+'" data-kind="'+(isImage?"image":"video")+'">Approve '+(isImage?"image":"video")+'</button>':"")+(approved?'<span class="tag confirmed">Owner approved · not published</span>':"")+(isImage&&t.status==="SUCCEEDED"&&assetId?'<button type="button" class="secondary-button" data-use-campaign="'+esc(assetId)+'" data-prompt="'+esc(t.prompt)+'">Use in campaign</button>':"")+'</div></article>';
+        return '<article class="social-post-card"><div class="social-post-head"><strong>'+esc(t.modelId)+'</strong><span class="tag '+(t.status==="SUCCEEDED"?"confirmed":"pending-tag")+'">'+esc(t.status)+'</span></div><p>'+esc(t.prompt)+'</p><small>'+esc(resolution)+' · '+esc(cost)+' estimated credits · '+esc(new Date(t.createdAt).toLocaleString())+'</small>'+media+(t.errorMessage?'<p class="footnote">'+esc(t.errorMessage)+'</p>':"")+'<div class="form-actions">'+(!isImage&&t.status==="DRAFT"?'<button type="button" class="secondary-button" data-generate="'+esc(t.id)+'" data-kind="video"'+(generationEnabled?"":" disabled title=\"Paid generation is paused.\"")+'">Generate · '+esc(cost)+' credits</button>':"")+(pending?'<button type="button" class="secondary-button" data-refresh="'+esc(t.id)+'">Check status</button>':"")+(t.status==="SUCCEEDED"&&!approved?'<button type="button" class="secondary-button" data-approve="'+esc(t.id)+'" data-kind="'+(isImage?"image":"video")+'">Approve '+(isImage?"image":"video")+'</button>':"")+(approved?'<span class="tag confirmed">Owner approved · not published</span>':"")+(isImage&&t.status==="SUCCEEDED"&&assetId?'<button type="button" class="secondary-button" data-use-campaign="'+esc(assetId)+'" data-prompt="'+esc(t.prompt)+'">Use in campaign</button>':"")+'</div></article>';
       };
       const videos=tasks.filter(t=>t.mediaType==="VIDEO"), images=tasks.filter(t=>t.mediaType==="IMAGE");
       if($("poyo-task-list"))$("poyo-task-list").innerHTML=videos.map(renderTask).join("")||'<p class="empty-copy">No PoYo video drafts yet.</p>';
@@ -123,11 +123,16 @@
       const urls=$("poyo-image-refs").value.split(/\r?\n/).map(v=>v.trim()).filter(Boolean);
       if(urls.length>10||!urls.every(v=>/^https:\/\//i.test(v)))throw new Error("Use up to 10 publicly accessible HTTPS reference URLs.");
       const modelInput={size:$("poyo-image-size").value,resolution,...(urls.length?{image_urls:urls}:{})};
+      if(!generationEnabled)throw new Error("Automatic Nano Banana generation is paused because POYO_ENABLED is off.");
       const result=await api(base()+"/poyo/tasks",{method:"POST",body:JSON.stringify({mediaType:"IMAGE",modelId:"nano-banana-2.1",prompt,modelInput})});
+      const taskId=result.task?.id;
+      if(!taskId)throw new Error("PoYo did not return an image task ID; generation was not submitted.");
+      const submitted=await api(base()+"/poyo/tasks/"+encodeURIComponent(taskId)+"/submit",{method:"POST",body:"{}"});
       const keepPrompt=$("poyo-image-form")?.dataset.keepPromptAfterSave === "true";
       if(!keepPrompt){$("poyo-image-prompt").value="";$("poyo-image-refs").value="";}
       if($("poyo-image-form")) delete $("poyo-image-form").dataset.keepPromptAfterSave;
-      await loadTasks();message("poyo-image-message","Image draft saved. The campaign prompt remains visible for review. Estimated "+(result.task?.estimatedCredits??(resolution==="1K"?4:resolution==="4K"?10:6))+" credits. No PoYo request was sent and no credits were used.");
+      await loadTasks();
+      message("poyo-image-message","Nano Banana 2.1 generation submitted automatically. Estimated "+(submitted.estimatedCredits??result.task?.estimatedCredits??(resolution==="1K"?4:resolution==="4K"?10:6))+" credits. Preview will appear when PoYo finishes.");
     }catch(err){if($("poyo-image-form")) delete $("poyo-image-form").dataset.keepPromptAfterSave;message("poyo-image-message","Could not save image draft: "+err.message,true);}finally{button.disabled=false;}
   });
   async function handleTaskAction(e){
@@ -152,11 +157,7 @@
     }catch(err){message(kind==="image"?"poyo-image-message":"poyo-studio-message","PoYo action failed: "+err.message,true);}finally{if(button.isConnected)button.disabled=false;}
   }
   $("poyo-task-list")?.addEventListener("click",handleTaskAction);
-  $("poyo-image-task-list")?.addEventListener("click",e=>{
-    const generate=e.target.closest("[data-generate]");
-    if(generate){const cost=generate.textContent.match(/[0-9]+/);if(!confirm("Submit this image generation to PoYo? Estimated cost: "+(cost?.[0]||"shown")+" credits. This may use paid credits."))return;}
-    handleTaskAction(e);
-  });
+  $("poyo-image-task-list")?.addEventListener("click",handleTaskAction);
   $("poyo-refresh")?.addEventListener("click",()=>loadTasks({refreshPending:true}));
   $("poyo-image-refresh")?.addEventListener("click",()=>loadTasks({refreshPending:true}));
   async function init(){if(!businessId()||!token())return;await loadModels();await loadTasks({refreshPending:true});}
