@@ -650,6 +650,7 @@ app.post("/v1/businesses/:businessId/creative/image", {
     topic: z.string().trim().min(1).max(300),
     offer: z.string().trim().max(500).optional(),
     creativeBrief: z.string().trim().max(1200).optional(),
+    caption: z.string().trim().max(2000).optional(),
     language: z.enum(["Tamil", "English", "Tamil + English"]).default("Tamil + English"),
     format: z.enum(["SQUARE", "PORTRAIT", "STORY"]).default("SQUARE"),
     provider: z.literal("OPENAI").default("OPENAI")
@@ -663,6 +664,7 @@ app.post("/v1/businesses/:businessId/creative/image", {
       topic: body.data.topic,
       offer: body.data.offer,
       creativeBrief: body.data.creativeBrief,
+      caption: body.data.caption,
       language: body.data.language,
       format: body.data.format
     };
