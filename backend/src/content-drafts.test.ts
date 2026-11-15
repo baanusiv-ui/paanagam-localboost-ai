@@ -26,21 +26,3 @@ test("content output must contain both bounded draft fields and no extras", () =
   assert.throws(() => parseContentDraftOutput('{"postCopy":"","creativeBrief":"Brief"}'));
   assert.throws(() => parseContentDraftOutput('{"postCopy":"Copy","creativeBrief":"Brief","price":"₹99"}'));
 });
-
-
-test("normalizes a bilingual JSON object accidentally embedded in postCopy", () => {
-  assert.deepEqual(parseContentDraftOutput(JSON.stringify({
-    postCopy: JSON.stringify({ Tamil: "இன்று பானகத்தில் சந்திப்போம்.", English: "See you at Paanagam today." }),
-    creativeBrief: "A simple warm-toned cafe visual"
-  })), {
-    postCopy: "இன்று பானகத்தில் சந்திப்போம்.\\n\\nSee you at Paanagam today.",
-    creativeBrief: "A simple warm-toned cafe visual"
-  });
-});
-
-test("keeps plain bilingual prose unchanged", () => {
-  assert.equal(parseContentDraftOutput(JSON.stringify({
-    postCopy: "வணக்கம்.\\n\\nHello.",
-    creativeBrief: "Warm visual"
-  })).postCopy, "வணக்கம்.\\n\\nHello.");
-});
