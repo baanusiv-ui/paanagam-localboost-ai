@@ -7,7 +7,7 @@ export type ImageDraftInput = {
   format: "SQUARE" | "PORTRAIT" | "STORY";
 };
 
-const imageModel = () => (process.env.OPENROUTER_IMAGE_MODEL || "openai/gpt-image-2.6-flare").trim();
+const imageModel = () => (process.env.OPENROUTER_IMAGE_MODEL || "black-forest-labs/flux-3-image").trim();
 
 export async function generateOpenRouterCampaignImage(input: ImageDraftInput) {
   const apiKey = process.env.OPENROUTER_API_KEY?.trim();
@@ -45,8 +45,7 @@ export async function generateOpenRouterCampaignImage(input: ImageDraftInput) {
       model: imageModel(),
       prompt,
       aspect_ratio: aspectRatio[input.format],
-      quality: "high",
-      output_format: "jpeg"
+      resolution: "1K"
     }),
     signal: AbortSignal.timeout(180000)
   });
@@ -71,18 +70,18 @@ export async function generateOpenRouterCampaignImage(input: ImageDraftInput) {
   if (!imageData || !/^[A-Za-z0-9+/]+={0,2}$/.test(imageData)) {
     throw new Error("OpenRouter returned no buffered image data. Verify the selected model supports the Images API.");
   }
-  const mimeType = raw.data?.[0]?.media_type || "image/jpeg";
+  const mimeType = raw.data?.[0]?.media_type || (imageData.startsWith("iVBOR") ? "image/png" : imageData.startsWith("UklGR") ? "image/webp" : imageData.startsWith("/9j/") ? "image/jpeg" : "image/png");
   if (!["image/jpeg", "image/png", "image/webp"].includes(mimeType)) {
     throw new Error("OpenRouter returned an unsupported image format: " + mimeType);
   }
   return {
     imageDataUrl: "data:" + mimeType + ";base64," + imageData,
     mimeType,
-    provider: "OPENROUTER_GPT_IMAGE",
+    provider: "OPENROUTER_FLUX",
     model: imageModel(),
     generatedAt: new Date().toISOString(),
     ...(typeof raw.usage?.cost === "number" ? { costUsd: raw.usage.cost } : {}),
     storage: "TEMPORARY_BROWSER_PREVIEW",
-    disclaimer: "Generated artwork is a temporary preview. Save it to the business creative library after review; this response does not publish it."
+    disclaimer: "FLUX-generated artwork is a temporary preview. Save it to the business creative library after review; this response does not publish it."
   };
 }
