@@ -41,6 +41,7 @@ const schema = z.object({
   OPENROUTER_SITE_URL: z.string().url().optional().default("https://paanagam-localboost-dashboard.onrender.com"),
   OPENAI_API_KEY: z.string().optional().default(""),
   OPENAI_TEXT_MODEL: z.string().trim().min(1).default("gpt-4o-mini"),
+  OPENAI_IMAGE_MODEL: z.string().trim().min(1).default("gpt-image-2.5-flare"),
   CLOUDFLARE_ACCOUNT_ID: z.string().optional().default(""),
   CLOUDFLARE_API_TOKEN: z.string().optional().default(""),
   CREATIVE_STUDIO_ADMIN_EMAILS: z.string().optional().default(""),
