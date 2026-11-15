@@ -151,11 +151,12 @@
       generatedImageDataUrl=await composeCampaignArtwork(canvaGeneratedImageUrl);
       preview.src=generatedImageDataUrl; preview.classList.remove("hidden");
       $("creative-image-download").disabled=false; $("creative-image-save").disabled=false;
-      const metrics=$("creative-provider-metrics"); if(metrics) metrics.textContent="Canva · completed. Brand overlay applied locally. Generate Gemini to compare both results.";
+      const metrics=$("creative-provider-metrics"); if(metrics) metrics.textContent="Canva · completed. Brand overlay applied locally. Generate GPT Image to compare both results.";
       setMessage("Canva background generated and Paanagam overlay composed. Review the result.");
     }catch(err){setMessage("Canva artwork generation failed: "+err.message,true);}
     finally{button.disabled=false;}
   });
+  const gptImageButton=$("creative-image-gemini"); if(gptImageButton){gptImageButton.textContent="Generate GPT Image";gptImageButton.setAttribute("aria-label","Generate artwork with OpenAI GPT Image");}
   $("creative-image-gemini")?.addEventListener("click",async()=>{
     if(!ready||!current){setMessage("Generate campaign copy first, then create its artwork.",true);return;}
     const button=$("creative-image-gemini"), preview=$("creative-gemini-preview"), startedAt=Date.now();
@@ -180,7 +181,7 @@
   $("creative-gemini-save")?.addEventListener("click",async()=>{
     const button=$("creative-gemini-save"), preview=$("creative-gemini-preview");
     const dataUrl=preview?.dataset.downloadUrl;
-    if(!ready||!current||!dataUrl||!dataUrl.startsWith("data:image/")){setMessage("Generate and review FLUX artwork before saving it.",true);return;}
+    if(!ready||!current||!dataUrl||!dataUrl.startsWith("data:image/")){setMessage("Generate and review GPT Image artwork before saving it.",true);return;}
     button.disabled=true;
     try{
       const comma=dataUrl.indexOf(",");
@@ -193,8 +194,8 @@
       })});
       current.assetId=result.asset.id; current.assetName=result.asset.fileName;
       button.textContent="Saved to business library";
-      setMessage("FLUX artwork saved to the selected business library. Save the campaign draft to send it to Approval Centre; nothing is published.");
-    }catch(err){setMessage("FLUX artwork could not be saved: "+err.message,true);button.disabled=false;}
+      setMessage("GPT Image artwork saved to the selected business library. Save the campaign draft to send it to Approval Centre; nothing is published.");
+    }catch(err){setMessage("GPT Image artwork could not be saved: "+err.message,true);button.disabled=false;}
   });
   $("creative-gemini-download")?.addEventListener("click",()=>{
     const url=$("creative-gemini-preview")?.dataset.downloadUrl;
