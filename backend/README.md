@@ -14,7 +14,7 @@ Requirements: Node.js 20+, npm, Docker Desktop.
    ```
    Put the first value in `JWT_SECRET` and the second in `TOKEN_ENCRYPTION_KEY_BASE64`.
 3. Start PostgreSQL: `docker compose up -d postgres`.
-4. Install dependencies: `npm install`.
+4. Install dependencies: `npm ci` (installs exactly the versions in the committed `package-lock.json`). Use `npm install` only when you are deliberately changing dependencies, and commit the updated lockfile.
 5. Generate Prisma client: `npm run db:generate`.
 6. Apply migrations: `npm run db:deploy`.
 7. Start the API: `npm run dev`.
