@@ -248,7 +248,10 @@
     imageStyle.innerHTML='<option value="photo">Premium café product photography</option><option value="cute-cups">Cute illustrated tea & coffee characters</option>';
     imageStyleLabel.appendChild(imageStyle);
     const imagePromptField=document.getElementById("poyo-image-prompt");
-    imagePromptField?.closest("label")?.insertAdjacentElement("beforebegin",imageStyleLabel);
+    const imageForm=document.getElementById("poyo-image-form");
+    const promptLabel=imagePromptField?.closest("label");
+    if(promptLabel)promptLabel.insertAdjacentElement("beforebegin",imageStyleLabel);
+    else if(imageForm)imageForm.insertBefore(imageStyleLabel,imageForm.firstChild);
     const buildPaanagamImagePrompt = (d={}) => {
       const selectedStyle=document.getElementById("poyo-image-style")?.value||"photo";
       if(selectedStyle==="cute-cups"){
@@ -307,12 +310,7 @@
       imagePrompt.dispatchEvent(new Event("input",{bubbles:true}));
       if(imageSize)imageSize.value=d.format==="feed"?"1:1":"9:16";
       if(resolution)resolution.value="2K";
-      const submit=form.querySelector("#poyo-image-save");
-      if(!submit)return;
-      form.dataset.keepPromptAfterSave="true";
-      submit.disabled=true;
-      try{if(typeof form.requestSubmit==="function")form.requestSubmit(submit);else submit.click();}
-      finally{window.setTimeout(()=>{if(submit.isConnected)submit.disabled=false;},1500);}
+      /* Prompt is prepared for owner review; image task creation/generation requires an explicit owner click. */
     });
     const syncCampaignBriefToImagePrompt=()=>{
       const brief=document.getElementById("creative-preview-brief")?.textContent?.trim();
