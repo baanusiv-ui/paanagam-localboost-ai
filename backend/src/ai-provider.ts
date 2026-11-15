@@ -76,7 +76,7 @@ async function callOllama(baseUrl: string, model: string, messages: AiMessage[],
     // Distinguish Cloudflare Access/edge HTML from a valid Ollama JSON response.
     let finalPath = "/api/chat";
     try { finalPath = new URL(response.url || baseUrl).pathname; } catch { /* keep safe fallback path */ }
-    const isHtml = /html/i.test(contentType) || /^\\s*<!doctype html|^\\s*<html/i.test(responseText);
+    const isHtml = /html/i.test(contentType) || /^\s*<!doctype html|^\s*<html/i.test(responseText);
     const reason = response.status === 401 || response.status === 403
       ? "Cloudflare Access or gateway denied the /api/chat request"
       : isHtml
