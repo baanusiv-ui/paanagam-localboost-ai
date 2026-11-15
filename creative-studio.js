@@ -160,7 +160,7 @@
     if(!ready||!current){setMessage("Generate campaign copy first, then create its artwork.",true);return;}
     const button=$("creative-image-gemini"), preview=$("creative-gemini-preview"), startedAt=Date.now();
     button.disabled=true; $("creative-gemini-download").disabled=true; preview.src=""; preview.classList.add("hidden");
-    setMessage("Generating campaign artwork with GPT Image via OpenRouter…");
+    setMessage("Generating campaign artwork with FLUX via OpenRouter…");
     try{
       const formatMap={feed:"SQUARE",portrait:"PORTRAIT",story:"STORY"};
       const result=await api(base()+"/creative/image",{method:"POST",body:JSON.stringify({
@@ -172,15 +172,15 @@
       $("creative-gemini-download").disabled=false; $("creative-gemini-save").disabled=false;
       const seconds=((Date.now()-startedAt)/1000).toFixed(1);
       const metrics=$("creative-provider-metrics");
-      if(metrics) metrics.textContent="OpenRouter · "+result.model+" · "+seconds+" s · "+result.mimeType+" · temporary preview.";
-      setMessage("GPT Image artwork generated and branded locally. Review and download it; nothing has been saved or published.");
+      if(metrics) metrics.textContent="OpenRouter FLUX · "+result.model+" · "+seconds+" s · "+result.mimeType+" · temporary preview.";
+      setMessage("FLUX artwork generated and branded locally. Review and download it; nothing has been saved or published.");
     }catch(err){setMessage("GPT Image generation failed: "+err.message,true);}
     finally{button.disabled=false;}
   });
   $("creative-gemini-save")?.addEventListener("click",async()=>{
     const button=$("creative-gemini-save"), preview=$("creative-gemini-preview");
     const dataUrl=preview?.dataset.downloadUrl;
-    if(!ready||!current||!dataUrl||!dataUrl.startsWith("data:image/")){setMessage("Generate and review GPT artwork before saving it.",true);return;}
+    if(!ready||!current||!dataUrl||!dataUrl.startsWith("data:image/")){setMessage("Generate and review FLUX artwork before saving it.",true);return;}
     button.disabled=true;
     try{
       const comma=dataUrl.indexOf(",");
@@ -193,13 +193,13 @@
       })});
       current.assetId=result.asset.id; current.assetName=result.asset.fileName;
       button.textContent="Saved to business library";
-      setMessage("GPT artwork saved to the selected business library. Save the campaign draft to send it to Approval Centre; nothing is published.");
-    }catch(err){setMessage("GPT artwork could not be saved: "+err.message,true);button.disabled=false;}
+      setMessage("FLUX artwork saved to the selected business library. Save the campaign draft to send it to Approval Centre; nothing is published.");
+    }catch(err){setMessage("FLUX artwork could not be saved: "+err.message,true);button.disabled=false;}
   });
   $("creative-gemini-download")?.addEventListener("click",()=>{
     const url=$("creative-gemini-preview")?.dataset.downloadUrl;
     if(!url)return;
-    const a=document.createElement("a");a.href=url;a.download="paanagam-gemini-campaign.jpg";document.body.appendChild(a);a.click();a.remove();
+    const a=document.createElement("a");a.href=url;a.download="paanagam-flux-campaign.jpg";document.body.appendChild(a);a.click();a.remove();
   });
   $("creative-image-save")?.addEventListener("click",async()=>{
     if(!ready||!current||!canvaGeneratedImageUrl||!canvaGenerationJobId)return;
