@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import Fastify from "fastify";
 import { test } from "node:test";
 import type { PrismaClient } from "@prisma/client";
-import { registerPosIntegrationRoutes } from "./pos-integration.js";
 
 test("every POS integration route denies a business not owned by the authenticated user", async () => {
+  process.env.DATABASE_URL ??= "postgresql://localboost:localboost_dev@localhost:5432/localboost?schema=public";
+  process.env.JWT_SECRET ??= "test-only-localboost-jwt-secret-32-bytes-minimum";
+  process.env.TOKEN_ENCRYPTION_KEY_BASE64 ??= "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=";
+  const { registerPosIntegrationRoutes } = await import("./pos-integration.js");
   const ownershipQueries: unknown[] = [];
   const db = { business: { findFirst: async (args: unknown) => { ownershipQueries.push(args); return null; } } } as unknown as PrismaClient;
   const app = Fastify();
