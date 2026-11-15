@@ -146,12 +146,15 @@ export async function registerCrmRoutes(
     try { contact = normaliseContact({ phone, email }); }
     catch (error) { return reply.code(400).send({ error: error instanceof Error ? error.message : "Invalid contact details." }); }
     try {
-      const customer = await db.customer.update({
-        where: { id: existing.id },
-        data: { ...(body.data.name !== undefined ? { name: body.data.name } : {}), ...contact, lastSeenAt: new Date() },
-        select: { id: true, name: true, phoneE164: true, email: true, status: true, updatedAt: true }
+      const customer = await db.$transaction(async tx => {
+        const updated = await tx.customer.update({
+          where: { id: existing.id },
+          data: { ...(body.data.name !== undefined ? { name: body.data.name } : {}), ...contact, lastSeenAt: new Date() },
+          select: { id: true, name: true, phoneE164: true, email: true, status: true, updatedAt: true }
+        });
+        await tx.customerEvent.create({ data: { businessId: business.id, customerId: updated.id, eventType: "PROFILE_UPDATED", source: "LOCALBOOST" } });
+        return updated;
       });
-      await db.customerEvent.create({ data: { businessId: business.id, customerId: customer.id, eventType: "PROFILE_UPDATED", source: "LOCALBOOST" } });
       return { customer };
     } catch (error) {
       if (isUniqueConflict(error)) return reply.code(409).send({ error: "Another customer in this business already uses that phone or email." });
