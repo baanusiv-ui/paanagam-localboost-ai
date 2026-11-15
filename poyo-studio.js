@@ -245,6 +245,13 @@
     imageStyleLabel.appendChild(imageStyle);
     const imagePromptField=document.getElementById("poyo-image-prompt");
     const presetImageForm=document.getElementById("poyo-image-form");
+
+    const randomCreativeButton=document.createElement("button");
+    randomCreativeButton.type="button";
+    randomCreativeButton.className="secondary-button";
+    randomCreativeButton.textContent="✦ Surprise me · Random creative prompt";
+    randomCreativeButton.title="Create a fresh commercial art direction without generating an image or spending credits";
+    imageStyleLabel.insertAdjacentElement("afterend",randomCreativeButton);
     const promptLabel=imagePromptField?.closest("label");
     if(promptLabel)promptLabel.insertAdjacentElement("beforebegin",imageStyleLabel);
     else if(presetImageForm)presetImageForm.insertBefore(imageStyleLabel,presetImageForm.firstChild);
@@ -293,6 +300,56 @@
       ].filter(Boolean);
       return lines.join("\n\n");
     };
+
+    const pickRandom=(items)=>items[Math.floor(Math.random()*items.length)];
+    const buildRandomCommercialPrompt=(d={})=>{
+      const shop=String(d.businessName||d.shopName||d.brandName||"PAANAGAM (பானகம்)").trim();
+      const topic=String(d.topic||"neighbourhood café brand").trim();
+      const caption=String(d.caption||"").trim();
+      const concept=pickRandom([
+        {name:"Signature storefront and illuminated signage",scene:"A wide-angle commercial exterior view of a contemporary urban tea café storefront. The fascia is clad in matte black composite ACP panels with subtle vertical walnut wood-slat accents. The shop name, '"+shop+"', appears as clean minimalist 3D acrylic letters with warm-white face illumination. Beside it, a custom warm-amber LED flex neon icon depicts a steaming earthen kulhad tea cup. Floor-to-ceiling clear glass reveals a warmly lit, inviting modern café interior."},
+        {name:"Premium café interior",scene:"A refined contemporary South Indian café interior with a dramatic counter, warm ivory walls, dark walnut fluted panels, mustard accents, pendant lighting, tactile natural materials and a beautifully illuminated brand wall displaying '"+shop+"' as dimensional lettering. Wide-angle architectural composition, inviting seating and realistic spatial depth."},
+        {name:"Hero product advertising",scene:"An editorial commercial hero photograph of the campaign's featured drink or food, beautifully styled on a dark walnut café counter with authentic serving ware, subtle steam, rich realistic textures and elegant warm reflections. A softly blurred premium café environment gives the product centre stage."},
+        {name:"Street-side café lifestyle campaign",scene:"A cinematic street-level view of a lively but tasteful South Indian neighbourhood café at blue hour, warm light glowing through full-height glass, a few naturally arranged café details, refined signage and welcoming atmosphere. The brand '"+shop+"' is clearly visible on the fascia."},
+        {name:"Architectural brand identity mock-up",scene:"A premium architectural branding mock-up showing the café façade, dimensional logo signage, material junctions, illuminated icon, glass frontage and considered storefront proportions. Contemporary commercial design presentation, crisp detailing and realistic construction materials."},
+        {name:"Food and beverage menu hero",scene:"A premium commercial still-life campaign featuring the exact food or beverage from the campaign topic, with carefully arranged ingredients and serving details, a strong focal point, beautiful natural texture and sophisticated café styling. Avoid adding unmentioned products."},
+        {name:"Promotional campaign key visual",scene:"A bold, polished commercial campaign key visual for a neighbourhood café, with one clear visual hero, layered but uncluttered composition, warm cinematic lighting, tasteful brand-colour accents and generous negative space reserved for editable promotional typography."}
+      ]);
+      const materials=pickRandom(["matte black ACP, vertical walnut slats, brushed brass and clear glass","warm ivory plaster, dark walnut, mustard enamel and ribbed glass","charcoal metal, natural teak, amber acrylic and polished concrete","textured limewash, fluted timber, warm metal trim and floor-to-ceiling glazing"]);
+      const lighting=pickRandom(["twilight blue-hour ambience with warm-white signage glow and amber interior light","soft early-morning daylight with gentle architectural shadows","cinematic evening illumination, warm practical lights and restrained reflections","overcast daylight with balanced exposure and crisp material definition"]);
+      const camera=pickRandom(["wide-angle 24mm architectural commercial photography, eye-level perspective","three-quarter street perspective, 28mm tilt-shift architectural lens","straight-on symmetrical façade view, professional commercial real-estate photography","low three-quarter hero angle with realistic vertical lines and controlled perspective"]);
+      const finish=pickRandom(["photorealistic commercial mock-up, crisp edges, physically accurate materials and premium retouching","high-end architectural visualisation that looks like a real photographed completed project","ultra-detailed commercial brand presentation, realistic illumination, natural reflections and precise geometry"]);
+      const format=String(d.format||"9:16").toLowerCase()==="feed"?"1:1":"9:16";
+      return [
+        "Create an original, high-end commercial creative for "+shop+".",
+        "CREATIVE CONCEPT: "+concept.name+".",
+        "SCENE AND ART DIRECTION: "+concept.scene,
+        "BRAND CONTEXT: "+topic+". Preserve the supplied business identity. Use a considered palette of mustard yellow, warm ivory, dark walnut and restrained amber accents where appropriate.",
+        "MATERIAL PALETTE: "+materials+".",
+        "LIGHTING AND ATMOSPHERE: "+lighting+".",
+        "CAMERA AND COMPOSITION: "+camera+". Vertical "+format+" composition, strong visual hierarchy, realistic scale, clean framing and carefully balanced negative space. Keep the main subject fully inside frame.",
+        "IMAGE FINISH: "+finish+".",
+        caption?"CAMPAIGN MESSAGE CONTEXT ONLY — use this to guide the visual mood, do not reproduce or invent text: "+caption:"",
+        "TEXT AND LOGO CONTROL: Render the shop name only where signage is explicitly part of the scene. Do not invent other words, prices, menu items, slogans, phone numbers, Tamil lettering, labels or watermarks. Leave promotional copy areas clean for approved editable overlays.",
+        "NEGATIVE PROMPT: no gibberish typography, misspelled signage, fake logos, distorted architecture, bent verticals, warped glass, duplicated objects, clutter, artificial plastic textures, oversaturated colours, stock-photo watermarks or UI elements.",
+        "FINAL RESULT: A distinctive, photorealistic, scroll-stopping commercial creative that looks professionally art-directed and suitable for a real café brand."
+      ].filter(Boolean).join("\n\n").slice(0,4000);
+    };
+    randomCreativeButton.addEventListener("click",()=>{
+      if(!imagePromptField)return;
+      const brief=lastCampaignImageBrief||{
+        topic:document.getElementById("creative-topic")?.value?.trim()||"neighbourhood café campaign",
+        caption:document.getElementById("creative-caption")?.value?.trim()||"",
+        businessName:document.querySelector("[data-business-name]")?.textContent?.trim()||"PAANAGAM (பானகம்)",
+        format:document.getElementById("poyo-image-size")?.value||"9:16"
+      };
+      imagePromptField.value=buildRandomCommercialPrompt(brief);
+      imagePromptField.dispatchEvent(new Event("input",{bubbles:true}));
+      const paired=document.getElementById("creative-matched-image-prompt");
+      if(paired)paired.value=imagePromptField.value;
+      const message=document.getElementById("poyo-image-message");
+      if(message)message.textContent="A new random commercial concept is ready. Edit the prompt or save it as a draft. No image was generated and no credits were used.";
+    });
     imageStyle.addEventListener("change",()=>{
       if(!lastCampaignImageBrief||!imagePromptField)return;
       imagePromptField.value=buildPaanagamImagePrompt(lastCampaignImageBrief);
