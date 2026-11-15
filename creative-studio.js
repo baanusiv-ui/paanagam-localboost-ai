@@ -71,10 +71,15 @@
       $("creative-preview-brief").textContent=current.designerBrief||"No separate image brief was returned by the drafting service.";
       $("creative-asset-url").value="";
       $("creative-save").disabled=false;
-      setMessage("Campaign copy generated. Preparing the image prompt and saving a no-cost image draft…");
+      setMessage("Campaign caption generated. Preparing the matching image prompt for your review…");
       window.dispatchEvent(new CustomEvent("localboost:campaign-copy-ready",{detail:{topic:current.topic,offer:current.offer,platform:current.platform,format:current.format,language:current.language,tone,caption:current.caption,headline:current.headline,designerBrief:current.designerBrief}}));
     } catch(err){setMessage("Generation failed: "+err.message,true);}
     finally{$("creative-generate").disabled=false;}
+  });
+  window.addEventListener("localboost:campaign-image-prompt-updated",event=>{
+    if(!current)return;
+    current.imagePrompt=String(event.detail?.prompt||"").slice(0,4000);
+    current.updatedAt=new Date().toISOString();
   });
   async function composeCampaignArtwork(sourceUrl) {
     const image = new Image(); image.crossOrigin = "anonymous"; image.src = sourceUrl;

@@ -122,7 +122,8 @@
       if(!prompt||prompt.length>4000)throw new Error("Image prompt must be between 1 and 4,000 characters.");
       const urls=$("poyo-image-refs").value.split(/\r?\n/).map(v=>v.trim()).filter(Boolean);
       if(urls.length>10||!urls.every(v=>/^https:\/\//i.test(v)))throw new Error("Use up to 10 publicly accessible HTTPS reference URLs.");
-      const modelInput={size:$("poyo-image-size").value,resolution,...(urls.length?{image_urls:urls}:{})};
+      const campaignContext=lastCampaignImageBrief?{topic:String(lastCampaignImageBrief.topic||"").slice(0,300),caption:String(lastCampaignImageBrief.caption||"").slice(0,2000),offer:String(lastCampaignImageBrief.offer||"").slice(0,500),format:String(lastCampaignImageBrief.format||"").slice(0,40)}:undefined;
+      const modelInput={size:$("poyo-image-size").value,resolution,...(urls.length?{image_urls:urls}:{}),...(campaignContext?{campaign:campaignContext}:{})};
       const result=await api(base()+"/poyo/tasks",{method:"POST",body:JSON.stringify({mediaType:"IMAGE",modelId:"nano-banana-2.1",prompt,modelInput})});
       const taskId=result.task?.id;
       if(!taskId)throw new Error("LocalBoost did not return a saved image draft ID.");
@@ -176,7 +177,8 @@
         if(!label){label=document.createElement("label");label.id="creative-matched-prompt-label";label.htmlFor="creative-matched-image-prompt";label.textContent="Matching image prompt · edit before generation";preview.appendChild(label);}
         if(!paired){paired=document.createElement("textarea");paired.id="creative-matched-image-prompt";paired.rows=8;paired.maxLength=4000;paired.style.width="100%";preview.appendChild(paired);}
         paired.value=imagePrompt.value;
-        paired.oninput=()=>{imagePrompt.value=paired.value;imagePrompt.dispatchEvent(new Event("input",{bubbles:true}));};
+        paired.oninput=()=>{imagePrompt.value=paired.value;imagePrompt.dispatchEvent(new Event("input",{bubbles:true}));window.dispatchEvent(new CustomEvent("localboost:campaign-image-prompt-updated",{detail:{prompt:paired.value}}));};
+        window.dispatchEvent(new CustomEvent("localboost:campaign-image-prompt-updated",{detail:{prompt:imagePrompt.value}}));
       }
       if(imageSize)imageSize.value=d.format==="feed"?"1:1":"9:16";
       if(resolution)resolution.value="2K";
