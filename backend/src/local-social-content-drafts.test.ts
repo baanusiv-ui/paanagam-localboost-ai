@@ -26,3 +26,27 @@ test("prompt bounds long source evidence before sending it to the model", () => 
   const payload = JSON.parse(messages[1]!.content);
   assert.equal(payload.evidence.length, 1800);
 });
+
+
+import { parseLocalSocialContentDraftOutput } from "./local-social-content-drafts.js";
+
+test("parses plain string fields from local model JSON", () => {
+  assert.deepEqual(parseLocalSocialContentDraftOutput(JSON.stringify({
+    postCopy: "வணக்கம்",
+    creativeBrief: "Warm coffee poster"
+  })), { postCopy: "வணக்கம்", creativeBrief: "Warm coffee poster" });
+});
+
+test("normalizes object-wrapped text fields returned by local models", () => {
+  assert.deepEqual(parseLocalSocialContentDraftOutput(JSON.stringify({
+    postCopy: { text: "வணக்கம்" },
+    creativeBrief: { description: "Warm coffee poster" }
+  })), { postCopy: "வணக்கம்", creativeBrief: "Warm coffee poster" });
+});
+
+test("rejects object fields without a clear text value", () => {
+  assert.throws(() => parseLocalSocialContentDraftOutput(JSON.stringify({
+    postCopy: { headline: "வணக்கம்", footer: "Welcome" },
+    creativeBrief: "Warm coffee poster"
+  })), /unsupported postCopy format/);
+});
