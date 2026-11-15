@@ -54,7 +54,11 @@ async function callOllama(baseUrl: string, model: string, messages: AiMessage[],
       messages,
       stream: false,
       format: "json",
-      options: { temperature, ...(numPredict ? { num_predict: numPredict } : {}) }
+      // Qwen 3.5 can spend the entire prediction budget in its separate
+      // thinking field, leaving message.content empty. Disable thinking for
+      // local structured drafts so the token budget is used for the JSON answer.
+      ...(isLocal ? { think: false } : {}),
+      options: { temperature, ...(numPredict ? { num_predict: Math.max(512, numPredict) } : {}) }
     }),
     signal: AbortSignal.timeout(timeoutMs)
   });
