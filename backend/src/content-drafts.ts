@@ -27,6 +27,7 @@ export function buildContentDraftMessages(input: ContentDraftInput) {
         "Use only the supplied business name, topic, offer and publish date. Never invent prices, discounts, dates, availability, opening hours, addresses, ingredients, awards, customer reviews or guarantees.",
         "If no offer is supplied, do not create an offer or imply a discount.",
         "Write concise, natural, engaging copy in the requested language. For Tamil + English, write natural Tamil first and a short English version second.",
+        "The postCopy value must contain reader-facing caption text only. Never put JSON, language labels, object syntax, or escaped key/value data inside postCopy. Use a plain Tamil paragraph, a blank line, then a plain English paragraph.",
         "Create a practical visual creative brief for a designer. Do not claim an image has been generated.",
         "The brief must match the requested format and must not add products, logos or brand facts that were not supplied.",
         "Return JSON only with exactly two keys: postCopy and creativeBrief. No markdown fences.",
@@ -45,9 +46,28 @@ export function buildContentDraftMessages(input: ContentDraftInput) {
   ];
 }
 
+function normalizePostCopy(value: string): string {
+  const trimmed = value.trim();
+  try {
+    const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const entries = Object.entries(parsed);
+      const pick = (keys: string[]) => {
+        const item = entries.find(([key, candidate]) => keys.includes(key.trim().toLowerCase()) && typeof candidate === "string" && candidate.trim());
+        return item ? (item[1] as string).trim() : "";
+      };
+      const tamil = pick(["tamil", "ta", "தமிழ்"]);
+      const english = pick(["english", "en"]);
+      if (tamil || english) return [tamil, english].filter(Boolean).join("\\n\\n").slice(0, 2000);
+    }
+  } catch { /* ordinary prose, not a serialized bilingual object */ }
+  return trimmed.slice(0, 2000);
+}
+
 export function parseContentDraftOutput(raw: string) {
   const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-  return contentSchema.parse(JSON.parse(cleaned));
+  const parsed = contentSchema.parse(JSON.parse(cleaned));
+  return { ...parsed, postCopy: normalizePostCopy(parsed.postCopy) };
 }
 
 export async function generateLocalContentDraft(input: ContentDraftInput) {
