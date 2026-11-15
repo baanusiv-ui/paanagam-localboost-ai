@@ -5,6 +5,7 @@
   const TOKEN = "localboost_access_token", BUSINESS = "localboost_business_id";
   let drafts = [], current = null, ready = false, generatedImageDataUrl = "", canvaGeneratedImageUrl = "", canvaGenerationJobId = "";
   let pendingPoyoAssetSelection = null;
+  let imageGeneration = null; // in-flight GPT Image request: {draft, promise}
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const businessId = () => sessionStorage.getItem(BUSINESS);
   async function api(path, options = {}) {
@@ -56,7 +57,7 @@
     const map={ta:"Tamil",en:"English",both:"Tamil + English"};
     const formatMap={feed:"SQUARE",portrait:"PORTRAIT",story:"STORY"};
     const toneMap={"warm":"WARM","traditional":"TRADITIONAL","offer":"OFFER_LED"};
-    $("creative-generate").disabled=true; setMessage("Generating copy with the configured Local AI service…");
+    $("creative-generate").disabled=true; setMessage("Generating the campaign caption with GPT via OpenRouter…");
     try {
       const result=await api(base()+"/google-content/draft",{method:"POST",body:JSON.stringify({topic,offer,language:map[language],format:formatMap[format],tone:toneMap[tone]})});
       generatedImageDataUrl="";
@@ -73,7 +74,8 @@
       $("creative-save").disabled=false;
       setMessage("Campaign caption generated. Preparing the matching image prompt for your review…");
       window.dispatchEvent(new CustomEvent("localboost:campaign-copy-ready",{detail:{topic:current.topic,offer:current.offer,platform:current.platform,format:current.format,language:current.language,tone,caption:current.caption,headline:current.headline,designerBrief:current.designerBrief}}));
-      setMessage("Caption and matching image prompt are ready. Review both, then choose Generate GPT Image or Generate image when you are ready.");
+      setMessage("Caption and matching image prompt are ready. GPT Image is now creating the matching artwork automatically…");
+      generateAndSaveGptImage({automatic:true}); // handles its own errors; never submits or publishes
     } catch(err){setMessage("Generation failed: "+err.message,true);}
     finally{$("creative-generate").disabled=false;}
   });
@@ -82,7 +84,7 @@
     current.imagePrompt=String(event.detail?.prompt||"").slice(0,4000);
     current.updatedAt=new Date().toISOString();
   });
-  async function composeCampaignArtwork(sourceUrl) {
+  async function composeCampaignArtwork(sourceUrl, draft = current) {
     const image = new Image(); image.crossOrigin = "anonymous"; image.src = sourceUrl;
     await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = () => reject(new Error("Generated image could not be opened for layout.")); });
     const canvas = document.createElement("canvas");
@@ -109,16 +111,16 @@
     gradient.addColorStop(.28, "rgba(28,17,11,.82)");
     gradient.addColorStop(1, "rgba(28,17,11,.94)");
     ctx.fillStyle = gradient; ctx.fillRect(0, bandTop, canvas.width, canvas.height - bandTop);
-    let title = (current?.headline || current?.topic || "Campaign").replace(/\\s*[–—-]\\s*/g, " · ").trim();
+    let title = (draft?.headline || draft?.topic || "Campaign").replace(/\\s*[–—-]\\s*/g, " · ").trim();
     if (/grand opening/i.test(title)) title = "Grand Opening";
     if (title.length > 48) title = title.slice(0,45).trim() + "…";
     ctx.fillStyle = "#fffaf0"; ctx.font = "700 " + (42 * scale) + "px Arial, sans-serif";
     ctx.shadowColor = "rgba(0,0,0,.35)"; ctx.shadowBlur = 7 * scale;
     ctx.fillText(title, margin, canvas.height - margin - 18 * scale, canvas.width - margin * 2);
     ctx.shadowBlur = 0;
-    if (current?.offer) {
+    if (draft?.offer) {
       ctx.fillStyle = "#f2c66d"; ctx.font = "600 " + (23 * scale) + "px Arial, sans-serif";
-      ctx.fillText(current.offer.slice(0, 72), margin, canvas.height - margin + 20 * scale, canvas.width - margin * 2);
+      ctx.fillText(draft.offer.slice(0, 72), margin, canvas.height - margin + 20 * scale, canvas.width - margin * 2);
     }
     return canvas.toDataURL("image/jpeg", .94);
   }
@@ -162,44 +164,72 @@
     }catch(err){setMessage("Canva artwork generation failed: "+err.message,true);}
     finally{button.disabled=false;}
   });
-  async function generateAndSaveGptImage() {
-    if(!current) throw new Error("Generate the campaign caption first.");
-    const preview=$("creative-gemini-preview");
-    const button=$("creative-image-gemini");
-    if(button) button.disabled=true;
-    if(preview){preview.src="";preview.classList.add("hidden");}
-    $("creative-gemini-download") && ($("creative-gemini-download").disabled=true);
-    setMessage("Caption ready. GPT Image is automatically creating matching campaign artwork…");
+  const setGptImageButton=(label,disabled)=>{const b=$("creative-image-gemini");if(b){b.textContent=label;b.disabled=disabled;}};
+  // At most one GPT Image request per campaign draft at a time: repeated events and clicks share it.
+  // Automatic runs are skipped when this caption already has artwork; explicit owner retries and
+  // regenerations always run, but never overlap. Failures keep the caption and draft and offer a retry.
+  function generateAndSaveGptImage({automatic=false}={}) {
+    const draft=current;
+    if(!draft) return Promise.reject(new Error("Generate the campaign caption first."));
+    if(imageGeneration&&imageGeneration.draft===draft) return imageGeneration.promise;
+    if(automatic&&draft.assetId&&draft.imageCaption===draft.caption) return Promise.resolve(draft);
+    const promise=runGptImage(draft).finally(()=>{if(imageGeneration&&imageGeneration.promise===promise)imageGeneration=null;});
+    imageGeneration={draft,promise};
+    return promise;
+  }
+  async function runGptImage(draft) {
+    const isCurrent=()=>current===draft;
+    const preview=$("creative-gemini-preview"), download=$("creative-gemini-download"), submit=$("creative-save");
+    if(isCurrent()){
+      setGptImageButton("Generating GPT Image…",true);
+      if(submit) submit.disabled=true;
+      if(preview){preview.src="";preview.classList.add("hidden");}
+      if(download) download.disabled=true;
+      setMessage("Caption ready. GPT Image is automatically creating matching campaign artwork…");
+    }
     const formatMap={feed:"SQUARE",portrait:"PORTRAIT",story:"STORY"};
-    const result=await api(base()+"/creative/image",{method:"POST",body:JSON.stringify({
-      provider:"OPENAI",topic:current.topic,offer:current.offer,creativeBrief:current.imagePrompt||current.designerBrief,
-      caption:current.caption,language:current.language,format:formatMap[$("creative-format").value]||"SQUARE"
-    })});
-    const composed=await composeCampaignArtwork(result.imageDataUrl);
-    const comma=composed.indexOf(","), header=composed.slice(0,comma);
-    const mimeType=(header.match(/^data:(image\/(?:jpeg|png|webp));base64$/)||[])[1];
-    const dataBase64=composed.slice(comma+1);
-    if(!mimeType||!dataBase64) throw new Error("Generated image data is invalid.");
-    const saved=await api(base()+"/creative-assets",{method:"POST",body:JSON.stringify({
-      fileName:"gpt-image-"+Date.now()+".jpg",mimeType,dataBase64,altText:current.topic+" — "+current.caption.slice(0,160)
-    })});
-    current.assetId=saved.asset.id;current.assetName=saved.asset.fileName;
-    current.imageProvider="OPENAI_GPT_IMAGE";current.imageModel=result.model;current.imageGeneratedAt=result.generatedAt;
-    if(preview){preview.src=composed;preview.classList.remove("hidden");preview.dataset.downloadUrl=composed;}
-    $("creative-gemini-download") && ($("creative-gemini-download").disabled=false);
-    $("creative-gemini-save") && ($("creative-gemini-save").disabled=true);
-    const metrics=$("creative-provider-metrics");
-    if(metrics)metrics.textContent="OpenAI GPT Image · "+result.model+" · generated and saved to business library.";
-    current.updatedAt=new Date().toISOString();
-    await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:current.id,payload:current,recordedAt:current.updatedAt})});
-    setMessage("Matching GPT Image artwork generated and saved with the caption as a campaign draft. Review it, then use Save to Approval Centre when ready. Nothing is approved or published.");
-    if(button)button.disabled=false;
-    return current;
+    try{
+      const result=await api(base()+"/creative/image",{method:"POST",body:JSON.stringify({
+        provider:"OPENAI",topic:draft.topic,offer:draft.offer,creativeBrief:draft.imagePrompt||draft.designerBrief,
+        caption:draft.caption,language:draft.language,format:formatMap[draft.format]||"SQUARE"
+      })});
+      const composed=await composeCampaignArtwork(result.imageDataUrl,draft);
+      const comma=composed.indexOf(","), header=composed.slice(0,comma);
+      const mimeType=(header.match(/^data:(image\/(?:jpeg|png|webp));base64$/)||[])[1];
+      const dataBase64=composed.slice(comma+1);
+      if(!mimeType||!dataBase64) throw new Error("Generated image data is invalid.");
+      const saved=await api(base()+"/creative-assets",{method:"POST",body:JSON.stringify({
+        fileName:"gpt-image-"+Date.now()+".jpg",mimeType,dataBase64,altText:draft.topic+" — "+draft.caption.slice(0,160)
+      })});
+      draft.assetId=saved.asset.id;draft.assetName=saved.asset.fileName;draft.imageCaption=draft.caption;
+      draft.imageProvider="OPENAI_GPT_IMAGE";draft.imageModel=result.model;draft.imageGeneratedAt=result.generatedAt;
+      draft.updatedAt=new Date().toISOString();
+      if(!isCurrent()) return draft; // the owner moved on; the saved asset stays in the business library
+      if(preview){preview.src=composed;preview.classList.remove("hidden");preview.dataset.downloadUrl=composed;}
+      if(download) download.disabled=false;
+      const geminiSave=$("creative-gemini-save"); if(geminiSave) geminiSave.disabled=true;
+      const metrics=$("creative-provider-metrics");
+      if(metrics)metrics.textContent="OpenAI GPT Image · "+result.model+" · generated and saved to business library.";
+      setGptImageButton("Regenerate GPT Image",false);
+      if(submit) submit.disabled=false;
+      try{
+        await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:draft.id,payload:draft,recordedAt:draft.updatedAt})});
+        setMessage("Matching GPT Image artwork generated and saved with the caption as a campaign draft. Review both, then use Save to Approval Centre when ready. Nothing is approved or published.");
+      }catch(err){
+        setMessage("Artwork was saved to the business library, but the campaign draft could not be saved: "+err.message+". Use Save to Approval Centre to retry.",true);
+      }
+    }catch(err){
+      if(isCurrent()){
+        setGptImageButton("Retry GPT Image",false);
+        if(submit) submit.disabled=false;
+        setMessage("GPT Image generation failed: "+err.message+". Your caption and draft are kept. Use Retry GPT Image, or save the caption without artwork.",true);
+      }
+    }
+    return draft;
   }
   const gptImageButton=$("creative-image-gemini"); if(gptImageButton){gptImageButton.textContent="Generate GPT Image";gptImageButton.setAttribute("aria-label","Generate artwork with OpenAI GPT Image");}
-  $("creative-image-gemini")?.addEventListener("click",async()=>{
-    try{await generateAndSaveGptImage();}
-    catch(err){setMessage("GPT Image generation failed: "+err.message,true);const button=$("creative-image-gemini");if(button)button.disabled=false;}
+  $("creative-image-gemini")?.addEventListener("click",()=>{
+    generateAndSaveGptImage({automatic:false}).catch(err=>setMessage("GPT Image generation failed: "+err.message,true));
   });
   $("creative-gemini-save")?.addEventListener("click",async()=>{
     const button=$("creative-gemini-save"), preview=$("creative-gemini-preview");
@@ -241,6 +271,7 @@
   });
   $("creative-save")?.addEventListener("click",async()=>{
     if(!ready||!current)return;
+    if(imageGeneration&&imageGeneration.draft===current){setMessage("GPT Image artwork is still being generated. Wait for it to finish, then save to Approval Centre.",true);return;}
     const assetUrl=$("creative-asset-url").value.trim();
     if(assetUrl&&!/^https:\/\//i.test(assetUrl)){setMessage("Image asset must use an https:// URL.",true);return;}
     if(assetUrl&&!current.assetId){setMessage("This URL is only a reference. Import the image into the business creative library before queueing it for publishing.",true);return;}

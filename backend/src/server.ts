@@ -10,6 +10,7 @@ import { findOwnedBusiness } from "./modules/businesses/access.js";
 import { recordBusinessActivity } from "./modules/activity/record.js";
 import { createRequireUser } from "./modules/identity/auth.js";
 import { env, corsOrigins } from "./env.js";
+import { apiErrorHandler } from "./error-handler.js";
 import { verifyAccessToken, encryptSecret, randomUrlToken, decryptSecret } from "./security.js";
 import { buildAudit } from "./audit.js";
 import { buildBusinessIntelligence } from "./intelligence.js";
@@ -2225,11 +2226,7 @@ app.get("/v1/meta/media/:token", async (request, reply) => {
   return reply.header("content-type", share.asset.mimeType).header("content-length", String(share.asset.data.length)).header("content-disposition", "inline").header("cache-control", "public, max-age=300").header("x-content-type-options", "nosniff").send(Buffer.from(share.asset.data));
 });
 
-app.setErrorHandler((error, request, reply) => {
-  request.log.error(error);
-  if (reply.sent) return;
-  return reply.code(500).send({ error: "Internal server error" });
-});
+app.setErrorHandler(apiErrorHandler);
 
 const close = async () => {
   await app.close();
