@@ -73,7 +73,7 @@
       $("creative-save").disabled=false;
       setMessage("Campaign caption generated. Preparing the matching image prompt for your review…");
       window.dispatchEvent(new CustomEvent("localboost:campaign-copy-ready",{detail:{topic:current.topic,offer:current.offer,platform:current.platform,format:current.format,language:current.language,tone,caption:current.caption,headline:current.headline,designerBrief:current.designerBrief}}));
-      try { await generateAndSaveGptImage(); } catch(imageError) { setMessage("Caption draft is ready, but automatic GPT Image generation failed: "+imageError.message+". Use Retry image to try again.",true); const retry=$("creative-image-gemini"); if(retry){retry.textContent="Retry GPT Image";retry.disabled=false;} }
+      setMessage("Caption and matching image prompt are ready. Review both, then choose Generate GPT Image or Generate image when you are ready.");
     } catch(err){setMessage("Generation failed: "+err.message,true);}
     finally{$("creative-generate").disabled=false;}
   });
@@ -172,7 +172,7 @@
     setMessage("Caption ready. GPT Image is automatically creating matching campaign artwork…");
     const formatMap={feed:"SQUARE",portrait:"PORTRAIT",story:"STORY"};
     const result=await api(base()+"/creative/image",{method:"POST",body:JSON.stringify({
-      provider:"OPENAI",topic:current.topic,offer:current.offer,creativeBrief:current.designerBrief,
+      provider:"OPENAI",topic:current.topic,offer:current.offer,creativeBrief:current.imagePrompt||current.designerBrief,
       caption:current.caption,language:current.language,format:formatMap[$("creative-format").value]||"SQUARE"
     })});
     const composed=await composeCampaignArtwork(result.imageDataUrl);
