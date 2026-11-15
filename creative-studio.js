@@ -464,13 +464,13 @@
     panel.style.cssText="margin:0 0 20px;padding:20px;border:1px solid var(--border,#e6dfd5);border-radius:16px;background:var(--surface,#fff)";
     panel.innerHTML=`
       <div style="display:flex;gap:14px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap">
-        <div><span class="eyebrow">AI CONTENT INTELLIGENCE</span><h2 style="margin:5px 0">Daily content plan</h2><p style="margin:0;max-width:720px">AI analyses owner-validated customer reviews, saved menu records and customer expectations to prepare five evidence-led posts. No manual topic required.</p></div>
+        <div><span class="eyebrow">AI CONTENT INTELLIGENCE</span><h2 style="margin:5px 0">Daily content plan</h2><p style="margin:0;max-width:720px">AI uses owner-validated reviews when available and saved menu records to prepare five distinct channel drafts. Missing evidence is stated, never guessed.</p></div>
         <span class="tag pending-tag">Owner approval required</span>
       </div>
       <div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:18px 0">
         <label style="min-width:170px">Plan date<input id="ai-plan-date" type="date" value="${istDate()}" style="display:block;width:100%;margin-top:6px"></label>
         <button id="ai-plan-analyse" class="secondary-button" type="button">Analyse business evidence</button>
-        <button id="ai-plan-generate" class="primary-button" type="button">Generate today's 5 channel drafts</button>
+        <button id="ai-plan-generate" class="primary-button" type="button">Generate 5 channel drafts</button>
       </div>
       <p id="ai-plan-status" role="status" style="margin:8px 0;color:var(--muted,#746d64)">Ready to analyse saved business evidence. AI service availability will be checked when generating.</p>
       <div id="ai-plan-insights" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px"></div>
@@ -496,7 +496,7 @@
       .slice(0,80).map(p=>({text:val(p,["reviewText","text","comment"]).slice(0,700),rating:Number(p.rating)||null,date:val(p,["reviewDate","createdAt","date"]),ownerValidation:val(p,["ownerValidation"])})).filter(x=>x.text);
   }
   function menuSummary(rows){
-    const inactive = /inactive|disabled|discontinued|deleted|unavailable|out.?of.?stock|draft|archived/i;
+    const inactive = /inactive|disabled|discontinued|deleted|unavailable|not\\s+available|out.?of.?stock|draft|archived/i;
     return rows.slice(0,100).map(p=>({
       name:val(p,["name","itemName","menuItem","title"]),
       category:val(p,["category","menuCategory"]),
