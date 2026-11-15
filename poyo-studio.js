@@ -238,7 +238,36 @@
         window.setTimeout(()=>routeCampaignOutput(true),0);
       });
     }
+    let lastCampaignImageBrief = null;
+    const imageStyleLabel=document.createElement("label");
+    imageStyleLabel.className="lb-image-style-choice";
+    imageStyleLabel.htmlFor="poyo-image-style";
+    imageStyleLabel.textContent="Artwork style preset";
+    const imageStyle=document.createElement("select");
+    imageStyle.id="poyo-image-style";
+    imageStyle.innerHTML='<option value="photo">Premium café product photography</option><option value="cute-cups">Cute illustrated tea & coffee characters</option>';
+    imageStyleLabel.appendChild(imageStyle);
+    const imagePromptField=document.getElementById("poyo-image-prompt");
+    imagePromptField?.closest("label")?.insertAdjacentElement("beforebegin",imageStyleLabel);
     const buildPaanagamImagePrompt = (d={}) => {
+      const selectedStyle=document.getElementById("poyo-image-style")?.value||"photo";
+      if(selectedStyle==="cute-cups"){
+        const topic=String(d.topic||"Tea and coffee moments at Paanagam").trim();
+        const facts=String(d.offer||"").trim();
+        return [
+          "Create a delightful, premium-quality, cute illustrated social-media campaign image for PAANAGAM (பானகம்), a South Indian tea and coffee café.",
+          "MAIN SCENE: Two adorable anthropomorphic drink cups sitting side by side on a warm wooden café counter: one transparent glass cup filled with rich amber South Indian tea, and one elegant ivory ceramic cup filled with creamy South Indian filter coffee with a beautiful latte-art heart. Give both cups expressive friendly cartoon faces, sparkling eyes, joyful smiles and tiny simple arms. The cups should feel charming, wholesome and instantly lovable, like polished character illustration for a family-friendly café brand.",
+          "REFERENCE STYLE: Match the visual language of a cheerful café greeting-card illustration: hand-painted warm wooden hanging sign, soft golden bokeh lights, lush subtle green leaves, coffee beans scattered naturally, small heart doodles and delicate steam curls. Rich warm colours, inviting depth and a polished, highly shareable Instagram aesthetic.",
+          "PAANAGAM BRAND PALETTE: mustard yellow, warm ivory, deep coffee brown, leaf green and restrained red accents. Keep the atmosphere rooted in a welcoming South Indian neighbourhood café, not a generic western coffee chain.",
+          "COMPOSITION: Portrait 9:16 Instagram Reel cover. Place the two friendly drink characters in the lower-middle foreground, large and clearly visible, with balanced breathing room. Include a tasteful blank wooden signboard near the top and small blank message cards held by the cups, with absolutely no writing on them. Keep every important object fully inside the frame.",
+          "ILLUSTRATION QUALITY: Beautifully rendered 2D-meets-3D storybook illustration, soft painterly textures, rounded appealing shapes, warm cinematic lighting, glossy but believable tea and coffee surfaces, crisp edges, expressive faces, professional commercial character design. Cute, not childish or cluttered.",
+          "CAMPAIGN SUBJECT: "+topic+".",
+          facts?"FACTS FOR CONTEXT ONLY (do not write these into the image): "+facts:"",
+          "TEXT CONTROL: Do not generate any text, letters, Tamil or English characters, numbers, logos, watermarks, labels or fake brand marks. Keep the signboard and cards completely blank so LocalBoost can add correct Tamil and English copy as editable text later.",
+          "STRICT NEGATIVE INSTRUCTIONS: No misspelled text, pseudo-letters, gibberish, extra cups, duplicate faces, malformed hands, extra limbs, distorted handles, spills, unrelated food, photorealistic human faces, dark horror mood, clutter, stock-photo watermark or UI elements.",
+          "FINAL INTENT: A heartwarming, instantly recognisable Tea & Coffee character illustration that makes viewers smile and feels distinctive to Paanagam."
+        ].filter(Boolean).join("\\n\\n");
+      }
       const topic=String(d.topic||"Paanagam café campaign").trim();
       const brief=String(d.designerBrief||d.brief||"").trim();
       const headline=String(d.headline||"").trim();
@@ -265,10 +294,15 @@
       ].filter(Boolean);
       return lines.join("\n\n");
     };
+    imageStyle.addEventListener("change",()=>{
+      if(!lastCampaignImageBrief||!imagePromptField)return;
+      imagePromptField.value=buildPaanagamImagePrompt(lastCampaignImageBrief);
+      imagePromptField.dispatchEvent(new Event("input",{bubbles:true}));
+    });
     window.addEventListener("localboost:campaign-copy-ready",async event=>{
       const d=event.detail||{}, imagePrompt=document.getElementById("poyo-image-prompt"), imageSize=document.getElementById("poyo-image-size"), resolution=document.getElementById("poyo-image-resolution"), form=document.getElementById("poyo-image-form");
       if(!imagePrompt||!form||!d.topic)return;
-      imagePrompt.value=buildPaanagamImagePrompt(d);
+      lastCampaignImageBrief=d;\n      imagePrompt.value=buildPaanagamImagePrompt(d);
       imagePrompt.dispatchEvent(new Event("input",{bubbles:true}));
       if(imageSize)imageSize.value=d.format==="feed"?"1:1":"9:16";
       if(resolution)resolution.value="2K";
