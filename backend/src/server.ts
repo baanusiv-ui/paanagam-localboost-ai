@@ -17,7 +17,7 @@ import { generateLocalConsultant, getLocalAiStatus } from "./consultant.js";
 import { generateLocalReviewReplyDraft } from "./review-replies.js";
 import { generateLocalContentDraft } from "./content-drafts.js";
 import { generateLocalSocialContentDraft } from "./local-social-content-drafts.js";
-import { generateOpenRouterCampaignImage } from "./image-generation.js";
+import { generateReplicateCampaignImage } from "./image-generation.js";
 import { generateLocalKeywords } from "./local-seo.js";
 import { normalizeGoogleReview, type GoogleReviewApiRecord } from "./google-reviews.js";
 import { analyzeReviewThemes } from "./review-themes.js";
@@ -666,7 +666,7 @@ app.post("/v1/businesses/:businessId/creative/image", {
       language: body.data.language,
       format: body.data.format
     };
-    const image = await generateOpenRouterCampaignImage(imageInput);
+    const image = await generateReplicateCampaignImage(imageInput);
     return { business: { id: business.id, displayName: business.displayName }, ...image };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Campaign image generation is unavailable";
