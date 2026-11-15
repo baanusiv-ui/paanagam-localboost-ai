@@ -7,18 +7,18 @@ export type ImageDraftInput = {
   format: "SQUARE" | "PORTRAIT" | "STORY";
 };
 
-const imageModel = "muse-image-1.0";
+const imageModel = () => (process.env.OPENROUTER_IMAGE_MODEL || "openai/gpt-image-2.6-flare").trim();
 
-export async function generateMetaMuseCampaignImage(input: ImageDraftInput) {
-  const apiKey = process.env.MODEL_API_KEY?.trim();
+export async function generateOpenRouterCampaignImage(input: ImageDraftInput) {
+  const apiKey = process.env.OPENROUTER_API_KEY?.trim();
   if (!apiKey) {
-    throw new Error("Meta Muse Image is not configured. Add MODEL_API_KEY to the LocalBoost API environment in Render.");
+    throw new Error("OpenRouter image generation is not configured. Add OPENROUTER_API_KEY to the LocalBoost API environment in Render.");
   }
 
-  const formatSize: Record<ImageDraftInput["format"], string> = {
-    SQUARE: "1024x1024",
-    PORTRAIT: "1024x1280",
-    STORY: "1024x1792"
+  const aspectRatio: Record<ImageDraftInput["format"], string> = {
+    SQUARE: "1:1",
+    PORTRAIT: "4:5",
+    STORY: "9:16"
   };
   const prompt = [
     "Create a premium, photorealistic commercial campaign photograph for a South Indian café.",
@@ -33,41 +33,56 @@ export async function generateMetaMuseCampaignImage(input: ImageDraftInput) {
     "Photographic realism, natural materials, refined lighting, authentic South Indian setting."
   ].filter(Boolean).join("\n");
 
-  const response = await fetch("https://api.meta.ai/v1/images/generations", {
+  const response = await fetch("https://openrouter.ai/api/v1/images", {
     method: "POST",
-    headers: { authorization: "Bearer " + apiKey, "content-type": "application/json" },
+    headers: {
+      authorization: "Bearer " + apiKey,
+      "content-type": "application/json",
+      "HTTP-Referer": process.env.OPENROUTER_SITE_URL || "https://paanagam-localboost-dashboard.onrender.com",
+      "X-Title": "LocalBoost AI"
+    },
     body: JSON.stringify({
-      model: imageModel,
+      model: imageModel(),
       prompt,
-      n: 1,
-      size: formatSize[input.format],
-      response_format: "b64_json",
-      output_format: "jpeg",
-      reasoning_strength: "high",
-      tool_enablement: { enable_web_search: false, enable_shell: false }
+      aspect_ratio: aspectRatio[input.format],
+      quality: "high",
+      output_format: "jpeg"
     }),
     signal: AbortSignal.timeout(180000)
   });
-  const raw = await response.json() as {
-    data?: Array<{ b64_json?: string; url?: string }>;
-    output_format?: string;
+
+  const contentType = response.headers.get("content-type") || "";
+  const responseText = await response.text();
+  let raw: {
+    data?: Array<{ b64_json?: string; media_type?: string; url?: string }>;
+    usage?: { cost?: number };
     error?: { message?: string };
     message?: string;
-  };
+  } = {};
+  if (contentType.toLowerCase().includes("application/json")) {
+    try { raw = JSON.parse(responseText) as typeof raw; }
+    catch { throw new Error("OpenRouter returned malformed JSON (HTTP " + response.status + ")."); }
+  }
   if (!response.ok) {
-    throw new Error(raw.error?.message || raw.message || "Meta Muse Image failed with HTTP " + response.status);
+    const detail = raw.error?.message || raw.message;
+    throw new Error("OpenRouter image generation failed (HTTP " + response.status + ")" + (detail ? ": " + detail.slice(0, 240) : ". Check the OpenRouter key, model availability and credit balance."));
   }
   const imageData = raw.data?.[0]?.b64_json;
   if (!imageData || !/^[A-Za-z0-9+/]+={0,2}$/.test(imageData)) {
-    throw new Error("Meta Muse Image returned no valid base64 image.");
+    throw new Error("OpenRouter returned no buffered image data. Verify the selected model supports the Images API.");
+  }
+  const mimeType = raw.data?.[0]?.media_type || "image/jpeg";
+  if (!["image/jpeg", "image/png", "image/webp"].includes(mimeType)) {
+    throw new Error("OpenRouter returned an unsupported image format: " + mimeType);
   }
   return {
-    imageDataUrl: "data:image/jpeg;base64," + imageData,
-    mimeType: "image/jpeg",
-    provider: "META_MUSE_IMAGE",
-    model: imageModel,
+    imageDataUrl: "data:" + mimeType + ";base64," + imageData,
+    mimeType,
+    provider: "OPENROUTER_GPT_IMAGE",
+    model: imageModel(),
     generatedAt: new Date().toISOString(),
+    ...(typeof raw.usage?.cost === "number" ? { costUsd: raw.usage.cost } : {}),
     storage: "TEMPORARY_BROWSER_PREVIEW",
-    disclaimer: "Generated artwork is a temporary preview. Download it or save it to the business creative library; this response does not publish it."
+    disclaimer: "Generated artwork is a temporary preview. Save it to the business creative library after review; this response does not publish it."
   };
 }
