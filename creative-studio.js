@@ -496,7 +496,14 @@
       .slice(0,80).map(p=>({text:val(p,["reviewText","text","comment"]).slice(0,700),rating:Number(p.rating)||null,date:val(p,["reviewDate","createdAt","date"]),ownerValidation:val(p,["ownerValidation"])})).filter(x=>x.text);
   }
   function menuSummary(rows){
-    return rows.slice(0,100).map(p=>({name:val(p,["name","itemName","menuItem","title"]),category:val(p,["category","menuCategory"]),description:val(p,["description","details"]),price:val(p,["sellingPrice","price","menuPrice"]),availability:val(p,["availability","status"])})).filter(x=>x.name);
+    const inactive = /inactive|disabled|discontinued|deleted|unavailable|out.?of.?stock|draft|archived/i;
+    return rows.slice(0,100).map(p=>({
+      name:val(p,["name","itemName","menuItem","title"]),
+      category:val(p,["category","menuCategory"]),
+      description:val(p,["description","details"]),
+      price:val(p,["sellingPrice","price","menuPrice"]),
+      availability:val(p,["availability","status"])
+    })).filter(x=>x.name && !inactive.test(x.availability));
   }
   function themesFrom(reviews){
     const text=reviews.map(x=>x.text.toLowerCase()).join(" ");
@@ -536,27 +543,31 @@
       if(!reviews.length&&!menu.length){$("ai-plan-status").textContent="Cannot create evidence-led posts yet: add owner-validated reviews or saved menu items first. No fabricated content will be generated.";return;}
       const date=$("ai-plan-date").value||istDate();
       const slots=[
-        {slot:"Morning · customer voice",angle:"A customer-led morning welcome or service expectation. Use a real positive review only if one exists; otherwise make it a helpful customer question/answer.",channel:"Instagram"},
-        {slot:"Midday · menu spotlight",angle:"Highlight one actual saved menu item. Use only saved item name, description and price; never invent availability or ingredients.",channel:"Facebook"},
-        {slot:"Afternoon · community message",angle:"Create a concise, useful WhatsApp customer update based only on verified business evidence. Keep it conversational and suitable for direct sharing; do not invent offers or timings.",channel:"WhatsApp"},
-        {slot:"Evening · expectation answered",angle:"Address the strongest recurring customer expectation or concern from review evidence. Be transparent and do not claim an issue is fixed unless owner-validated.",channel:"Google Business Profile"},
-        {slot:"Night · discovery & conversation",angle:"Create a short-form discovery or engagement post linking menu choice to a genuine customer need. Avoid fake testimonials.",channel:"YouTube Shorts"}
+        {slot:"Morning · brand welcome",angle:"Write a warm morning greeting from Paanagam. Do not pretend this is based on customer reviews or quote customer feedback.",channel:"Instagram",menuIndex:null,reviewOnly:false},
+        {slot:"Midday · menu spotlight",angle:"Spotlight one saved menu item by its exact saved name. Mention category, description or price only when explicitly present. Never claim it is available today unless the saved status explicitly says available.",channel:"Facebook",menuIndex:0,reviewOnly:false},
+        {slot:"Afternoon · community connection",angle:"Write a short, friendly WhatsApp message that invites the local community to connect with Paanagam. No invented offers, timings, location details or product claims.",channel:"WhatsApp",menuIndex:null,reviewOnly:false},
+        {slot:"Evening · customer insight",angle:"Use one owner-validated customer review only if available. If no validated review exists, write a transparent general service message and do not imply customer feedback or satisfaction.",channel:"Google Business Profile",menuIndex:null,reviewOnly:true},
+        {slot:"Night · menu discovery",angle:"Create a short-form discovery idea using a different saved menu item from the midday post when available. If there is no second item, make this a general brand discovery post without inventing a product.",channel:"YouTube Shorts",menuIndex:1,reviewOnly:false}
       ];
       const cards=[];
       $("ai-plan-status").textContent="Generating five evidence-grounded Tamil-first + English channel drafts with the configured hybrid AI provider. This may take a few minutes…";
       for(let i=0;i<slots.length;i++){
         const slot=slots[i];
-        const menuItem=menu[i%Math.max(menu.length,1)];
-        const review=reviews[i%Math.max(reviews.length,1)];
-        const evidenceFacts = [
-          "Date "+date+" (IST); "+slot.slot+".",
-          "Angle: "+slot.angle.slice(0,80)+".",
-          "Review: "+(review?review.text.slice(0,110):"No written review saved.")+(review&&review.rating?" (rating "+review.rating+"/5)":""),
-          "Themes: "+(themes.slice(0,3).map(x=>x.name+" "+x.count).join(", ")||"none detected")+".",
-          "Menu: "+(menuItem?[menuItem.name,menuItem.price].filter(Boolean).join(" · "):"no saved menu item")+"."
-        ].join(" ");
-        const evidenceBrief = evidenceFacts.slice(0,350)+" Only use supplied facts; do not invent claims, prices, ingredients or availability. Tamil first + English.";
-        const topic="Paanagam daily customer-led social post — "+slot.slot+" — "+slot.angle;
+        const menuItem=slot.menuIndex===null?null:(menu[slot.menuIndex]||null);
+        const review=slot.reviewOnly?reviews[0]||null:null;
+        const facts=["Plan date: "+date+" (IST).","Business: Paanagam.","Content angle: "+slot.angle];
+        if(menuItem){
+          facts.push("Saved menu record: "+menuItem.name+".");
+          if(menuItem.category)facts.push("Saved category: "+menuItem.category+".");
+          if(menuItem.description)facts.push("Saved description: "+menuItem.description+".");
+          if(menuItem.price)facts.push("Saved price: "+menuItem.price+".");
+          if(menuItem.availability)facts.push("Saved status field: "+menuItem.availability+". Do not reinterpret this as current stock unless it explicitly means available.");
+          else facts.push("Current availability is not verified; do not claim it is available today.");
+        }
+        if(review)facts.push("Owner-validated review excerpt (use carefully, do not embellish): "+review.text.slice(0,350)+(review.rating?" (rating "+review.rating+"/5)":""));
+        else if(slot.reviewOnly)facts.push("No owner-validated written review is available. Do not mention customer feedback, ratings or testimonials.");
+        const evidenceBrief=facts.join(" ").slice(0,1600);
+        const topic="Paanagam | "+slot.slot+" | "+slot.angle;
         const result=await api(base()+"/ai-content/draft",{method:"POST",body:JSON.stringify({topic,evidence:evidenceBrief,language:"Tamil + English",format:i===4?"PORTRAIT":"SQUARE",tone:i===2?"PROFESSIONAL":"WARM"})});
         const caption=result.postCopy||result.caption||result.copy||result.postText||"";
         if(!caption.trim())throw new Error("AI returned an empty caption for "+slot.slot);
