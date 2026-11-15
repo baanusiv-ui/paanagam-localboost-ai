@@ -4,6 +4,7 @@
   const API = () => (window.LOCALBOOST_API_BASE || "http://localhost:4100").replace(/\/$/, "");
   const TOKEN = "localboost_access_token", BUSINESS = "localboost_business_id";
   let drafts = [], current = null, ready = false, generatedImageDataUrl = "", canvaGeneratedImageUrl = "", canvaGenerationJobId = "";
+  let pendingPoyoAssetSelection = null;
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const businessId = () => sessionStorage.getItem(BUSINESS);
   async function api(path, options = {}) {
@@ -338,55 +339,247 @@
     } finally { button.disabled=false; button.textContent="Disconnect Canva"; }
   });
   let poyoCampaignPreviewUrl = "";
-  window.addEventListener("localboost:poyo-asset-selected",async event=>{
-    const detail=event.detail||{}, assetId=String(detail.assetId||"").trim();
-    const topic=$("creative-topic")?.value?.trim()||"";
-    const offer=$("creative-offer")?.value?.trim()||"";
-    if(!ready||!assetId||!businessId()){setMessage("Select a business and wait for the campaign library to load before using a generated image.",true);return;}
-    if(!topic){setMessage("Enter the campaign topic or product in Campaign post first, then use the generated image again.",true);$("creative-topic")?.focus();return;}
-    const saveButton=$("creative-save");
-    if(saveButton)saveButton.disabled=true;
+  async function handlePoyoAssetSelection(detail) {
+    const assetId = String(detail?.assetId || "").trim();
+    if (!assetId || !businessId()) { setMessage("Select a business workspace before using a generated image.", true); return; }
+    if (!ready) {
+      pendingPoyoAssetSelection = { ...detail, assetId };
+      setMessage("Image selected. Waiting for the business campaign library to finish loading; the selection has been kept.");
+      return;
+    }
+    // Never reuse the image-generation prompt as campaign copy. If the owner
+    // has not entered a topic, use a neutral editable campaign placeholder.
+    const topicField = $("creative-topic");
+    if (topicField && !topicField.value.trim()) topicField.value = "Paanagam café campaign";
+    const topic = topicField?.value?.trim() || "Paanagam café campaign";
+    const offer = $("creative-offer")?.value?.trim() || "";
+    const saveButton = $("creative-save");
+    if (saveButton) saveButton.disabled = true;
     setMessage("Attaching the selected PoYo image and preparing campaign copy…");
-    try{
-      const languageValue=$("creative-language")?.value||"ta", languageMap={ta:"Tamil",en:"English",both:"Tamil + English"};
-      const formatValue=$("creative-format")?.value||"feed", formatMap={feed:"SQUARE",portrait:"PORTRAIT",story:"STORY"};
-      const platform=$("creative-platform")?.value||"Instagram + Facebook";
-      const [result,response]=await Promise.all([
-        api(base()+"/google-content/draft",{method:"POST",body:JSON.stringify({topic,offer,language:languageMap[languageValue]||"Tamil",format:formatMap[formatValue]||"SQUARE",tone:({warm:"WARM",traditional:"TRADITIONAL",offer:"OFFER_LED"})[$("creative-tone")?.value]||"WARM"})}),
-        fetch(API()+base()+"/poyo/assets/"+encodeURIComponent(assetId)+"/content",{headers:{authorization:"Bearer "+sessionStorage.getItem(TOKEN)}})
+    try {
+      const languageValue = $("creative-language")?.value || "ta";
+      const languageMap = { ta: "Tamil", en: "English", both: "Tamil + English" };
+      const formatValue = $("creative-format")?.value || "feed";
+      const formatMap = { feed: "SQUARE", portrait: "PORTRAIT", story: "STORY" };
+      const platform = $("creative-platform")?.value || "Instagram + Facebook";
+      const [result, response] = await Promise.all([
+        api(base() + "/google-content/draft", { method: "POST", body: JSON.stringify({
+          topic, offer, language: languageMap[languageValue] || "Tamil",
+          format: formatMap[formatValue] || "SQUARE",
+          tone: ({ warm: "WARM", traditional: "TRADITIONAL", offer: "OFFER_LED" })[$("creative-tone")?.value] || "WARM"
+        }) }),
+        fetch(API() + base() + "/poyo/assets/" + encodeURIComponent(assetId) + "/content", {
+          headers: { authorization: "Bearer " + sessionStorage.getItem(TOKEN) }
+        })
       ]);
-      if(!response.ok)throw new Error("Could not load the selected image ("+response.status+").");
-      const blob=await response.blob();
-      if(!["image/png","image/jpeg","image/webp"].includes(blob.type))throw new Error("The selected asset is not a supported image.");
-      const caption=result.postCopy||result.caption||result.copy||result.postText||"";
-      if(!caption.trim())throw new Error("Caption service returned no usable copy.");
-      current={id:"creative-studio:"+((crypto.randomUUID&&crypto.randomUUID())||Date.now()),kind:"LOCALBOOST_SOCIAL_CREATIVE",topic,offer,platform,format:formatValue,language:languageMap[languageValue]||"Tamil",caption,headline:result.headline||"",designerBrief:result.creativeBrief||result.imageBrief||result.designerBrief||"",assetId,assetUrl:"",status:"DRAFT",provenance:"POYO_GENERATED_ASSET",createdAt:new Date().toISOString()};
-      if(poyoCampaignPreviewUrl)URL.revokeObjectURL(poyoCampaignPreviewUrl);
-      poyoCampaignPreviewUrl=URL.createObjectURL(blob);
-      let preview=$("creative-poyo-image-preview");
-      if(!preview){
-        preview=document.createElement("img");preview.id="creative-poyo-image-preview";preview.alt="Selected PoYo campaign artwork";
-        preview.style.cssText="display:block;width:100%;max-height:520px;object-fit:contain;border-radius:12px;margin:12px 0;background:#f3f0e9";
-        const heading=[...$("creative-preview").querySelectorAll("h4")].find(node=>/image|artwork/i.test(node.textContent));
-        if(heading)heading.insertAdjacentElement("afterend",preview);else $("creative-preview").prepend(preview);
+      if (!response.ok) throw new Error("Could not load the selected image (" + response.status + ").");
+      const blob = await response.blob();
+      if (!["image/png", "image/jpeg", "image/webp"].includes(blob.type)) throw new Error("The selected asset is not a supported image.");
+      const caption = result.postCopy || result.caption || result.copy || result.postText || "";
+      if (!caption.trim()) throw new Error("Caption service returned no usable copy.");
+      current = {
+        id: "creative-studio:" + ((crypto.randomUUID && crypto.randomUUID()) || Date.now()),
+        kind: "LOCALBOOST_SOCIAL_CREATIVE", topic, offer, platform, format: formatValue,
+        language: languageMap[languageValue] || "Tamil", caption,
+        headline: result.headline || "",
+        designerBrief: result.creativeBrief || result.imageBrief || result.designerBrief || "",
+        assetId, assetUrl: "", status: "DRAFT", provenance: "POYO_GENERATED_ASSET",
+        createdAt: new Date().toISOString()
+      };
+      if (poyoCampaignPreviewUrl) URL.revokeObjectURL(poyoCampaignPreviewUrl);
+      poyoCampaignPreviewUrl = URL.createObjectURL(blob);
+      let preview = $("creative-poyo-image-preview");
+      if (!preview) {
+        preview = document.createElement("img");
+        preview.id = "creative-poyo-image-preview";
+        preview.alt = "Selected PoYo campaign artwork";
+        preview.style.cssText = "display:block;width:100%;max-height:520px;object-fit:contain;border-radius:12px;margin:12px 0;background:#f3f0e9";
+        const heading = [...$("creative-preview").querySelectorAll("h4")].find(node => /image|artwork/i.test(node.textContent));
+        if (heading) heading.insertAdjacentElement("afterend", preview); else $("creative-preview").prepend(preview);
       }
-      preview.src=poyoCampaignPreviewUrl;
-      const download=$("creative-image-download");
-      if(download){download.disabled=false;download.onclick=()=>{const a=document.createElement("a");a.href=poyoCampaignPreviewUrl;a.download="paanagam-campaign-artwork."+({"image/jpeg":"jpg","image/webp":"webp","image/png":"png"}[blob.type]||"png");a.click();};}
+      preview.src = poyoCampaignPreviewUrl;
+      const download = $("creative-image-download");
+      if (download) {
+        download.disabled = false;
+        download.onclick = () => {
+          const a = document.createElement("a"); a.href = poyoCampaignPreviewUrl;
+          a.download = "paanagam-campaign-artwork." + ({ "image/jpeg": "jpg", "image/webp": "webp", "image/png": "png" }[blob.type] || "png");
+          a.click();
+        };
+      }
       $("creative-preview").classList.remove("hidden");
-      $("creative-preview-copy").textContent=current.caption;
-      $("creative-preview-brief").textContent=current.designerBrief||"PoYo generated artwork attached from this business workspace.";
-      $("creative-asset-url").value="";
-      if(saveButton)saveButton.disabled=false;
-      const campaignTab=[...document.querySelectorAll("#content-view .lb-studio-tab")].find(tab=>tab.textContent.trim()==="Campaign post");
-      if(campaignTab)campaignTab.click();
-      setMessage("Image attached to Campaign post. Review the topic, offer, artwork and caption, then save to the approval queue. Nothing is published.");
-    }catch(error){
-      if(saveButton)saveButton.disabled=false;
-      setMessage("Could not create a campaign from the generated image: "+error.message,true);
+      $("creative-preview-copy").textContent = current.caption;
+      $("creative-preview-brief").textContent = current.designerBrief || "PoYo generated artwork attached from this business workspace.";
+      $("creative-asset-url").value = "";
+      if (saveButton) saveButton.disabled = false;
+      const campaignTab = [...document.querySelectorAll("#content-view .lb-studio-tab")].find(tab => tab.textContent.trim() === "Campaign post");
+      if (campaignTab) campaignTab.click();
+      setMessage("Image attached. Review the editable campaign topic, offer, artwork and caption, then save to the approval queue. Nothing is published.");
+    } catch (error) {
+      if (saveButton) saveButton.disabled = true;
+      setMessage("Could not create a campaign from the generated image: " + error.message, true);
+    }
+  }
+  window.addEventListener("localboost:poyo-asset-selected", event => {
+    const detail = event.detail || {};
+    pendingPoyoAssetSelection = { ...detail, assetId: String(detail.assetId || "").trim() };
+    if (ready) {
+      const pending = pendingPoyoAssetSelection;
+      pendingPoyoAssetSelection = null;
+      void handlePoyoAssetSelection(pending);
+    } else {
+      setMessage("Image selected. Waiting for the business campaign library to finish loading; the selection has been kept.");
+      if (businessId() && sessionStorage.getItem(TOKEN)) void load();
     }
   });
   window.addEventListener("localboost:business-ready",()=>{load();loadDesignIntegrations();});
   window.addEventListener("localboost:signed-out",()=>{drafts=[];current=null;ready=false;render();setMessage("Signed out. Cloud creative library is locked.");});
   if(businessId()) { load(); loadDesignIntegrations(); }
+})();
+
+// AI-led daily content planner: review voice + approved menu + customer expectations.
+// Drafts are saved to the private business library only. No channel is queued or published.
+(() => {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const API = () => (window.LOCALBOOST_API_BASE || "").replace(/\/$/, "");
+  const TOKEN = "localboost_access_token", BUSINESS = "localboost_business_id";
+  const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const base = () => "/v1/businesses/" + encodeURIComponent(sessionStorage.getItem(BUSINESS) || "");
+  const api = async (path, options={}) => {
+    const response = await fetch(API()+path,{...options,headers:{"content-type":"application/json",authorization:"Bearer "+sessionStorage.getItem(TOKEN),...(options.headers||{})}});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok) throw new Error(data.error||"Request failed ("+response.status+")");
+    return data;
+  };
+  const istDate = () => new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+  const val = (p, keys) => { for(const k of keys){const x=p?.[k];if(x!==undefined&&x!==null&&String(x).trim())return String(x).trim();}return ""; };
+  let generating=false;
+  function mount(){
+    const root=$("content-view");
+    if(!root||root.querySelector("#ai-daily-content-planner"))return;
+    const panel=document.createElement("section");
+    panel.id="ai-daily-content-planner";
+    panel.className="panel";
+    panel.style.cssText="margin:0 0 20px;padding:20px;border:1px solid var(--border,#e6dfd5);border-radius:16px;background:var(--surface,#fff)";
+    panel.innerHTML=`
+      <div style="display:flex;gap:14px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap">
+        <div><span class="eyebrow">AI CONTENT INTELLIGENCE</span><h2 style="margin:5px 0">Daily content plan</h2><p style="margin:0;max-width:720px">AI analyses owner-validated customer reviews, saved menu records and customer expectations to prepare five evidence-led posts. No manual topic required.</p></div>
+        <span class="tag pending-tag">Owner approval required</span>
+      </div>
+      <div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:18px 0">
+        <label style="min-width:170px">Plan date<input id="ai-plan-date" type="date" value="${istDate()}" style="display:block;width:100%;margin-top:6px"></label>
+        <button id="ai-plan-analyse" class="secondary-button" type="button">Analyse business evidence</button>
+        <button id="ai-plan-generate" class="primary-button" type="button">Generate today's 5 channel drafts</button>
+      </div>
+      <p id="ai-plan-status" role="status" style="margin:8px 0;color:var(--muted,#746d64)">Ready to analyse saved business evidence. AI service availability will be checked when generating.</p>
+      <div id="ai-plan-insights" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px"></div>
+      <div id="ai-plan-posts" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:12px;margin-top:14px"></div>
+      <small style="display:block;margin-top:14px;color:var(--muted,#746d64)">Evidence gaps will be shown, not filled with invented reviews, products, prices or customer claims. Saving creates private drafts only; publishing remains a separate approval action.</small>`;
+    root.prepend(panel);
+    $("ai-plan-analyse").addEventListener("click",()=>analyse(false));
+    $("ai-plan-generate").addEventListener("click",()=>analyse(true));
+    window.addEventListener("localboost:signed-out",()=>{const s=$("ai-plan-status");if(s)s.textContent="Signed out · business evidence is not available.";});
+  }
+  async function readEvidence(){
+    const [reviews,menu,themeResult]=await Promise.all([
+      api(base()+"/growth-records?type=REVIEW_ITEM&limit=200"),
+      api(base()+"/growth-records?type=MENU_ITEM&limit=200"),
+      api(base()+"/reviews/themes").catch(()=>null)
+    ]);
+    const reviewRows=(reviews.records||[]).filter(r=>r.source!=="DEMO").map(r=>r.payload||{}).filter(p=>val(p,["reviewText","text","comment"]));
+    const menuRows=(menu.records||[]).filter(r=>r.source!=="DEMO").map(r=>r.payload||{});
+    return {reviewRows,menuRows,themes:themeResult?.themes||[],reviewCount:reviewRows.length,menuCount:menuRows.length};
+  }
+  function reviewSummary(rows){
+    return rows.filter(p => ["OWNER_CONFIRMED","VERIFIED","APPROVED"].includes(val(p,["ownerValidation"]).toUpperCase()))
+      .slice(0,80).map(p=>({text:val(p,["reviewText","text","comment"]).slice(0,700),rating:Number(p.rating)||null,date:val(p,["reviewDate","createdAt","date"]),ownerValidation:val(p,["ownerValidation"])})).filter(x=>x.text);
+  }
+  function menuSummary(rows){
+    return rows.slice(0,100).map(p=>({name:val(p,["name","itemName","menuItem","title"]),category:val(p,["category","menuCategory"]),description:val(p,["description","details"]),price:val(p,["sellingPrice","price","menuPrice"]),availability:val(p,["availability","status"])})).filter(x=>x.name);
+  }
+  function themesFrom(reviews){
+    const text=reviews.map(x=>x.text.toLowerCase()).join(" ");
+    const dict=[
+      ["Food quality & taste",/taste|flavour|fresh|சுவை|ருசி|தரம்/g],
+      ["Value & pricing",/price|cost|value|expensive|விலை|குறைவு|அதிகம்/g],
+      ["Service & waiting",/wait|slow|service|staff|தாமதம்|சேவை|ஊழியர்/g],
+      ["Cleanliness & ambience",/clean|hygiene|ambience|seating|சுத்தம்|சூழல்/g],
+      ["Menu discovery",/menu|variety|available|item|வகை|கிடைக்க/g]
+    ];
+    return dict.map(([name,re])=>({name,count:(text.match(re)||[]).length})).filter(x=>x.count>0).sort((a,b)=>b.count-a.count);
+  }
+  function showInsights(evidence){
+    const review=reviewSummary(evidence.reviewRows), menu=menuSummary(evidence.menuRows), themes=themesFrom(review);
+    $("ai-plan-insights").innerHTML=[
+      ["Owner-validated reviews",review.length],
+      ["Saved menu items",menu.length],
+      ["Recurring feedback signals",themes.length],
+      ["AI source","Hybrid provider · checked on generation"]
+    ].map(([k,v])=>'<article style="padding:12px;border:1px solid var(--border,#e6dfd5);border-radius:12px"><small>'+esc(k)+'</small><strong style="display:block;font-size:20px;margin-top:5px">'+esc(v)+'</strong></article>').join("");
+    const gap=[];
+    if(!review.length)gap.push("No written customer reviews are saved. Review-led insights cannot be claimed.");
+    if(!menu.length)gap.push("No saved menu items are available. Product-specific content will be limited.");
+    $("ai-plan-status").textContent=gap.length?"Evidence check complete · "+gap.join(" "):"Evidence check complete · "+review.length+" reviews and "+menu.length+" menu items available. Review themes: "+(themes.map(x=>x.name).join(", ")||"none detected")+".";
+  }
+  async function analyse(generate){
+    if(generating)return;
+    if(!sessionStorage.getItem(TOKEN)||!sessionStorage.getItem(BUSINESS)){$("ai-plan-status").textContent="Sign in and select the Paanagam business workspace first.";return;}
+    generating=true;
+    const analyseButton=$("ai-plan-analyse"),generateButton=$("ai-plan-generate");
+    analyseButton.disabled=true;generateButton.disabled=true;
+    try{
+      $("ai-plan-status").textContent="Reading customer reviews, menu records and customer feedback themes…";
+      const evidence=await readEvidence();showInsights(evidence);
+      if(!generate)return;
+      const reviews=reviewSummary(evidence.reviewRows), menu=menuSummary(evidence.menuRows), themes=themesFrom(reviews);
+      if(!reviews.length&&!menu.length){$("ai-plan-status").textContent="Cannot create evidence-led posts yet: add owner-validated reviews or saved menu items first. No fabricated content will be generated.";return;}
+      const date=$("ai-plan-date").value||istDate();
+      const slots=[
+        {slot:"Morning · customer voice",angle:"A customer-led morning welcome or service expectation. Use a real positive review only if one exists; otherwise make it a helpful customer question/answer.",channel:"Instagram"},
+        {slot:"Midday · menu spotlight",angle:"Highlight one actual saved menu item. Use only saved item name, description and price; never invent availability or ingredients.",channel:"Facebook"},
+        {slot:"Afternoon · community message",angle:"Create a concise, useful WhatsApp customer update based only on verified business evidence. Keep it conversational and suitable for direct sharing; do not invent offers or timings.",channel:"WhatsApp"},
+        {slot:"Evening · expectation answered",angle:"Address the strongest recurring customer expectation or concern from review evidence. Be transparent and do not claim an issue is fixed unless owner-validated.",channel:"Google Business Profile"},
+        {slot:"Night · discovery & conversation",angle:"Create a short-form discovery or engagement post linking menu choice to a genuine customer need. Avoid fake testimonials.",channel:"YouTube Shorts"}
+      ];
+      const cards=[];
+      $("ai-plan-status").textContent="Generating five evidence-grounded Tamil-first + English channel drafts with the configured hybrid AI provider. This may take a few minutes…";
+      for(let i=0;i<slots.length;i++){
+        const slot=slots[i];
+        const menuItem=menu[i%Math.max(menu.length,1)];
+        const review=reviews[i%Math.max(reviews.length,1)];
+        const evidenceFacts = [
+          "Date "+date+" (IST); "+slot.slot+".",
+          "Angle: "+slot.angle.slice(0,80)+".",
+          "Review: "+(review?review.text.slice(0,110):"No written review saved.")+(review&&review.rating?" (rating "+review.rating+"/5)":""),
+          "Themes: "+(themes.slice(0,3).map(x=>x.name+" "+x.count).join(", ")||"none detected")+".",
+          "Menu: "+(menuItem?[menuItem.name,menuItem.price].filter(Boolean).join(" · "):"no saved menu item")+"."
+        ].join(" ");
+        const evidenceBrief = evidenceFacts.slice(0,350)+" Only use supplied facts; do not invent claims, prices, ingredients or availability. Tamil first + English.";
+        const topic="Paanagam daily customer-led social post — "+slot.slot+" — "+slot.angle;
+        const result=await api(base()+"/ai-content/draft",{method:"POST",body:JSON.stringify({topic,evidence:evidenceBrief,language:"Tamil + English",format:i===4?"PORTRAIT":"SQUARE",tone:i===2?"PROFESSIONAL":"WARM"})});
+        const caption=result.postCopy||result.caption||result.copy||result.postText||"";
+        if(!caption.trim())throw new Error("AI returned an empty caption for "+slot.slot);
+        const draft={
+          id:"creative-studio:daily:"+date+":"+i,
+          kind:"LOCALBOOST_AI_DAILY_POST",topic,offer:evidenceBrief,platform:slot.channel,format:i===4?"portrait":"feed",
+          language:"Tamil + English",caption,headline:result.headline||slot.slot,
+          designerBrief:result.creativeBrief||result.imageBrief||"",
+          sourceEvidence:{reviewCount:reviews.length,menuCount:menu.length,reviewThemes:themes,reviewSample:review?review.text:"",menuItem:menuItem||null},
+          status:"DRAFT",provenance:"AI_REVIEW_MENU_ANALYSIS",createdAt:new Date().toISOString(),plannedDate:date,slot:slot.slot
+        };
+        await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:draft.id,payload:draft,recordedAt:draft.createdAt})});
+        cards.push(draft);
+        $("ai-plan-status").textContent="Generated and saved "+cards.length+" of 5 private drafts…";
+        $("ai-plan-posts").innerHTML=cards.map(renderCard).join("");
+      }
+      $("ai-plan-status").textContent="Daily plan ready · 5 channel drafts saved for "+date+". All require your review; nothing has been queued or published.";
+    }catch(error){$("ai-plan-status").textContent="Daily plan incomplete: "+error.message+". Any drafts already saved remain private; retry only after checking them in the library.";}
+    finally{generating=false;analyseButton.disabled=false;generateButton.disabled=false;}
+  }
+  function renderCard(d){
+    return '<article style="padding:14px;border:1px solid var(--border,#e6dfd5);border-radius:14px;min-width:0"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><strong>'+esc(d.slot)+'</strong><span class="tag pending-tag">Draft · '+esc(d.platform)+'</span></div><p style="white-space:pre-wrap;line-height:1.55">'+esc(d.caption)+'</p><small>Evidence: '+d.sourceEvidence.reviewCount+' reviews · '+d.sourceEvidence.menuCount+' menu items · '+esc(d.language)+'</small></article>';
+  }
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",mount,{once:true});else mount();
+  window.addEventListener("localboost:business-ready",mount);
 })();

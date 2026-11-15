@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { generateAiJson } from "./ai-provider.js";
 
 export type ContentDraftInput = {
   businessName: string;
@@ -15,7 +16,7 @@ const contentSchema = z.object({
   creativeBrief: z.string().trim().min(1).max(1200)
 }).strict();
 
-const modelName = () => (process.env.GEMINI_TEXT_MODEL || "gemini-3.1-flash-lite").trim();
+
 
 export function buildContentDraftMessages(input: ContentDraftInput) {
   return [
@@ -50,76 +51,25 @@ export function parseContentDraftOutput(raw: string) {
 }
 
 export async function generateLocalContentDraft(input: ContentDraftInput) {
-  const apiKey = process.env.GEMINI_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error("Free cloud AI is not configured. Create a Gemini API key in Google AI Studio and add GEMINI_API_KEY to the LocalBoost API environment in Render.");
-  }
-
-  const prompt = buildContentDraftMessages(input).map(message => message.role.toUpperCase() + ":\n" + message.content).join("\n\n");
-  const url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(modelName()) + ":generateContent";
-  const requestBody = JSON.stringify({
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    generationConfig: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: "OBJECT",
-        properties: {
-          postCopy: { type: "STRING" },
-          creativeBrief: { type: "STRING" }
-        },
-        required: ["postCopy", "creativeBrief"]
+  const generated = await generateAiJson({
+    task: "google-content-draft",
+    messages: buildContentDraftMessages(input),
+    temperature: 0.2,
+    maxOutputTokens: 500,
+    responseSchema: {
+      type: "OBJECT",
+      properties: {
+        postCopy: { type: "STRING" },
+        creativeBrief: { type: "STRING" }
       },
-      thinkingConfig: { thinkingLevel: "LOW" },
-      maxOutputTokens: 500
+      required: ["postCopy", "creativeBrief"]
     }
   });
-
-  // Gemini can queue requests during periods of high demand. Allow more time
-  // than the previous 60s deadline and retry one transient failure only.
-  let response: Response | undefined;
-  let lastError: unknown;
-  const startedAt = Date.now();
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "x-goog-api-key": apiKey,
-          "content-type": "application/json"
-        },
-        body: requestBody,
-        signal: AbortSignal.timeout(120000)
-      });
-      console.info("[content-draft] Gemini response", { model: modelName(), attempt: attempt + 1, status: response.status, elapsedMs: Date.now() - startedAt });
-      if (response.ok || ![429, 500, 502, 503, 504].includes(response.status) || attempt === 1) break;
-      await response.body?.cancel();
-    } catch (error) {
-      lastError = error;
-      console.warn("[content-draft] Gemini request failed", { model: modelName(), attempt: attempt + 1, elapsedMs: Date.now() - startedAt, errorName: error instanceof Error ? error.name : "UnknownError" });
-      if (attempt === 1) {
-        const detail = error instanceof Error && error.name === "TimeoutError"
-          ? "Gemini did not respond within 120 seconds. Please retry in a minute."
-          : "Gemini connection failed. Please retry in a minute.";
-        throw new Error(detail);
-      }
-    }
-    await new Promise(resolve => setTimeout(resolve, 2500 * (attempt + 1)));
-  }
-  if (!response) throw new Error(lastError instanceof Error ? lastError.message : "Gemini cloud AI is temporarily unavailable.");
-
-  const data = await response.json() as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    error?: { message?: string };
-  };
-  if (!response.ok) {
-    throw new Error("Gemini cloud AI generation failed: " + (data.error?.message || "HTTP " + response.status));
-  }
-  const raw = data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("").trim();
-  if (!raw) throw new Error("Gemini returned an empty content draft. Try again later.");
   return {
-    ...parseContentDraftOutput(raw),
-    provider: "GOOGLE_GEMINI",
-    model: modelName(),
+    ...parseContentDraftOutput(generated.raw),
+    provider: generated.provider,
+    model: generated.model,
+    fallbackUsed: generated.fallbackUsed,
     language: input.language,
     format: input.format,
     tone: input.tone,

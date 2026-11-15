@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { generateAiJson, getAiProviderStatus } from "./ai-provider.js";
 
 type ReportInsight = {
   id: string;
@@ -30,15 +31,7 @@ const outputSchema = z.object({
   }).strict()).max(5)
 }).strict();
 
-const localBaseUrl = () => (process.env.OLLAMA_BASE_URL || "").replace(/\/$/, "");
-const localModel = () => (process.env.OLLAMA_MODEL || "qwen3.5:4b").trim();
-const ollamaHeaders = () => ({
-  "content-type": "application/json",
-  ...(process.env.OLLAMA_ACCESS_CLIENT_ID && process.env.OLLAMA_ACCESS_CLIENT_SECRET ? {
-    "CF-Access-Client-Id": process.env.OLLAMA_ACCESS_CLIENT_ID,
-    "CF-Access-Client-Secret": process.env.OLLAMA_ACCESS_CLIENT_SECRET
-  } : {})
-});
+
 
 export function buildConsultantMessages(report: IntelligenceReport, language: "Tamil" | "English" | "Tamil + English") {
   const compactReport = {
@@ -91,58 +84,45 @@ export function parseConsultantOutput(raw: string, allowedEvidenceIds: string[])
 }
 
 export async function getLocalAiStatus() {
-  const baseUrl = localBaseUrl();
-  const model = localModel();
-  if (!baseUrl) {
-    return {
-      configured: false, reachable: false, modelInstalled: false, model,
-      message: "Local AI is not configured. Set OLLAMA_BASE_URL in backend/.env and restart the API."
-    };
-  }
-  try {
-    const response = await fetch(baseUrl + "/api/tags", { headers: ollamaHeaders(), signal: AbortSignal.timeout(8000) });
-    if (!response.ok) throw new Error("Ollama returned HTTP " + response.status);
-    const data = await response.json() as { models?: Array<{ name?: string }> };
-    const installed = (data.models ?? []).some(item => item.name === model || item.name === model + ":latest");
-    return {
-      configured: true, reachable: true, modelInstalled: installed, model,
-      message: installed ? "Local Ollama model is ready." : "Ollama is running, but the model is not installed. Run: ollama pull " + model
-    };
-  } catch {
-    return {
-      configured: true, reachable: false, modelInstalled: false, model,
-      message: "Cannot reach Ollama. Check the Windows tunnel, Cloudflare Access credentials, and OLLAMA_BASE_URL."
-    };
-  }
+  return getAiProviderStatus();
 }
 
 export async function generateLocalConsultant(report: IntelligenceReport, language: "Tamil" | "English" | "Tamil + English") {
-  const baseUrl = localBaseUrl();
-  const model = localModel();
-  if (!baseUrl) throw new Error("Local AI is not configured. Set OLLAMA_BASE_URL in backend/.env and restart the API.");
-  const messages = buildConsultantMessages(report, language);
-  const response = await fetch(baseUrl + "/api/chat", {
-    method: "POST",
-    headers: ollamaHeaders(),
-    body: JSON.stringify({
-      model,
-      messages,
-      stream: false,
-      format: "json",
-      options: { temperature: 0.2 }
-    }),
-    signal: AbortSignal.timeout(60000)
+  const generated = await generateAiJson({
+    task: "growth-consultant",
+    messages: buildConsultantMessages(report, language),
+    temperature: 0.2,
+    maxOutputTokens: 900,
+    responseSchema: {
+      type: "OBJECT",
+      properties: {
+        executiveSummary: { type: "STRING" },
+        recommendations: {
+          type: "ARRAY",
+          items: {
+            type: "OBJECT",
+            properties: {
+              title: { type: "STRING" },
+              priority: { type: "STRING", enum: ["HIGH", "MEDIUM", "INFO"] },
+              action: { type: "STRING" },
+              reason: { type: "STRING" },
+              evidenceIds: { type: "ARRAY", items: { type: "STRING" } },
+              confidence: { type: "STRING", enum: ["HIGH", "MEDIUM", "LOW"] }
+            },
+            required: ["title", "priority", "action", "reason", "evidenceIds", "confidence"]
+          }
+        }
+      },
+      required: ["executiveSummary", "recommendations"]
+    }
   });
-  const data = await response.json() as { message?: { content?: string }; error?: string };
-  if (!response.ok) throw new Error(data.error || "Local Ollama request failed with HTTP " + response.status);
-  const content = data.message?.content;
-  if (!content) throw new Error("Local AI returned an empty response. Try again or check the model.");
   const allowedIds = report.insights.flatMap(item => item.evidence.recordIds);
-  const result = parseConsultantOutput(content, allowedIds);
+  const result = parseConsultantOutput(generated.raw, allowedIds);
   return {
     ...result,
-    provider: "LOCAL_OLLAMA",
-    model,
+    provider: generated.provider,
+    model: generated.model,
+    fallbackUsed: generated.fallbackUsed,
     language,
     generatedAt: new Date().toISOString(),
     disclaimer: "AI explanation only. Calculations and evidence remain from the rules engine. Suggestions require owner approval; no action was executed."
