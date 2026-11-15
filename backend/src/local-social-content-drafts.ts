@@ -70,6 +70,7 @@ export function buildLocalSocialContentMessages(input: LocalSocialContentInput) 
         "Use only the supplied business name, topic and evidence. Never invent prices, discounts, dates, availability, opening hours, addresses, ingredients, awards, customer reviews or guarantees.",
         "Treat review excerpts as unverified source material; do not present them as testimonials or claim a business issue has been fixed.",
         "If evidence is missing, write a general helpful post without implying unsupported facts.",
+        "Make the caption memorable and catchy: lead with a scroll-stopping hook, use natural conversational language and vivid but truthful wording, keep lines short for mobile reading, and finish with a gentle relevant call to action. Avoid generic AI wording, stiff Tamil translations, keyword stuffing and emoji overload.",
         "For Tamil + English, write natural Tamil first and a concise English version second.",
         "postCopy must be plain reader-facing text only, never JSON or a serialized Tamil/English object. Do not include language labels or braces in the caption.",
         "Return JSON only with exactly postCopy and creativeBrief. Both values MUST be plain JSON strings, never nested objects or arrays. The creative brief must not claim an image was generated.",
