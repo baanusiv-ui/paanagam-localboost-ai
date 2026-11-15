@@ -140,3 +140,42 @@ test("private local Ollama requests preserve Cloudflare Access headers", async (
     }
   }
 });
+
+
+test("campaign captions use GPT through OpenRouter first and do not fall back to Ollama", async () => {
+  const names = ["OPENROUTER_API_KEY", "OPENROUTER_TEXT_MODEL", "OLLAMA_API_KEY", "OLLAMA_BASE_URL"];
+  const previous = Object.fromEntries(names.map(name => [name, process.env[name]]));
+  const originalFetch = globalThis.fetch;
+  const calls: string[] = [];
+  process.env.OPENROUTER_API_KEY = "test-openrouter-key";
+  process.env.OPENROUTER_TEXT_MODEL = "openai/gpt-4.1";
+  process.env.OLLAMA_API_KEY = "should-not-be-used";
+  delete process.env.OLLAMA_BASE_URL;
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    calls.push(String(input));
+    assert.equal((init?.headers as Record<string, string>).authorization, "Bearer test-openrouter-key");
+    const body = JSON.parse(String(init?.body));
+    assert.equal(body.model, "openai/gpt-4.1");
+    assert.deepEqual(body.response_format, { type: "json_object" });
+    return new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify({ answer: "A catchy caption" }) } }]
+    }), { status: 200, headers: { "content-type": "application/json" } });
+  }) as typeof fetch;
+  try {
+    const result = await generateAiJson({
+      task: "google-content-draft",
+      messages: [{ role: "user", content: "Write a catchy Tamil coffee caption" }],
+      responseSchema: schema
+    });
+    assert.equal(result.provider, "OPENROUTER_GPT");
+    assert.equal(result.model, "openai/gpt-4.1");
+    assert.equal(result.fallbackUsed, false);
+    assert.deepEqual(calls, ["https://openrouter.ai/api/v1/chat/completions"]);
+  } finally {
+    globalThis.fetch = originalFetch;
+    for (const name of names) {
+      const value = previous[name];
+      if (value === undefined) delete process.env[name]; else process.env[name] = value;
+    }
+  }
+});
