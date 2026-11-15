@@ -131,7 +131,7 @@
       if(!keepPrompt){$("poyo-image-prompt").value="";$("poyo-image-refs").value="";}
       if($("poyo-image-form")) delete $("poyo-image-form").dataset.keepPromptAfterSave;
       await loadTasks();
-      message("poyo-image-message","Image prompt saved as a draft. No provider request was sent and no credits were used. Review it, then click Generate image on the saved task when ready.");\n\\n");
+      message("poyo-image-message","Image prompt saved as a draft. No provider request was sent and no credits were used. Review it, then click Generate image on the saved task when ready.");
       }
       const topic=String(d.topic||"Paanagam café campaign").trim();
       const brief=String(d.designerBrief||d.brief||"").trim();
