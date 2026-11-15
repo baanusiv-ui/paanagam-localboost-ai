@@ -62,11 +62,35 @@ async function callOllama(baseUrl: string, model: string, messages: AiMessage[],
     }),
     signal: AbortSignal.timeout(timeoutMs)
   });
-  const data = await response.json() as { message?: { content?: string }; error?: string };
+  const contentType = response.headers.get("content-type") || "";
+  const responseText = await response.text();
+  let data: { message?: { content?: string }; error?: string } = {};
+  if (contentType.toLowerCase().includes("application/json")) {
+    try {
+      data = JSON.parse(responseText) as typeof data;
+    } catch {
+      throw Object.assign(new Error("Ollama returned malformed JSON (HTTP " + response.status + ")."), { status: response.status });
+    }
+  } else {
+    // Do not leak response bodies, which may contain provider or gateway details.
+    // Distinguish Cloudflare Access/edge HTML from a valid Ollama JSON response.
+    let finalPath = "/api/chat";
+    try { finalPath = new URL(response.url || baseUrl).pathname; } catch { /* keep safe fallback path */ }
+    const isHtml = /html/i.test(contentType) || /^\s*<!doctype html|^\s*<html/i.test(responseText);
+    const reason = response.status === 401 || response.status === 403
+      ? "Cloudflare Access or gateway denied the /api/chat request"
+      : isHtml
+        ? "the tunnel returned an HTML page instead of Ollama JSON"
+        : "the endpoint returned a non-JSON response";
+    throw Object.assign(
+      new Error("Local Ollama " + reason + " (HTTP " + response.status + ", content-type " + (contentType || "unknown") + ", final path " + finalPath + "). Check the Cloudflare Access application/policy and tunnel routing for POST /api/chat."),
+      { status: response.status }
+    );
+  }
   if (!response.ok) throw Object.assign(new Error(data.error || "Ollama request failed with HTTP " + response.status), { status: response.status });
-  const content = data.message?.content?.trim();
-  if (!content) throw new Error("Ollama returned an empty response.");
-  return content;
+  const generatedContent = data.message?.content?.trim();
+  if (!generatedContent) throw new Error("Ollama returned an empty response.");
+  return generatedContent;
 }
 
 async function callGemini(messages: AiMessage[], responseSchema: JsonSchema, maxOutputTokens: number) {

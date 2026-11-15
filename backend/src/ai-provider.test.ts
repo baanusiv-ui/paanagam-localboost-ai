@@ -97,7 +97,7 @@ test("authentication failures stop instead of falling through to Gemini", async 
   process.env.GEMINI_FALLBACK_ENABLED = "true";
   globalThis.fetch = (async (input: string | URL | Request) => {
     calls.push(String(input));
-    return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 });
+    return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { "content-type": "application/json" } });
   }) as typeof fetch;
   try {
     await assert.rejects(() => generateAiJson({ task: "test", messages: [{ role: "user", content: "hello" }], responseSchema: schema }), /unauthorized/);
@@ -126,7 +126,7 @@ test("private local Ollama requests preserve Cloudflare Access headers", async (
     const headers = init?.headers as Record<string, string>;
     assert.equal(headers["CF-Access-Client-Id"], "test-access-id");
     assert.equal(headers["CF-Access-Client-Secret"], "test-access-secret");
-    return new Response(JSON.stringify({ message: { content: JSON.stringify({ answer: "local" }) } }), { status: 200 });
+    return new Response(JSON.stringify({ message: { content: JSON.stringify({ answer: "local" }) } }), { status: 200, headers: { "content-type": "application/json" } });
   }) as typeof fetch;
   try {
     const result = await generateAiJson({ task: "test", messages: [{ role: "user", content: "hello" }], responseSchema: schema });
