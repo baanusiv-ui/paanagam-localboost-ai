@@ -120,19 +120,17 @@
     try{
       const prompt=$("poyo-image-prompt").value.trim(),resolution=$("poyo-image-resolution").value;
       if(!prompt||prompt.length>4000)throw new Error("Image prompt must be between 1 and 4,000 characters.");
-      const urls=$("poyo-image-refs").value.split(/\r?\n/).map(v=>v.trim()).filter(Boolean);
-      if(urls.length>10||!urls.every(v=>/^https:\/\//i.test(v)))throw new Error("Use up to 10 publicly accessible HTTPS reference URLs.");
+      const urls=$("poyo-image-refs").value.split(/\\r?\\n/).map(v=>v.trim()).filter(Boolean);
+      if(urls.length>10||!urls.every(v=>/^https:\\/\\//i.test(v)))throw new Error("Use up to 10 publicly accessible HTTPS reference URLs.");
       const campaignContext=lastCampaignImageBrief?{topic:String(lastCampaignImageBrief.topic||"").slice(0,300),caption:String(lastCampaignImageBrief.caption||"").slice(0,2000),offer:String(lastCampaignImageBrief.offer||"").slice(0,500),format:String(lastCampaignImageBrief.format||"").slice(0,40)}:undefined;
       const modelInput={size:$("poyo-image-size").value,resolution,...(urls.length?{image_urls:urls}:{}),...(campaignContext?{campaign:campaignContext}:{})};
       const result=await api(base()+"/poyo/tasks",{method:"POST",body:JSON.stringify({mediaType:"IMAGE",modelId:"nano-banana-2.1",prompt,modelInput})});
-      const taskId=result.task?.id;
-      if(!taskId)throw new Error("LocalBoost did not return a saved image draft ID.");
-      const keepPrompt=$("poyo-image-form")?.dataset.keepPromptAfterSave === "true";
-      if(!keepPrompt){$("poyo-image-prompt").value="";$("poyo-image-refs").value="";}
-      if($("poyo-image-form")) delete $("poyo-image-form").dataset.keepPromptAfterSave;
+      if(!result.task?.id)throw new Error("LocalBoost did not return a saved image draft ID.");
       await loadTasks();
       message("poyo-image-message","Image prompt saved as a draft. No provider request was sent and no credits were used. Review it, then click Generate image on the saved task when ready.");
-      }
+    }catch(err){message("poyo-image-message","Could not save image draft: "+err.message,true);}
+    finally{button.disabled=false;}
+  });
       const topic=String(d.topic||"Paanagam café campaign").trim();
       const brief=String(d.designerBrief||d.brief||"").trim();
       const headline=String(d.headline||"").trim();
