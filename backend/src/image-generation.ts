@@ -57,7 +57,7 @@ export async function generateOpenRouterCampaignImage(input: ImageDraftInput) {
   const contentType = response.headers.get("content-type") || "";
   const responseText = await response.text();
   let raw: {
-    data?: Array<{ b64_json?: string; revised_prompt?: string }>;
+    data?: Array<{ b64_json?: string; revised_prompt?: string; media_type?: string }>;
     usage?: { cost?: number };
     error?: { message?: string; type?: string; code?: string };
   } = {};
