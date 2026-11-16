@@ -15,10 +15,10 @@ const imageModel = () => env.OPENROUTER_GPT_IMAGE_MODEL.trim();
 export async function generateOpenRouterCampaignImage(input: ImageDraftInput) {
   const apiKey = env.OPENROUTER_API_KEY.trim();
   if (!apiKey) {
-    throw new Error("GPT Image generation is not configured. OPENROUTER_API_KEY is missing from the LocalBoost API environment in Render.");
+    throw new Error("GPT Image generation is not configured. Add OPENROUTER_API_KEY to the LocalBoost API environment in Render.");
   }
 
-  const sizes: Record<ImageDraftInput["format"], string> = {
+  const aspectRatios: Record<ImageDraftInput["format"], string> = {
     SQUARE: "1:1",
     PORTRAIT: "4:5",
     STORY: "9:16"
@@ -29,26 +29,29 @@ export async function generateOpenRouterCampaignImage(input: ImageDraftInput) {
     "Campaign subject: " + input.topic.slice(0, 180) + ".",
     input.offer ? "Offer context: " + input.offer.slice(0, 240) + "." : "",
     input.creativeBrief ? "Creative direction: " + input.creativeBrief.slice(0, 500) + "." : "",
-    input.caption ? "Exact social caption context (use only to understand the campaign mood and subject; do not render any words): " + input.caption.slice(0, 1800) : "",
-    "Brand palette: mustard yellow, warm ivory, coffee brown and dark walnut, with subtle traditional kolam-inspired atmosphere.",
-    "Make the main subject clear, attractive and fully visible. Compose with deliberate negative space for a brand and campaign text overlay.",
-    "Generate the visual artwork only. Do not include text, letters, Tamil or English characters, numbers, logos, watermarks, signage, menus, labels, prices or invented claims.",
-    "Do not render the business name or campaign copy; LocalBoost adds approved text separately.",
-    "Photographic realism, natural materials, refined lighting, authentic South Indian setting."
+    input.caption ? "Social caption context (use only to understand the campaign mood and subject; do not render any words): " + input.caption.slice(0, 1800) : "",
+    "Brand palette: mustard yellow, warm ivory, coffee brown and dark walnut, with subtle kolam-inspired details where appropriate.",
+    "Make the actual campaign subject the clear focal point. Match the visual to the topic: food and drink photography for menu/product posts, people and atmosphere for experience posts, and relevant local context for community posts. Do not default to a storefront.",
+    "Compose as finished social campaign photography, not a mockup, phone frame, slide, collage or poster. Leave tasteful negative space for a separate brand overlay.",
+    "Do not include text, letters, Tamil or English characters, numbers, logos, watermarks, signage, menus, labels, prices or invented claims.",
+    "Do not invent product details or depict items not supported by the campaign subject and supplied brief.",
+    "Photographic realism, natural materials, refined lighting and an authentic South Indian setting."
   ].filter(Boolean).join("\n");
 
   const response = await fetch("https://openrouter.ai/api/v1/images", {
     method: "POST",
     headers: {
       authorization: "Bearer " + apiKey,
-      "content-type": "application/json"
+      "content-type": "application/json",
+      "HTTP-Referer": env.OPENROUTER_SITE_URL,
+      "X-Title": "LocalBoost AI"
     },
     body: JSON.stringify({
       model: imageModel(),
       prompt,
-      aspect_ratio: sizes[input.format],
+      aspect_ratio: aspectRatios[input.format],
+      resolution: "1K",
       quality: "high",
-      output_format: "png",
       n: 1
     }),
     signal: AbortSignal.timeout(180000)
@@ -57,30 +60,44 @@ export async function generateOpenRouterCampaignImage(input: ImageDraftInput) {
   const contentType = response.headers.get("content-type") || "";
   const responseText = await response.text();
   let raw: {
-    data?: Array<{ b64_json?: string; revised_prompt?: string; media_type?: string }>;
+    data?: Array<{ b64_json?: string; media_type?: string }>;
     usage?: { cost?: number };
-    error?: { message?: string; type?: string; code?: string };
+    error?: { message?: string; type?: string; code?: string } | string;
   } = {};
   if (contentType.toLowerCase().includes("application/json")) {
     try { raw = JSON.parse(responseText) as typeof raw; }
-    catch { throw new Error("OpenRouter returned malformed JSON (HTTP " + response.status + ")."); }
+    catch { throw new Error("OpenRouter returned malformed JSON for GPT Image (HTTP " + response.status + ")."); }
   }
   if (!response.ok) {
-    const detail = raw.error?.message;
-    throw new Error("GPT Image generation failed (HTTP " + response.status + ")" + (detail ? ": " + detail.slice(0, 240) : ". Check OpenRouter model access, account credits and model availability."));
+    const detail = typeof raw.error === "string" ? raw.error : raw.error?.message;
+    const guidance = response.status === 401
+      ? " Check OPENROUTER_API_KEY in Render."
+      : response.status === 402
+        ? " OpenRouter image generation requires an available credit balance above its image-request pre-authorization."
+        : response.status === 404
+          ? " Verify OPENROUTER_GPT_IMAGE_MODEL against OpenRouter's current image-model catalogue."
+          : "";
+    throw new Error("OpenRouter GPT Image failed (HTTP " + response.status + ")" + (detail ? ": " + detail.slice(0, 260) : ".") + guidance);
   }
-  const imageData = raw.data?.[0]?.b64_json;
+
+  const image = raw.data?.find(item => typeof item.b64_json === "string" && item.b64_json.length > 0);
+  const imageData = image?.b64_json;
   if (!imageData || !/^[A-Za-z0-9+/]+={0,2}$/.test(imageData)) {
-    throw new Error("OpenRouter returned no buffered image data. Check the configured GPT Image model and account credits.");
+    throw new Error("OpenRouter completed the request but returned no valid base64 image. Check that the configured model supports the Image API.");
   }
+  const mimeType = image?.media_type || "image/png";
+  if (!["image/png", "image/jpeg", "image/webp"].includes(mimeType)) {
+    throw new Error("OpenRouter returned an unsupported image format: " + mimeType + ".");
+  }
+
   return {
-    imageDataUrl: "data:" + (raw.data?.[0]?.media_type || "image/png") + ";base64," + imageData,
-    mimeType: raw.data?.[0]?.media_type || "image/png",
-    provider: "OPENAI_GPT_IMAGE",
+    imageDataUrl: "data:" + mimeType + ";base64," + imageData,
+    mimeType,
+    provider: "OPENROUTER_GPT_IMAGE",
     model: imageModel(),
     generatedAt: new Date().toISOString(),
-    costUsd: raw.usage?.cost,
+    usage: raw.usage ?? null,
     storage: "TEMPORARY_BROWSER_PREVIEW",
-    disclaimer: "GPT Image artwork is a temporary preview. Save it to the business creative library after review; this response does not publish it."
+    disclaimer: "GPT Image artwork is a temporary preview until saved to the selected business creative library. Nothing is published."
   };
 }
