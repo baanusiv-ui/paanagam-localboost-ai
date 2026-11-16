@@ -22,7 +22,10 @@
   function render() {
     const list=$("creative-library");
     if (!list) return;
-    list.innerHTML = drafts.map((d,i) => '<article class="creative-card"><div class="creative-card-top"><span class="tag '+(d.status==="REVIEWED"?"confirmed":"pending-tag")+'">'+esc(d.status||"DRAFT")+'</span><small>'+esc(d.platform||"Social")+' · '+esc(d.format||"Feed")+'</small></div><h3>'+esc(d.topic)+'</h3><p>'+esc(d.caption||"")+'</p>'+(d.assetId?'<img class="creative-card-image" data-asset-id="'+esc(d.assetId)+'" alt="'+esc(d.topic||"Campaign artwork")+'">':(d.assetUrl?'<a href="'+esc(d.assetUrl)+'" target="_blank" rel="noopener">Open attached creative</a>':'<small class="footnote">No image asset attached</small>'))+'<div class="creative-card-actions"><button type="button" data-copy="'+i+'" class="secondary-button">Copy caption</button><button type="button" data-approve="'+i+'" class="secondary-button" '+(d.status==="REVIEWED"?"disabled":"")+'>'+ (d.status==="REVIEWED"?"Reviewed":"Mark reviewed")+'</button></div></article>').join("") || '<p class="empty-copy">No saved creative drafts in this business workspace.</p>';
+    const card = (d,i) => '<article class="creative-card"><div class="creative-card-top"><span class="tag '+(d.status==="REVIEWED"?"confirmed":"pending-tag")+'">'+esc(d.status||"DRAFT")+'</span><small>'+esc(d.platform||"Social")+' · '+esc(d.format||"Feed")+'</small></div><h3>'+esc(d.topic)+'</h3><p>'+esc(d.caption||"")+'</p>'+(d.assetId?'<img class="creative-card-image" data-asset-id="'+esc(d.assetId)+'" alt="'+esc(d.topic||"Campaign artwork")+'">':(d.assetUrl?'<a href="'+esc(d.assetUrl)+'" target="_blank" rel="noopener">Open attached creative</a>':'<small class="footnote">Caption only · no image attached</small>'))+'<div class="creative-card-actions"><button type="button" data-copy="'+i+'" class="secondary-button">Copy caption</button><button type="button" data-approve="'+i+'" class="secondary-button" '+(d.status==="REVIEWED"?"disabled":"")+'>'+ (d.status==="REVIEWED"?"Reviewed":"Mark reviewed")+'</button></div></article>';
+    const recent=drafts.slice(0,2), older=drafts.slice(2);
+    list.innerHTML=(recent.map(d=>card(d,drafts.indexOf(d))).join("")||'<p class="empty-copy">No recent drafts. Generate a caption to begin.</p>')+
+      (older.length?'<details class="creative-history"><summary>Previous drafts ('+older.length+')</summary><div class="creative-history-list">'+older.map(d=>card(d,drafts.indexOf(d))).join("")+'</div></details>':'');
     const count=$("creative-count"); if(count) count.textContent=String(drafts.length);
     hydrateAssetImages();
   }
@@ -81,7 +84,7 @@
       await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:current.id,payload:current,recordedAt:current.updatedAt})});
       const imageButton=$("creative-image-gemini");
       if(imageButton){imageButton.disabled=false;imageButton.textContent="Generate GPT Image (uses credits)";}
-      setMessage("Caption saved as a draft. Review the brief, then click Generate GPT Image when you are ready. No image credits have been used and nothing has been queued or published.");
+      setMessage("Caption saved. Next step: click Generate GPT Image below. No image credits have been used yet; nothing has been queued or published."); $("creative-preview")?.scrollIntoView({behavior:"smooth",block:"center"});
     } catch(err){setMessage("Generation failed: "+err.message,true);const imageButton=$("creative-image-gemini");if(imageButton)imageButton.disabled=false;}
     finally{$("creative-generate").disabled=false;}
   });
