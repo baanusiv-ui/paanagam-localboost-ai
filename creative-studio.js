@@ -255,10 +255,10 @@
     const a=document.createElement("a"); a.href=generatedImageDataUrl; a.download="paanagam-canva-campaign.jpg"; document.body.appendChild(a); a.click(); a.remove();
   });
   async function saveCurrentCampaignDraft() {
-    if(!ready||!current)return;
+    if(!ready||!current)return false;
     const assetUrl=$("creative-asset-url").value.trim();
     if(assetUrl&&!/^https:\/\//i.test(assetUrl)){setMessage("Image asset must use an https:// URL.",true);return;}
-    if(assetUrl&&!current.assetId){setMessage("This URL is only a reference. Import the image into the business creative library before queueing it for publishing.",true);return;}
+    if(assetUrl&&!current.assetId){setMessage("This URL is only a reference. Import the image into the business creative library before queueing it for publishing.",true);return false;}
     current.assetUrl=assetUrl; current.updatedAt=new Date().toISOString();
     $("creative-save").disabled=true;
     try{
@@ -274,12 +274,13 @@
       if(failed.length){
         drafts.unshift({...current}); render();
         $("creative-save").disabled=false;
-        setMessage("Campaign draft saved. Queued: "+(queued.join(", ")||"none")+". Failed channels: "+failed.join("; ")+". Retry by saving again after correcting the issue.",true);
-        return;
+        setMessage("Campaign draft saved. Queued: "+(queued.join(", ")||"none")+". Failed channels: "+failed.join("; ")+". Review the Approval Centre before retrying to avoid duplicate posts.",true);
+        return false;
       }
       drafts.unshift({...current}); current=null; $("creative-save").disabled=true; $("creative-preview").classList.add("hidden"); $("creative-form").reset(); render();
       setMessage("Draft saved. "+queued.length+" social post(s) added to Approval Centre; nothing has been approved or published."+(skipped.length?" "+skipped.join("; ")+".":""));
-    }catch(err){$("creative-save").disabled=false;setMessage("Save failed: "+err.message,true);}
+      return true;
+    }catch(err){$("creative-save").disabled=false;setMessage("Save failed: "+err.message,true);return false;}
   }
   $("creative-save")?.addEventListener("click", saveCurrentCampaignDraft);
   $("creative-library")?.addEventListener("click",async e=>{
