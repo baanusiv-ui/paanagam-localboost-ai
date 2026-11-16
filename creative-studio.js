@@ -70,7 +70,7 @@
       $("creative-preview-copy").textContent=current.caption;
       $("creative-preview-brief").textContent=current.designerBrief||"No separate image brief was returned by the drafting service.";
       $("creative-asset-url").value="";
-      $("creative-save").disabled=false;
+      $("creative-save").disabled=true;
       setMessage("Campaign caption generated. Preparing the matching image prompt for your review…");
       window.dispatchEvent(new CustomEvent("localboost:campaign-copy-ready",{detail:{topic:current.topic,offer:current.offer,platform:current.platform,format:current.format,language:current.language,tone,caption:current.caption,headline:current.headline,designerBrief:current.designerBrief}}));
       // Fully automate the default campaign path: GPT caption -> GPT Image -> saved campaign draft -> Approval Centre.
@@ -203,6 +203,7 @@
     if(metrics)metrics.textContent="OpenAI GPT Image · "+result.model+" · generated and saved to business library.";
     current.updatedAt=new Date().toISOString();
     await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:current.id,payload:current,recordedAt:current.updatedAt})});
+    $("creative-save").disabled=false;
     setMessage("Matching GPT Image artwork generated and saved with the caption as a campaign draft. Review it, then use Save to Approval Centre when ready. Nothing is approved or published.");
     if(button)button.disabled=false;
     return current;
