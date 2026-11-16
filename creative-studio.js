@@ -275,6 +275,7 @@
       setMessage("Draft saved. "+queued.length+" social post(s) added to Approval Centre; nothing has been approved or published."+(skipped.length?" "+skipped.join("; ")+".":""));
     }catch(err){setMessage("Save failed: "+err.message,true);}
   }
+  $("creative-save")?.addEventListener("click", saveCurrentCampaignDraft);
   $("creative-library")?.addEventListener("click",async e=>{
     const copy=e.target.dataset.copy, approve=e.target.dataset.approve;
     if(copy!==undefined){const d=drafts[Number(copy)]; if(d) navigator.clipboard?.writeText(d.caption||"").then(()=>setMessage("Caption copied."),()=>setMessage("Copy unavailable in this browser.",true));}
