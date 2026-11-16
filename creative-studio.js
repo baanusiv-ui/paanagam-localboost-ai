@@ -71,7 +71,10 @@
       $("creative-preview-brief").textContent=current.designerBrief||"No separate image brief was returned by the drafting service.";
       $("creative-asset-url").value="";
       $("creative-save").disabled=true;
-      setMessage("Campaign caption generated. Preparing the matching image prompt for your review…");
+      const authorizeButton=$("creative-image-authorize"), rejectButton=$("creative-image-reject");
+      if(authorizeButton) authorizeButton.disabled=true;
+      if(rejectButton) rejectButton.disabled=true;
+      setMessage("Campaign caption generated. Review it, then generate the matching GPT image when ready.");
       window.dispatchEvent(new CustomEvent("localboost:campaign-copy-ready",{detail:{topic:current.topic,offer:current.offer,platform:current.platform,format:current.format,language:current.language,tone,caption:current.caption,headline:current.headline,designerBrief:current.designerBrief}}));
       // Persist the caption first. Image generation is deliberately owner-triggered because it may incur provider charges.
       current.updatedAt=new Date().toISOString();
@@ -215,15 +218,19 @@
       current.assetId=saved.asset.id;current.assetName=saved.asset.fileName;
       current.assetUrl=saved.asset.url||"";
       current.imageProvider="OPENAI_GPT_IMAGE";current.imageModel=result.model;current.imageGeneratedAt=result.generatedAt;
+      current.imageAuthorized=false; current.imageRejected=false;
       if(preview){preview.src=composed;preview.classList.remove("hidden");preview.dataset.downloadUrl=composed;}
       if(download) download.disabled=false;
       const metrics=$("creative-provider-metrics");
       if(metrics)metrics.textContent="OpenAI GPT Image · "+(result.model||"model")+" · generated and saved to business library.";
       current.updatedAt=new Date().toISOString();
       await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:current.id,payload:current,recordedAt:current.updatedAt})});
-      $("creative-save").disabled=false;
+      $("creative-save").disabled=true;
+      const authorizeButton=$("creative-image-authorize"), rejectButton=$("creative-image-reject");
+      if(authorizeButton){authorizeButton.disabled=false;authorizeButton.textContent="Authorize this image";}
+      if(rejectButton)rejectButton.disabled=false;
       if(button)button.textContent="Regenerate GPT Image";
-      setMessage("GPT Image artwork generated, displayed and saved to the business library. Review it, then use Save to Approval Centre when ready. Nothing is approved or published.");
+      setMessage("Image generated and saved. Inspect the image and caption. Authorize this exact image before it can enter the posting queue.");
       return current;
     } finally {
       if(button)button.disabled=false;
@@ -233,6 +240,36 @@
   $("creative-image-gemini")?.addEventListener("click",async()=>{
     try{await generateAndSaveGptImage();}
     catch(err){setMessage("GPT Image generation failed: "+err.message,true);const button=$("creative-image-gemini");if(button)button.disabled=false;}
+  });
+  async function persistCurrentDraft() {
+    if(!current) return;
+    current.updatedAt=new Date().toISOString();
+    await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:current.id,payload:current,recordedAt:current.updatedAt})});
+  }
+  $("creative-image-authorize")?.addEventListener("click",async()=>{
+    if(!current?.assetId){setMessage("Generate and save the GPT image before authorizing it.",true);return;}
+    if(!window.confirm("Authorize this exact image and its caption for the selected destination? It will only enter Approval Centre; it will not publish yet."))return;
+    const button=$("creative-image-authorize");button.disabled=true;
+    try{
+      current.imageAuthorized=true;current.imageRejected=false;current.imageAuthorizedAt=new Date().toISOString();
+      await persistCurrentDraft();
+      $("creative-save").disabled=false;
+      $("creative-image-reject").disabled=true;
+      setMessage("Image authorized. Next, send the exact caption and image to Approval Centre. Publishing still requires a separate approval and Publish now action.");
+      button.textContent="Image authorized";
+    }catch(err){current.imageAuthorized=false;button.disabled=false;setMessage("Authorization could not be saved: "+err.message,true);}
+  });
+  $("creative-image-reject")?.addEventListener("click",async()=>{
+    if(!current?.assetId)return;
+    if(!window.confirm("Reject this image for this campaign? The saved file stays in the business library, but it will not be used for this post."))return;
+    current.imageAuthorized=false;current.imageRejected=true;current.imageRejectedAt=new Date().toISOString();
+    current.assetId="";current.assetName="";current.assetUrl="";
+    $("creative-gemini-preview")?.classList.add("hidden");
+    $("creative-image-authorize").disabled=true;$("creative-image-reject").disabled=true;
+    $("creative-save").disabled=true;
+    $("creative-image-gemini").disabled=false;$("creative-image-gemini").textContent="Generate another GPT Image";
+    try{await persistCurrentDraft();setMessage("Image rejected for this campaign. Generate another image when ready. The original file remains safely in the business library.");}
+    catch(err){setMessage("Rejection state could not be saved: "+err.message,true);}
   });
   $("creative-gemini-save")?.addEventListener("click",async()=>{
     const button=$("creative-gemini-save"), preview=$("creative-gemini-preview");
@@ -274,7 +311,8 @@
   });
   async function saveCurrentCampaignDraft() {
     if(!ready||!current)return false;
-    const assetUrl=$("creative-asset-url").value.trim();
+    if(!current.assetId || current.imageAuthorized!==true){setMessage("Authorize the generated image first. Nothing can enter Approval Centre before image authorization.",true);return false;}
+    const assetUrl=$("creative-asset-url")?.value.trim() || "";
     if(assetUrl&&!/^https:\/\//i.test(assetUrl)){setMessage("Image asset must use an https:// URL.",true);return false;}
     if(assetUrl&&!current.assetId){setMessage("This URL is only a reference. Import the image into the business creative library before queueing it for publishing.",true);return false;}
     current.assetUrl=assetUrl; current.updatedAt=new Date().toISOString();
@@ -296,7 +334,7 @@
         return false;
       }
       drafts.unshift({...current}); current=null; $("creative-save").disabled=true; $("creative-preview").classList.add("hidden"); $("creative-form").reset(); render();
-      setMessage("Draft saved. "+queued.length+" social post(s) added to Approval Centre; nothing has been approved or published."+(skipped.length?" "+skipped.join("; ")+".":""));
+      setMessage("Authorized post queued in Approval Centre for "+queued.join(", ")+". Nothing has been published. Open Approval Centre, approve the exact post, then choose Publish now.");
       return true;
     }catch(err){$("creative-save").disabled=false;setMessage("Save failed: "+err.message,true);return false;}
   }
