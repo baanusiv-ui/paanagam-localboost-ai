@@ -70,7 +70,7 @@
       $("creative-preview-copy").textContent=current.caption;
       $("creative-preview-brief").textContent=current.designerBrief||"No separate image brief was returned by the drafting service.";
       $("creative-asset-url").value="";
-      $("creative-save").disabled=false;
+      $("creative-save").disabled=true;
       setMessage("Campaign caption generated. Preparing the matching image prompt for your review…");
       window.dispatchEvent(new CustomEvent("localboost:campaign-copy-ready",{detail:{topic:current.topic,offer:current.offer,platform:current.platform,format:current.format,language:current.language,tone,caption:current.caption,headline:current.headline,designerBrief:current.designerBrief}}));
       // Fully automate the default campaign path: GPT caption -> GPT Image -> saved campaign draft -> Approval Centre.
@@ -79,9 +79,8 @@
       await generateAndSaveGptImage();
       const saveButton=$("creative-save");
       if(!saveButton || saveButton.disabled) throw new Error("GPT artwork was created, but the campaign could not be queued for review.");
-      saveButton.click();
-      setMessage("GPT caption and matching image generated and saved. Eligible posts are being added to the Approval Centre. Nothing is approved or published.");
-    } catch(err){setMessage("Generation failed: "+err.message,true);}
+      await saveCurrentCampaignDraft();
+    } catch(err){setMessage("Generation failed: "+err.message,true);const imageButton=$("creative-image-gemini");if(imageButton)imageButton.disabled=false;}
     finally{$("creative-generate").disabled=false;}
   });
   window.addEventListener("localboost:campaign-image-prompt-updated",event=>{
@@ -127,7 +126,12 @@
       ctx.fillStyle = "#f2c66d"; ctx.font = "600 " + (23 * scale) + "px Arial, sans-serif";
       ctx.fillText(current.offer.slice(0, 72), margin, canvas.height - margin + 20 * scale, canvas.width - margin * 2);
     }
-    return canvas.toDataURL("image/jpeg", .94);
+    // Keep base64 JSON comfortably below the API's 8 MB decoded-image limit.
+    for (const quality of [.90, .84, .78, .72, .66]) {
+      const dataUrl = canvas.toDataURL("image/jpeg", quality);
+      if (dataUrl.length - dataUrl.indexOf(",") - 1 <= 9_300_000) return dataUrl;
+    }
+    throw new Error("Artwork is too large to save safely. Regenerate the image.");
   }
   $("creative-image-generate")?.addEventListener("click",async()=>{
     if(!ready||!current){setMessage("Generate campaign copy first, then create its artwork.",true);return;}
@@ -199,6 +203,7 @@
     if(metrics)metrics.textContent="OpenAI GPT Image · "+result.model+" · generated and saved to business library.";
     current.updatedAt=new Date().toISOString();
     await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:current.id,payload:current,recordedAt:current.updatedAt})});
+    $("creative-save").disabled=false;
     setMessage("Matching GPT Image artwork generated and saved with the caption as a campaign draft. Review it, then use Save to Approval Centre when ready. Nothing is approved or published.");
     if(button)button.disabled=false;
     return current;
@@ -246,12 +251,13 @@
     if(!generatedImageDataUrl)return;
     const a=document.createElement("a"); a.href=generatedImageDataUrl; a.download="paanagam-canva-campaign.jpg"; document.body.appendChild(a); a.click(); a.remove();
   });
-  $("creative-save")?.addEventListener("click",async()=>{
+  async function saveCurrentCampaignDraft() {
     if(!ready||!current)return;
     const assetUrl=$("creative-asset-url").value.trim();
     if(assetUrl&&!/^https:\/\//i.test(assetUrl)){setMessage("Image asset must use an https:// URL.",true);return;}
     if(assetUrl&&!current.assetId){setMessage("This URL is only a reference. Import the image into the business creative library before queueing it for publishing.",true);return;}
     current.assetUrl=assetUrl; current.updatedAt=new Date().toISOString();
+    $("creative-save").disabled=true;
     try{
       await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:current.id,payload:current,recordedAt:current.updatedAt})});
       const channels = current.format === "story" ? [] : (current.platform === "Instagram + Facebook" ? ["FACEBOOK","INSTAGRAM"] : current.platform === "Instagram" ? ["INSTAGRAM"] : current.platform === "Facebook" ? ["FACEBOOK"] : []);
@@ -264,13 +270,15 @@
       outcomes.forEach((outcome,index)=>{ if(outcome.status==="fulfilled")queued.push(eligible[index]); else failed.push(eligible[index]+": "+(outcome.reason?.message||"queue failed")); });
       if(failed.length){
         drafts.unshift({...current}); render();
+        $("creative-save").disabled=false;
         setMessage("Campaign draft saved. Queued: "+(queued.join(", ")||"none")+". Failed channels: "+failed.join("; ")+". Retry by saving again after correcting the issue.",true);
         return;
       }
       drafts.unshift({...current}); current=null; $("creative-save").disabled=true; $("creative-preview").classList.add("hidden"); $("creative-form").reset(); render();
       setMessage("Draft saved. "+queued.length+" social post(s) added to Approval Centre; nothing has been approved or published."+(skipped.length?" "+skipped.join("; ")+".":""));
-    }catch(err){setMessage("Save failed: "+err.message,true);}
-  });
+    }catch(err){$("creative-save").disabled=false;setMessage("Save failed: "+err.message,true);}
+  }
+  $("creative-save")?.addEventListener("click", saveCurrentCampaignDraft);
   $("creative-library")?.addEventListener("click",async e=>{
     const copy=e.target.dataset.copy, approve=e.target.dataset.approve;
     if(copy!==undefined){const d=drafts[Number(copy)]; if(d) navigator.clipboard?.writeText(d.caption||"").then(()=>setMessage("Caption copied."),()=>setMessage("Copy unavailable in this browser.",true));}

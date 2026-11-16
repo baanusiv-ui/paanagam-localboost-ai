@@ -10,18 +10,18 @@ export type ImageDraftInput = {
   format: "SQUARE" | "PORTRAIT" | "STORY";
 };
 
-const imageModel = () => env.OPENAI_IMAGE_MODEL.trim();
+const imageModel = () => env.OPENROUTER_GPT_IMAGE_MODEL.trim();
 
 export async function generateOpenRouterCampaignImage(input: ImageDraftInput) {
-  const apiKey = env.OPENAI_API_KEY.trim();
+  const apiKey = env.OPENROUTER_API_KEY.trim();
   if (!apiKey) {
-    throw new Error("GPT Image generation is not configured. OPENAI_API_KEY is missing from the LocalBoost API environment in Render.");
+    throw new Error("GPT Image generation is not configured. OPENROUTER_API_KEY is missing from the LocalBoost API environment in Render.");
   }
 
   const sizes: Record<ImageDraftInput["format"], string> = {
-    SQUARE: "1024x1024",
-    PORTRAIT: "1024x1280",
-    STORY: "1024x1792"
+    SQUARE: "1:1",
+    PORTRAIT: "4:5",
+    STORY: "9:16"
   };
   const prompt = [
     "Create a premium, photorealistic commercial campaign photograph for a South Indian café.",
@@ -37,7 +37,7 @@ export async function generateOpenRouterCampaignImage(input: ImageDraftInput) {
     "Photographic realism, natural materials, refined lighting, authentic South Indian setting."
   ].filter(Boolean).join("\n");
 
-  const response = await fetch("https://api.openai.com/v1/images/generations", {
+  const response = await fetch("https://openrouter.ai/api/v1/images", {
     method: "POST",
     headers: {
       authorization: "Bearer " + apiKey,
@@ -46,7 +46,7 @@ export async function generateOpenRouterCampaignImage(input: ImageDraftInput) {
     body: JSON.stringify({
       model: imageModel(),
       prompt,
-      size: sizes[input.format],
+      aspect_ratio: sizes[input.format],
       quality: "high",
       output_format: "png",
       n: 1
@@ -57,28 +57,29 @@ export async function generateOpenRouterCampaignImage(input: ImageDraftInput) {
   const contentType = response.headers.get("content-type") || "";
   const responseText = await response.text();
   let raw: {
-    data?: Array<{ b64_json?: string; revised_prompt?: string }>;
+    data?: Array<{ b64_json?: string; revised_prompt?: string; media_type?: string }>;
     usage?: { cost?: number };
     error?: { message?: string; type?: string; code?: string };
   } = {};
   if (contentType.toLowerCase().includes("application/json")) {
     try { raw = JSON.parse(responseText) as typeof raw; }
-    catch { throw new Error("OpenAI returned malformed JSON (HTTP " + response.status + ")."); }
+    catch { throw new Error("OpenRouter returned malformed JSON (HTTP " + response.status + ")."); }
   }
   if (!response.ok) {
     const detail = raw.error?.message;
-    throw new Error("GPT Image generation failed (HTTP " + response.status + ")" + (detail ? ": " + detail.slice(0, 240) : ". Check OpenAI API access, organization verification and billing."));
+    throw new Error("GPT Image generation failed (HTTP " + response.status + ")" + (detail ? ": " + detail.slice(0, 240) : ". Check OpenRouter model access, account credits and model availability."));
   }
   const imageData = raw.data?.[0]?.b64_json;
   if (!imageData || !/^[A-Za-z0-9+/]+={0,2}$/.test(imageData)) {
-    throw new Error("OpenAI returned no buffered image data. Check GPT Image model access.");
+    throw new Error("OpenRouter returned no buffered image data. Check the configured GPT Image model and account credits.");
   }
   return {
-    imageDataUrl: "data:image/png;base64," + imageData,
-    mimeType: "image/png",
+    imageDataUrl: "data:" + (raw.data?.[0]?.media_type || "image/png") + ";base64," + imageData,
+    mimeType: raw.data?.[0]?.media_type || "image/png",
     provider: "OPENAI_GPT_IMAGE",
     model: imageModel(),
     generatedAt: new Date().toISOString(),
+    costUsd: raw.usage?.cost,
     storage: "TEMPORARY_BROWSER_PREVIEW",
     disclaimer: "GPT Image artwork is a temporary preview. Save it to the business creative library after review; this response does not publish it."
   };
