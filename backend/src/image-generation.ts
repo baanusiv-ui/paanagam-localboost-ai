@@ -63,19 +63,19 @@ export async function generateOpenRouterCampaignImage(input: ImageDraftInput) {
   } = {};
   if (contentType.toLowerCase().includes("application/json")) {
     try { raw = JSON.parse(responseText) as typeof raw; }
-    catch { throw new Error("OpenAI returned malformed JSON (HTTP " + response.status + ")."); }
+    catch { throw new Error("OpenRouter returned malformed JSON (HTTP " + response.status + ")."); }
   }
   if (!response.ok) {
     const detail = raw.error?.message;
-    throw new Error("GPT Image generation failed (HTTP " + response.status + ")" + (detail ? ": " + detail.slice(0, 240) : ". Check OpenAI API access, organization verification and billing."));
+    throw new Error("GPT Image generation failed (HTTP " + response.status + ")" + (detail ? ": " + detail.slice(0, 240) : ". Check OpenRouter model access, account credits and model availability."));
   }
   const imageData = raw.data?.[0]?.b64_json;
   if (!imageData || !/^[A-Za-z0-9+/]+={0,2}$/.test(imageData)) {
-    throw new Error("OpenAI returned no buffered image data. Check GPT Image model access.");
+    throw new Error("OpenRouter returned no buffered image data. Check the configured GPT Image model and account credits.");
   }
   return {
     imageDataUrl: "data:" + (raw.data?.[0]?.media_type || "image/png") + ";base64," + imageData,
-    mimeType: "image/png",
+    mimeType: raw.data?.[0]?.media_type || "image/png",
     provider: "OPENAI_GPT_IMAGE",
     model: imageModel(),
     generatedAt: new Date().toISOString(),
