@@ -176,6 +176,10 @@
     if(!root||!engine||root.dataset.guidedStudio==="ready")return;
     const campaign=root.querySelector(".creative-layout");
     const image=document.getElementById("poyo-image-panel");
+    const videoForm=engine.querySelector("#poyo-draft-form")?.closest(".panel");
+    const videoJobs=document.getElementById("poyo-task-list")?.closest(".panel");
+    if(!campaign||!image||!videoForm||!videoJobs)return;
+    const distributionSettings=document.getElementById("content-distribution-settings");
     const imageCreate=document.createElement("div");imageCreate.className="panel";
     const imageHeader=image?.querySelector(".panel-heading");
     const imageForm=image?.querySelector("#poyo-image-form");
@@ -209,8 +213,7 @@
     imageJobsPanel.append(imageJobsHeader);if(imageJobsList)imageJobsPanel.append(imageJobsList);
     /* Keep the task cards and their Generate actions beside the image prompt. */
     imageCreate.append(imageJobsPanel);
-    const videoForm=engine.querySelector("#poyo-draft-form")?.closest(".panel");
-    const videoPrompt=videoForm?.querySelector("#poyo-prompt");
+    const videoPrompt=videoForm.querySelector("#poyo-prompt");
     const outputType=document.getElementById("creative-output-type");
     const routeCampaignOutput=(activate=false)=>{
       if(!campaignPreview)return;
@@ -450,12 +453,8 @@
       });
       videoPrompt.insertAdjacentElement("beforebegin",useBrief);
     }
-    const imageJobs=image?.querySelector("#poyo-image-task-list")?.closest(".panel-heading")?.parentElement;
-    const videoJobs=document.getElementById("poyo-task-list")?.closest(".panel");
     const integrations=document.getElementById("design-integrations-panel");
     const meta=root.querySelector(".meta-connection-panel");
-    if(!campaign||!image||!videoForm||!videoJobs)return;
-    root.dataset.guidedStudio="ready";
 
     const nav=document.createElement("div");
     nav.className="lb-studio-nav";
@@ -471,22 +470,43 @@
       ["settings","Connections",null]
     ];
     const paneMap={};
+    const activateTab=(id,moveFocus)=>{
+      const pane=paneMap[id];if(!pane)return;
+      Object.entries(paneMap).forEach(([key,p])=>{p.hidden=key!==id;});
+      nav.querySelectorAll('[role="tab"]').forEach(tab=>{
+        const active=tab.id==="lb-studio-tab-"+id;
+        tab.setAttribute("aria-selected",String(active));tab.tabIndex=active?0:-1;
+        if(active&&moveFocus)tab.focus();
+      });
+    };
     specs.forEach(([id,label,node],index)=>{
       const pane=document.createElement("section");
       pane.className="lb-studio-pane";
       pane.id="lb-studio-"+id;
-      pane.hidden=index!==1;
+      pane.setAttribute("role","tabpanel");
+      pane.setAttribute("aria-labelledby","lb-studio-tab-"+id);
+      pane.tabIndex=0;
+      pane.hidden=index!==0;
       if(node)pane.appendChild(node);
       paneMap[id]=pane;
       panes.appendChild(pane);
       const tab=document.createElement("button");
       tab.type="button";tab.className="lb-studio-tab";
+      tab.id="lb-studio-tab-"+id;
       tab.textContent=label;tab.setAttribute("role","tab");
       tab.setAttribute("aria-controls",pane.id);
-      tab.setAttribute("aria-selected",index===1?"true":"false");
-      tab.addEventListener("click",()=>{
-        Object.entries(paneMap).forEach(([key,p])=>p.hidden=key!==id);
-        nav.querySelectorAll("button").forEach(b=>b.setAttribute("aria-selected",b===tab?"true":"false"));
+      tab.setAttribute("aria-selected",index===0?"true":"false");
+      tab.tabIndex=index===0?0:-1;
+      tab.addEventListener("click",()=>activateTab(id,false));
+      tab.addEventListener("keydown",event=>{
+        const tabs=[...nav.querySelectorAll('[role="tab"]')], current=tabs.indexOf(tab);
+        let next=current;
+        if(event.key==="ArrowRight")next=(current+1)%tabs.length;
+        else if(event.key==="ArrowLeft")next=(current+tabs.length-1)%tabs.length;
+        else if(event.key==="Home")next=0;
+        else if(event.key==="End")next=tabs.length-1;
+        else return;
+        event.preventDefault();activateTab(specs[next][0],true);
       });
       nav.appendChild(tab);
     });
@@ -515,14 +535,19 @@
     settingsCopy.className="lb-studio-note";
     settingsCopy.textContent="Connect social accounts and optional design tools here. Publishing still requires separate approval.";
     settings.append(settingsCopy);
+    if(distributionSettings)settings.append(distributionSettings);
     if(integrations)settings.append(integrations);
     if(meta)settings.append(meta);
     settings.append(advanced);
 
-    /* Move the existing content into one simple navigation without cloning IDs. */
+    /* Remove the obsolete static navigation and empty wrappers only after all
+       live feature nodes have been moved into the new, single tab structure. */
+    root.querySelectorAll(".lb-studio-nav").forEach(existing=>existing.remove());
     const heading=root.querySelector(".section-heading");
     if(heading)heading.insertAdjacentElement("afterend",nav);
     nav.insertAdjacentElement("afterend",panes);
+    root.querySelectorAll('.lb-studio-pane[id^="studio-pane-"]').forEach(pane=>pane.remove());
+    root.dataset.guidedStudio="ready";
 
     /* The engine wrapper now only carries advanced provider information. */
     engine.querySelector(".panel-heading")?.remove();

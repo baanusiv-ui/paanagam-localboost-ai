@@ -6,26 +6,6 @@
   let drafts = [], current = null, ready = false, generatedImageDataUrl = "", canvaGeneratedImageUrl = "", canvaGenerationJobId = "";
   let pendingPoyoAssetSelection = null;
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  function initStudioTabs(){
-    const root=$("content-view");
-    if(!root || root.dataset.tabsReady==="true") return;
-    const tabs=[...root.querySelectorAll(".lb-studio-tab")];
-    const panes=[...root.querySelectorAll(".lb-studio-pane")];
-    if(!tabs.length || !panes.length) return;
-    const activate=id=>{
-      tabs.forEach(tab=>{const active=tab.getAttribute("aria-controls")===id;tab.setAttribute("aria-selected",String(active));tab.tabIndex=active?0:-1;});
-      panes.forEach(pane=>{pane.hidden=pane.id!==id;});
-    };
-    tabs.forEach((tab,index)=>{
-      tab.addEventListener("click",()=>activate(tab.getAttribute("aria-controls")));
-      tab.addEventListener("keydown",event=>{
-        if(event.key!=="ArrowRight"&&event.key!=="ArrowLeft") return;
-        event.preventDefault();const next=(index+(event.key==="ArrowRight"?1:tabs.length-1))%tabs.length;tabs[next].focus();tabs[next].click();
-      });
-    });
-    activate("studio-pane-create");root.dataset.tabsReady="true";
-  }
-  initStudioTabs();
   const businessId = () => sessionStorage.getItem(BUSINESS);
   async function api(path, options = {}) {
     const token = sessionStorage.getItem(TOKEN);
