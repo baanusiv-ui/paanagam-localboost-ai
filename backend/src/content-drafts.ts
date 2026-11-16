@@ -16,7 +16,38 @@ const contentSchema = z.object({
   creativeBrief: z.string().trim().min(1).max(1200)
 }).strict();
 
+function normalizeCreativeBrief(value: unknown): string {
+  if (typeof value === "string") return value.trim();
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("AI creative brief must be text or a structured brief object");
+  }
 
+  // Some model/provider combinations return the designer brief as a JSON
+  // object despite the requested string schema. Flatten it deterministically
+  // so downstream image-generation APIs always receive a string.
+  const parts: string[] = [];
+  const visit = (entry: unknown, path: string, depth: number): void => {
+    if (depth > 4 || parts.join(" ").length >= 1200) return;
+    if (typeof entry === "string" || typeof entry === "number" || typeof entry === "boolean") {
+      const text = String(entry).trim();
+      if (text) parts.push(path ? path + ": " + text : text);
+      return;
+    }
+    if (Array.isArray(entry)) {
+      entry.slice(0, 12).forEach((item, index) => visit(item, path ? path + " " + (index + 1) : String(index + 1), depth + 1));
+      return;
+    }
+    if (entry && typeof entry === "object") {
+      for (const [key, child] of Object.entries(entry as Record<string, unknown>).slice(0, 16)) {
+        visit(child, path ? path + " / " + key : key, depth + 1);
+      }
+    }
+  };
+  visit(value, "", 0);
+  const normalized = parts.join("; ").slice(0, 1200).trim();
+  if (!normalized) throw new Error("AI returned an empty structured creative brief");
+  return normalized;
+}
 
 export function buildContentDraftMessages(input: ContentDraftInput) {
   return [
@@ -29,7 +60,7 @@ export function buildContentDraftMessages(input: ContentDraftInput) {
         "Write catchy, high-quality social copy with a strong scroll-stopping opening hook, natural rhythm, vivid but truthful language, short readable lines and a clear low-pressure call to action. Avoid generic AI phrases, stiff translations, keyword stuffing and excessive emojis. For Tamil, use fluent conversational Tamil suited to local audiences, not literal English translation. For Tamil + English, write natural Tamil first and a concise English version second.",
         "Create a practical visual creative brief for a designer. Do not claim an image has been generated.",
         "The brief must match the requested format and must not add products, logos or brand facts that were not supplied.",
-        "Return JSON only with exactly two keys: postCopy and creativeBrief. No markdown fences.",
+        "Return JSON only with exactly two keys: postCopy and creativeBrief. Both values MUST be plain strings, never objects or arrays. No markdown fences.",
         "Language: " + input.language + ". Tone: " + input.tone + ". Format: " + input.format + "."
       ].join(" ")
     },
@@ -46,8 +77,12 @@ export function buildContentDraftMessages(input: ContentDraftInput) {
 }
 
 export function parseContentDraftOutput(raw: string) {
-  const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-  return contentSchema.parse(JSON.parse(cleaned));
+  const cleaned = raw.trim().replace(/^\x60\x60\x60(?:json)?\s*/i, "").replace(/\s*\x60\x60\x60$/, "");
+  const parsed = JSON.parse(cleaned) as Record<string, unknown>;
+  return contentSchema.parse({
+    ...parsed,
+    creativeBrief: normalizeCreativeBrief(parsed?.creativeBrief)
+  });
 }
 
 export async function generateLocalContentDraft(input: ContentDraftInput) {
