@@ -79,8 +79,7 @@
       await generateAndSaveGptImage();
       const saveButton=$("creative-save");
       if(!saveButton || saveButton.disabled) throw new Error("GPT artwork was created, but the campaign could not be queued for review.");
-      saveButton.click();
-      setMessage("GPT caption and matching image generated and saved. Eligible posts are being added to the Approval Centre. Nothing is approved or published.");
+      await saveCurrentCampaignDraft();
     } catch(err){setMessage("Generation failed: "+err.message,true);}
     finally{$("creative-generate").disabled=false;}
   });
@@ -251,7 +250,7 @@
     if(!generatedImageDataUrl)return;
     const a=document.createElement("a"); a.href=generatedImageDataUrl; a.download="paanagam-canva-campaign.jpg"; document.body.appendChild(a); a.click(); a.remove();
   });
-  $("creative-save")?.addEventListener("click",async()=>{
+  async function saveCurrentCampaignDraft() {
     if(!ready||!current)return;
     const assetUrl=$("creative-asset-url").value.trim();
     if(assetUrl&&!/^https:\/\//i.test(assetUrl)){setMessage("Image asset must use an https:// URL.",true);return;}
@@ -275,8 +274,7 @@
       drafts.unshift({...current}); current=null; $("creative-save").disabled=true; $("creative-preview").classList.add("hidden"); $("creative-form").reset(); render();
       setMessage("Draft saved. "+queued.length+" social post(s) added to Approval Centre; nothing has been approved or published."+(skipped.length?" "+skipped.join("; ")+".":""));
     }catch(err){setMessage("Save failed: "+err.message,true);}
-  });
-  $("creative-library")?.addEventListener("click",async e=>{
+  }c e=>{
     const copy=e.target.dataset.copy, approve=e.target.dataset.approve;
     if(copy!==undefined){const d=drafts[Number(copy)]; if(d) navigator.clipboard?.writeText(d.caption||"").then(()=>setMessage("Caption copied."),()=>setMessage("Copy unavailable in this browser.",true));}
     if(approve!==undefined){const d=drafts[Number(approve)];if(!d||d.status==="REVIEWED")return;const next={...d,status:"REVIEWED",reviewedAt:new Date().toISOString(),approvalNote:"Marked reviewed in the creative library; this is not publishing approval."};try{await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:d.id,payload:next,recordedAt:next.reviewedAt})});drafts[Number(approve)]=next;render();setMessage("Marked reviewed. Use the separate Approval Centre to approve and manually publish a social post.");}catch(err){setMessage("Approval save failed: "+err.message,true);}}
