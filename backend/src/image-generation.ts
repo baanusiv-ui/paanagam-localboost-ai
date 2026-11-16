@@ -20,7 +20,7 @@ export async function generateOpenRouterCampaignImage(input: ImageDraftInput) {
 
   const aspectRatios: Record<ImageDraftInput["format"], string> = {
     SQUARE: "1:1",
-    PORTRAIT: "4:5",
+    PORTRAIT: "3:4",
     STORY: "9:16"
   };
   const prompt = [
@@ -50,7 +50,6 @@ export async function generateOpenRouterCampaignImage(input: ImageDraftInput) {
       model: imageModel(),
       prompt,
       aspect_ratio: aspectRatios[input.format],
-      resolution: "1K",
       quality: "high",
       n: 1
     }),
