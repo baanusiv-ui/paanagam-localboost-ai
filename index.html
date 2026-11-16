@@ -300,15 +300,15 @@ We look forward to welcoming you!</textarea></label>
               <button class="primary-button" id="creative-generate" type="submit">Generate campaign copy</button>
             </form>
             <div id="creative-preview" class="creative-preview hidden">
-              <h4>Generated caption</h4><p id="creative-preview-copy"></p>
-              <h4>Image / designer brief</h4><p id="creative-preview-brief"></p>
-              <p class="footnote">Review the caption and image brief. Generate GPT Image only when you choose; this may use paid credits. The image is saved to your business library, but nothing enters Approval Centre until you click Save to Approval Centre.</p>
+              <h4>Step 1 · GPT caption</h4><p id="creative-preview-copy"></p>
+              <h4>Image prompt</h4><p id="creative-preview-brief"></p>
+              <p class="footnote">Step 2 · Generate with GPT Image when ready. This may use paid credits. Step 3 · inspect the actual image and explicitly authorize or reject it. No post is created before authorization.</p>
               <button class="primary-button" id="creative-image-gemini" type="button" disabled>Generate GPT Image (uses credits)</button>
+              <h4>Step 3 · Image authorization preview</h4>
               <img id="creative-gemini-preview" class="creative-card-image hidden" alt="Generated campaign artwork preview">
-              <button class="secondary-button" id="creative-image-download" type="button" disabled>Download artwork</button>
-              <button class="secondary-button" id="creative-image-save" type="button" disabled hidden>Save artwork to business library</button>
-              <label for="creative-asset-url" class="creative-form">Finished image URL (optional)<input id="creative-asset-url" type="url" placeholder="https://…"></label>
-              <button class="secondary-button" id="creative-save" type="button" disabled>Save to Approval Centre</button>
+              <div class="form-actions"><button class="primary-button" id="creative-image-authorize" type="button" disabled>Authorize this image</button><button class="secondary-button" id="creative-image-reject" type="button" disabled>Reject image</button><button class="secondary-button" id="creative-image-download" type="button" disabled>Download artwork</button></div>
+              <p class="footnote">Step 4 · Send the authorized caption and image to Approval Centre. The final Publish now action remains separate and requires your confirmation.</p>
+              <button class="secondary-button" id="creative-save" type="button" disabled>Send authorized post to Approval Centre</button>
             </div>
             <p id="creative-message" class="creative-message" role="status">Sign in and select a business to load the creative library.</p>
             <p class="footnote">Image generation may incur API charges. Save finished artwork to the business library before adding it to an Instagram post. Publishing is never automatic.</p>
@@ -319,6 +319,7 @@ We look forward to welcoming you!</textarea></label>
           </div>
         </div>
 
+        <details class="panel" id="content-advanced-tools" style="margin-top:16px"><summary><strong>Advanced tools · PoYo video, Nano Banana and Canva</strong><span class="footnote">Optional tools retained outside the main GPT posting flow</span></summary>
         <div class="panel" id="poyo-creative-panel" style="margin-top:16px">
           <div class="panel-heading"><div><h3>PoYo WAN 2.2 Fast Video Engine</h3><p>Create vertical campaign clips from a text brief or animate an existing image inside LocalBoost.</p></div><span class="tag pending-tag">Owner approval required</span></div>
           <p id="poyo-generation-state" class="footnote">Checking PoYo configuration…</p>
@@ -368,6 +369,7 @@ We look forward to welcoming you!</textarea></label>
             <button type="button" class="secondary-button" id="canva-design-more" hidden>Load more</button>
           </section>
         </div>
+        </details>
         <div class="panel meta-connection-panel">
           <div class="panel-heading"><div><h3>Facebook &amp; Instagram connection</h3><p>Connect a Facebook Page and its linked Instagram professional account.</p></div><span class="tag pending-tag" id="meta-connection-badge">Not connected</span></div>
           <p id="meta-connection-status" class="creative-message" role="status">Meta connection status will appear here after sign-in.</p>
