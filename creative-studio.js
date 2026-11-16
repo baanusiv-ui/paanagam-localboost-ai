@@ -73,12 +73,12 @@
       $("creative-save").disabled=true;
       setMessage("Campaign caption generated. Preparing the matching image prompt for your review…");
       window.dispatchEvent(new CustomEvent("localboost:campaign-copy-ready",{detail:{topic:current.topic,offer:current.offer,platform:current.platform,format:current.format,language:current.language,tone,caption:current.caption,headline:current.headline,designerBrief:current.designerBrief}}));
-      // Fully automate the default campaign path: GPT caption -> GPT Image -> saved campaign draft -> Approval Centre.
-      // The final save queues eligible channels for owner review only; it never approves or publishes.
-      setMessage("GPT caption ready. Automatically generating matching GPT Image artwork…");
-      await generateAndSaveGptImage();
-      const saved = await saveCurrentCampaignDraft();
-      if(!saved) throw new Error("Caption and artwork were generated, but the campaign could not be fully saved. Check the error above; nothing was approved or published.");
+      // Persist the caption first. Image generation is deliberately owner-triggered because it may incur provider charges.
+      current.updatedAt=new Date().toISOString();
+      await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:current.id,payload:current,recordedAt:current.updatedAt})});
+      const imageButton=$("creative-image-gemini");
+      if(imageButton){imageButton.disabled=false;imageButton.textContent="Generate GPT Image (uses credits)";}
+      setMessage("Caption saved as a draft. Review the brief, then click Generate GPT Image when you are ready. No image credits have been used and nothing has been queued or published.");
     } catch(err){setMessage("Generation failed: "+err.message,true);const imageButton=$("creative-image-gemini");if(imageButton)imageButton.disabled=false;}
     finally{$("creative-generate").disabled=false;}
   });
