@@ -331,16 +331,16 @@ app.post("/v1/businesses/:businessId/local-seo/keywords", {
 
 
 app.post("/v1/businesses/:businessId/creative-assets", {
-  preHandler: requireUser, bodyLimit: 6 * 1024 * 1024,
+  preHandler: requireUser, bodyLimit: 12 * 1024 * 1024,
   config: { rateLimit: { max: 12, timeWindow: "1 minute" } }
 }, async (request, reply) => {
   const params = z.object({ businessId: z.string().min(1) }).safeParse(request.params);
-  const body = z.object({ fileName: z.string().trim().min(1).max(160), mimeType: z.enum(["image/png", "image/jpeg", "image/webp"]), dataBase64: z.string().min(16).max(5_600_000).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/), altText: z.string().trim().max(240).optional() }).safeParse(request.body);
+  const body = z.object({ fileName: z.string().trim().min(1).max(160), mimeType: z.enum(["image/png", "image/jpeg", "image/webp"]), dataBase64: z.string().min(16).max(11_200_000).regex(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/), altText: z.string().trim().max(240).optional() }).safeParse(request.body);
   if (!params.success || !body.success) return reply.code(400).send({ error: "Provide a PNG, JPEG or WebP image and a valid file name." });
   const business = await ownedBusiness(request.userId!, params.data.businessId);
   if (!business) return reply.code(404).send({ error: "Business not found" });
   const bytes = Buffer.from(body.data.dataBase64, "base64");
-  if (!bytes.length || bytes.length > 4 * 1024 * 1024 || bytes.toString("base64") !== body.data.dataBase64) return reply.code(413).send({ error: "Image must be a valid base64 file no larger than 4 MB." });
+  if (!bytes.length || bytes.length > 8 * 1024 * 1024 || bytes.toString("base64") !== body.data.dataBase64) return reply.code(413).send({ error: "Image must be a valid base64 file no larger than 8 MB." });
   const png = body.data.mimeType === "image/png" && bytes.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
   const jpeg = body.data.mimeType === "image/jpeg" && bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255;
   const webp = body.data.mimeType === "image/webp" && bytes.length >= 12 && bytes.toString("ascii", 0, 4) === "RIFF" && bytes.toString("ascii", 8, 12) === "WEBP";
