@@ -184,6 +184,10 @@
     const button=$("creative-image-gemini");
     const download=$("creative-image-download");
     if(button) button.disabled=true;
+    current.imageAuthorized=false; current.imageRejected=false; current.assetId=""; current.assetName=""; current.assetUrl="";
+    $("creative-save").disabled=true;
+    $("creative-image-authorize").disabled=true;$("creative-image-reject").disabled=true;
+    $("creative-image-authorize").textContent="Authorize this image";
     if(preview){preview.removeAttribute("src");preview.classList.add("hidden");delete preview.dataset.downloadUrl;}
     if(download) download.disabled=true;
     setMessage("Generating matching GPT Image artwork. This request may use credits…");
@@ -319,8 +323,9 @@
     $("creative-save").disabled=true;
     try{
       await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:current.id,payload:current,recordedAt:current.updatedAt})});
-      const channels = current.format === "story" ? [] : (current.platform === "Instagram + Facebook" ? ["FACEBOOK","INSTAGRAM"] : current.platform === "Instagram" ? ["INSTAGRAM"] : current.platform === "Facebook" ? ["FACEBOOK"] : []);
-      const queued = [], failed = [], skipped = current.format === "story" ? ["Story/Reel publishing is not supported by the current Meta image endpoints; this remains a creative-library draft"] : [];
+      const channels = current.platform === "Instagram + Facebook" ? ["FACEBOOK","INSTAGRAM"] : current.platform === "Instagram" ? ["INSTAGRAM"] : current.platform === "Facebook" ? ["FACEBOOK"] : [];
+      if(!channels.length){setMessage("Choose Instagram, Facebook, or both before sending this post to Approval Centre.",true);$("creative-save").disabled=false;return false;}
+      const queued = [], failed = [], skipped = [];
       const eligible = channels.filter(channel => {
         if (channel === "INSTAGRAM" && !current.assetId) { skipped.push("Instagram needs a saved JPEG/PNG image"); return false; }
         return true;
