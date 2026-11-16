@@ -257,6 +257,7 @@
     if(assetUrl&&!/^https:\/\//i.test(assetUrl)){setMessage("Image asset must use an https:// URL.",true);return;}
     if(assetUrl&&!current.assetId){setMessage("This URL is only a reference. Import the image into the business creative library before queueing it for publishing.",true);return;}
     current.assetUrl=assetUrl; current.updatedAt=new Date().toISOString();
+    $("creative-save").disabled=true;
     try{
       await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:current.id,payload:current,recordedAt:current.updatedAt})});
       const channels = current.format === "story" ? [] : (current.platform === "Instagram + Facebook" ? ["FACEBOOK","INSTAGRAM"] : current.platform === "Instagram" ? ["INSTAGRAM"] : current.platform === "Facebook" ? ["FACEBOOK"] : []);
@@ -269,12 +270,13 @@
       outcomes.forEach((outcome,index)=>{ if(outcome.status==="fulfilled")queued.push(eligible[index]); else failed.push(eligible[index]+": "+(outcome.reason?.message||"queue failed")); });
       if(failed.length){
         drafts.unshift({...current}); render();
+        $("creative-save").disabled=false;
         setMessage("Campaign draft saved. Queued: "+(queued.join(", ")||"none")+". Failed channels: "+failed.join("; ")+". Retry by saving again after correcting the issue.",true);
         return;
       }
       drafts.unshift({...current}); current=null; $("creative-save").disabled=true; $("creative-preview").classList.add("hidden"); $("creative-form").reset(); render();
       setMessage("Draft saved. "+queued.length+" social post(s) added to Approval Centre; nothing has been approved or published."+(skipped.length?" "+skipped.join("; ")+".":""));
-    }catch(err){setMessage("Save failed: "+err.message,true);}
+    }catch(err){$("creative-save").disabled=false;setMessage("Save failed: "+err.message,true);}
   }
   $("creative-save")?.addEventListener("click", saveCurrentCampaignDraft);
   $("creative-library")?.addEventListener("click",async e=>{
