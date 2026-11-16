@@ -56,7 +56,7 @@
     const map={ta:"Tamil",en:"English",both:"Tamil + English"};
     const formatMap={feed:"SQUARE",portrait:"PORTRAIT",story:"STORY"};
     const toneMap={"warm":"WARM","traditional":"TRADITIONAL","offer":"OFFER_LED"};
-    $("creative-generate").disabled=true; setMessage("Generating copy with the configured Local AI service…");
+    $("creative-generate").disabled=true; setMessage("Generating the campaign caption with GPT via OpenRouter…");
     try {
       const result=await api(base()+"/google-content/draft",{method:"POST",body:JSON.stringify({topic,offer,language:map[language],format:formatMap[format],tone:toneMap[tone]})});
       generatedImageDataUrl="";
@@ -77,9 +77,8 @@
       // The final save queues eligible channels for owner review only; it never approves or publishes.
       setMessage("GPT caption ready. Automatically generating matching GPT Image artwork…");
       await generateAndSaveGptImage();
-      const saveButton=$("creative-save");
-      if(!saveButton || saveButton.disabled) throw new Error("GPT artwork was created, but the campaign could not be queued for review.");
-      await saveCurrentCampaignDraft();
+      const saved = await saveCurrentCampaignDraft();
+      if(!saved) throw new Error("Caption and artwork were generated, but the campaign could not be fully saved. Check the error above; nothing was approved or published.");
     } catch(err){setMessage("Generation failed: "+err.message,true);const imageButton=$("creative-image-gemini");if(imageButton)imageButton.disabled=false;}
     finally{$("creative-generate").disabled=false;}
   });
@@ -92,7 +91,10 @@
     const image = new Image(); image.crossOrigin = "anonymous"; image.src = sourceUrl;
     await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = () => reject(new Error("Generated image could not be opened for layout.")); });
     const canvas = document.createElement("canvas");
-    canvas.width = image.naturalWidth || 1024; canvas.height = image.naturalHeight || 1024;
+    const sourceWidth = image.naturalWidth || 1024, sourceHeight = image.naturalHeight || 1024;
+    const downscale = Math.min(1, 1600 / Math.max(sourceWidth, sourceHeight));
+    canvas.width = Math.max(1, Math.round(sourceWidth * downscale));
+    canvas.height = Math.max(1, Math.round(sourceHeight * downscale));
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Your browser cannot compose the campaign artwork.");
     const scale = canvas.width / 1024, margin = 58 * scale;
@@ -252,10 +254,10 @@
     const a=document.createElement("a"); a.href=generatedImageDataUrl; a.download="paanagam-canva-campaign.jpg"; document.body.appendChild(a); a.click(); a.remove();
   });
   async function saveCurrentCampaignDraft() {
-    if(!ready||!current)return;
+    if(!ready||!current)return false;
     const assetUrl=$("creative-asset-url").value.trim();
-    if(assetUrl&&!/^https:\/\//i.test(assetUrl)){setMessage("Image asset must use an https:// URL.",true);return;}
-    if(assetUrl&&!current.assetId){setMessage("This URL is only a reference. Import the image into the business creative library before queueing it for publishing.",true);return;}
+    if(assetUrl&&!/^https:\/\//i.test(assetUrl)){setMessage("Image asset must use an https:// URL.",true);return false;}
+    if(assetUrl&&!current.assetId){setMessage("This URL is only a reference. Import the image into the business creative library before queueing it for publishing.",true);return false;}
     current.assetUrl=assetUrl; current.updatedAt=new Date().toISOString();
     $("creative-save").disabled=true;
     try{
@@ -271,12 +273,13 @@
       if(failed.length){
         drafts.unshift({...current}); render();
         $("creative-save").disabled=false;
-        setMessage("Campaign draft saved. Queued: "+(queued.join(", ")||"none")+". Failed channels: "+failed.join("; ")+". Retry by saving again after correcting the issue.",true);
-        return;
+        setMessage("Campaign draft saved. Queued: "+(queued.join(", ")||"none")+". Failed channels: "+failed.join("; ")+". Review the Approval Centre before retrying to avoid duplicate posts.",true);
+        return false;
       }
       drafts.unshift({...current}); current=null; $("creative-save").disabled=true; $("creative-preview").classList.add("hidden"); $("creative-form").reset(); render();
       setMessage("Draft saved. "+queued.length+" social post(s) added to Approval Centre; nothing has been approved or published."+(skipped.length?" "+skipped.join("; ")+".":""));
-    }catch(err){$("creative-save").disabled=false;setMessage("Save failed: "+err.message,true);}
+      return true;
+    }catch(err){$("creative-save").disabled=false;setMessage("Save failed: "+err.message,true);return false;}
   }
   $("creative-save")?.addEventListener("click", saveCurrentCampaignDraft);
   $("creative-library")?.addEventListener("click",async e=>{
