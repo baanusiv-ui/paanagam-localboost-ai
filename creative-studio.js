@@ -127,7 +127,12 @@
       ctx.fillStyle = "#f2c66d"; ctx.font = "600 " + (23 * scale) + "px Arial, sans-serif";
       ctx.fillText(current.offer.slice(0, 72), margin, canvas.height - margin + 20 * scale, canvas.width - margin * 2);
     }
-    return canvas.toDataURL("image/jpeg", .94);
+    // Keep base64 JSON comfortably below the API's 8 MB decoded-image limit.
+    for (const quality of [.90, .84, .78, .72, .66]) {
+      const dataUrl = canvas.toDataURL("image/jpeg", quality);
+      if (dataUrl.length - dataUrl.indexOf(",") - 1 <= 9_300_000) return dataUrl;
+    }
+    throw new Error("Artwork is too large to save safely. Regenerate the image.");
   }
   $("creative-image-generate")?.addEventListener("click",async()=>{
     if(!ready||!current){setMessage("Generate campaign copy first, then create its artwork.",true);return;}
