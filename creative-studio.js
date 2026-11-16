@@ -77,9 +77,8 @@
       // The final save queues eligible channels for owner review only; it never approves or publishes.
       setMessage("GPT caption ready. Automatically generating matching GPT Image artwork…");
       await generateAndSaveGptImage();
-      const saveButton=$("creative-save");
-      if(!saveButton || saveButton.disabled) throw new Error("GPT artwork was created, but the campaign could not be queued for review.");
-      await saveCurrentCampaignDraft();
+      const saved = await saveCurrentCampaignDraft();
+      if(!saved) throw new Error("Caption and artwork were generated, but the campaign could not be fully saved. Check the error above; nothing was approved or published.");
     } catch(err){setMessage("Generation failed: "+err.message,true);const imageButton=$("creative-image-gemini");if(imageButton)imageButton.disabled=false;}
     finally{$("creative-generate").disabled=false;}
   });
@@ -257,7 +256,7 @@
   async function saveCurrentCampaignDraft() {
     if(!ready||!current)return false;
     const assetUrl=$("creative-asset-url").value.trim();
-    if(assetUrl&&!/^https:\/\//i.test(assetUrl)){setMessage("Image asset must use an https:// URL.",true);return;}
+    if(assetUrl&&!/^https:\/\//i.test(assetUrl)){setMessage("Image asset must use an https:// URL.",true);return false;}
     if(assetUrl&&!current.assetId){setMessage("This URL is only a reference. Import the image into the business creative library before queueing it for publishing.",true);return false;}
     current.assetUrl=assetUrl; current.updatedAt=new Date().toISOString();
     $("creative-save").disabled=true;
