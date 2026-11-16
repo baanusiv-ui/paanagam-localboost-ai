@@ -80,7 +80,7 @@
       const saveButton=$("creative-save");
       if(!saveButton || saveButton.disabled) throw new Error("GPT artwork was created, but the campaign could not be queued for review.");
       await saveCurrentCampaignDraft();
-    } catch(err){setMessage("Generation failed: "+err.message,true);}
+    } catch(err){setMessage("Generation failed: "+err.message,true);const imageButton=$("creative-image-gemini");if(imageButton)imageButton.disabled=false;}
     finally{$("creative-generate").disabled=false;}
   });
   window.addEventListener("localboost:campaign-image-prompt-updated",event=>{
@@ -274,7 +274,8 @@
       drafts.unshift({...current}); current=null; $("creative-save").disabled=true; $("creative-preview").classList.add("hidden"); $("creative-form").reset(); render();
       setMessage("Draft saved. "+queued.length+" social post(s) added to Approval Centre; nothing has been approved or published."+(skipped.length?" "+skipped.join("; ")+".":""));
     }catch(err){setMessage("Save failed: "+err.message,true);}
-  }c e=>{
+  }
+  $("creative-library")?.addEventListener("click",async e=>{
     const copy=e.target.dataset.copy, approve=e.target.dataset.approve;
     if(copy!==undefined){const d=drafts[Number(copy)]; if(d) navigator.clipboard?.writeText(d.caption||"").then(()=>setMessage("Caption copied."),()=>setMessage("Copy unavailable in this browser.",true));}
     if(approve!==undefined){const d=drafts[Number(approve)];if(!d||d.status==="REVIEWED")return;const next={...d,status:"REVIEWED",reviewedAt:new Date().toISOString(),approvalNote:"Marked reviewed in the creative library; this is not publishing approval."};try{await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:d.id,payload:next,recordedAt:next.reviewedAt})});drafts[Number(approve)]=next;render();setMessage("Marked reviewed. Use the separate Approval Centre to approve and manually publish a social post.");}catch(err){setMessage("Approval save failed: "+err.message,true);}}
