@@ -38,6 +38,7 @@ const schema = z.object({
   OPENROUTER_API_KEY: z.string().optional().default(""),
   OPENROUTER_TEXT_MODEL: z.string().trim().min(1).default("openai/gpt-4.1"),
   OPENROUTER_IMAGE_MODEL: z.string().trim().min(1).default("black-forest-labs/flux-3-image"),
+  OPENROUTER_GPT_IMAGE_MODEL: z.string().trim().min(1).default("openai/gpt-image-2.6-flare"),
   OPENROUTER_SITE_URL: z.string().url().optional().default("https://paanagam-localboost-dashboard.onrender.com"),
   OPENAI_API_KEY: z.string().optional().default(""),
   OPENAI_TEXT_MODEL: z.string().trim().min(1).default("gpt-4o-mini"),
