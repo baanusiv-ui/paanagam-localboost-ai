@@ -56,7 +56,7 @@
     const map={ta:"Tamil",en:"English",both:"Tamil + English"};
     const formatMap={feed:"SQUARE",portrait:"PORTRAIT",story:"STORY"};
     const toneMap={"warm":"WARM","traditional":"TRADITIONAL","offer":"OFFER_LED"};
-    $("creative-generate").disabled=true; setMessage("Generating copy with the configured Local AI service…");
+    $("creative-generate").disabled=true; setMessage("Generating the campaign caption with GPT via OpenRouter…");
     try {
       const result=await api(base()+"/google-content/draft",{method:"POST",body:JSON.stringify({topic,offer,language:map[language],format:formatMap[format],tone:toneMap[tone]})});
       generatedImageDataUrl="";
@@ -92,7 +92,10 @@
     const image = new Image(); image.crossOrigin = "anonymous"; image.src = sourceUrl;
     await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = () => reject(new Error("Generated image could not be opened for layout.")); });
     const canvas = document.createElement("canvas");
-    canvas.width = image.naturalWidth || 1024; canvas.height = image.naturalHeight || 1024;
+    const sourceWidth = image.naturalWidth || 1024, sourceHeight = image.naturalHeight || 1024;
+    const downscale = Math.min(1, 1600 / Math.max(sourceWidth, sourceHeight));
+    canvas.width = Math.max(1, Math.round(sourceWidth * downscale));
+    canvas.height = Math.max(1, Math.round(sourceHeight * downscale));
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Your browser cannot compose the campaign artwork.");
     const scale = canvas.width / 1024, margin = 58 * scale;
