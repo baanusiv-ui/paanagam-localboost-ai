@@ -252,47 +252,12 @@ We look forward to welcoming you!</textarea></label>
       <section class="view-panel hidden" id="content-view">
         <div class="section-heading"><div><h2>Content studio</h2><p>One simple flow: write caption → generate image → inspect → authorize → send for approval.</p></div><span class="tag pending-tag">Nothing publishes without approval</span></div>
         <div class="content-workflow-steps" aria-label="Content workflow"><div><b>1</b><span><strong>Caption</strong><small>GPT writes your post</small></span></div><div><b>2</b><span><strong>Image</strong><small>GPT creates artwork</small></span></div><div><b>3</b><span><strong>Authorize</strong><small>You inspect and approve</small></span></div><div><b>4</b><span><strong>Publish review</strong><small>Approval Centre</small></span></div></div>
-        <details class="panel content-settings" id="content-distribution-settings" style="margin-bottom:16px"><summary><strong>Channel settings</strong><span class="footnote">Optional · configure where approved posts can go</span></summary>
-        <section class="panel" id="content-distribution-panel" style="margin:14px 0 0">
-          <div class="panel-heading"><div><h3>Content distribution planner · Paanagam</h3><p>One campaign strategy across selected channels. Strategy is saved per business workspace.</p></div><span class="tag confirmed">Approval before publishing</span></div>
-          <div class="content-grid">
-            <article class="metric-card">
-              <strong>Distribution channels</strong>
-              <div class="creative-form" style="margin-top:10px">
-                <label><input type="checkbox" id="distribution-INSTAGRAM" checked> Instagram</label>
-                <label><input type="checkbox" id="distribution-FACEBOOK" checked> Facebook</label>
-                <label><input type="checkbox" id="distribution-WHATSAPP" checked> WhatsApp</label>
-                <label><input type="checkbox" id="distribution-GOOGLE_BUSINESS" checked> Google Business</label>
-                <label><input type="checkbox" id="distribution-YOUTUBE_SHORTS" checked> YouTube Shorts</label>
-              </div>
-            </article>
-            <article class="metric-card">
-              <strong>Campaign objectives</strong>
-              <p><span class="tag confirmed">Brand awareness</span></p>
-              <p><span class="tag confirmed">Engagement & followers</span></p>
-              <p><span class="tag confirmed">Local customer acquisition</span></p>
-              <label for="distribution-radius">Primary local reach radius</label>
-              <select id="distribution-radius"><option value="10">10 km</option><option value="20">20 km</option><option value="30" selected>30 km</option><option value="50">50 km</option></select>
-            </article>
-            <article class="metric-card">
-              <strong>Content language</strong>
-              <p class="tamil">தமிழ் முதலில் · English next</p>
-              <small>Tamil-first captions and voice hooks, followed by English adaptation.</small>
-            </article>
-            <article class="metric-card">
-              <strong>Publishing control</strong>
-              <p><span class="tag confirmed">Owner approval required</span></p>
-              <small>Every platform version must be reviewed. Saving a strategy or draft never publishes content.</small>
-            </article>
-          </div>
-          <h4 style="margin:16px 0 8px">Channel readiness</h4>
-          <div id="distribution-readiness" class="content-grid"></div>
-          <div class="form-actions" style="margin-top:14px"><button class="primary-button" id="distribution-save" type="button">Save Paanagam distribution strategy</button></div>
-          <p class="form-message" id="distribution-status" role="status">Loading distribution strategy…</p>
-          <p class="footnote">Important: WhatsApp and YouTube Shorts are selected in the strategy but are not yet connected for direct publishing. Google Business continues through its existing owner-approved workflow. Instagram and Facebook use the existing Meta approval queue. No unsupported channel is silently marked as published.</p>
-        </section>
-        </details>
-        <div class="creative-layout">
+        <nav class="lb-studio-nav" role="tablist" aria-label="Content Studio sections">
+          <button class="lb-studio-tab" id="studio-tab-create" type="button" role="tab" aria-selected="true" aria-controls="studio-pane-create">Create post</button>
+          <button class="lb-studio-tab" id="studio-tab-advanced" type="button" role="tab" aria-selected="false" aria-controls="studio-pane-advanced">Advanced tools</button>
+          <button class="lb-studio-tab" id="studio-tab-settings" type="button" role="tab" aria-selected="false" aria-controls="studio-pane-settings">Channel settings</button>
+        </nav>
+        <section class="lb-studio-pane" id="studio-pane-create" role="tabpanel" aria-labelledby="studio-tab-create"><div class="creative-layout">
           <div class="panel">
             <form id="creative-form" class="creative-form">
               <label for="creative-topic">Campaign topic / product<input id="creative-topic" required maxlength="300" placeholder="e.g. Paanagam filter coffee"></label>
@@ -321,9 +286,8 @@ We look forward to welcoming you!</textarea></label>
             <div class="panel-heading"><div><h3>Business creative library</h3><p>Drafts and image files are stored per selected business.</p></div><span class="tag confirmed" id="creative-count">0</span></div>
             <div id="creative-library" class="creative-library"><p class="empty-copy">Loading saved creative drafts…</p></div>
           </div>
-        </div>
-
-        <details class="panel" id="content-advanced-tools" style="margin-top:16px"><summary><strong>Advanced tools · PoYo video, Nano Banana and Canva</strong><span class="footnote">Optional tools retained outside the main GPT posting flow</span></summary>
+        </div></section>
+        <section class="lb-studio-pane" id="studio-pane-advanced" role="tabpanel" aria-labelledby="studio-tab-advanced" hidden><details class="panel" id="content-advanced-tools" style="margin-top:16px"><summary><strong>Advanced tools · PoYo video, Nano Banana and Canva</strong><span class="footnote">Optional tools retained outside the main GPT posting flow</span></summary>
         <div class="panel" id="poyo-creative-panel" style="margin-top:16px">
           <div class="panel-heading"><div><h3>PoYo WAN 2.2 Fast Video Engine</h3><p>Create vertical campaign clips from a text brief or animate an existing image inside LocalBoost.</p></div><span class="tag pending-tag">Owner approval required</span></div>
           <p id="poyo-generation-state" class="footnote">Checking PoYo configuration…</p>
@@ -373,8 +337,47 @@ We look forward to welcoming you!</textarea></label>
             <button type="button" class="secondary-button" id="canva-design-more" hidden>Load more</button>
           </section>
         </div>
-        </details>
-        <details class="panel content-settings" id="meta-connection-settings" style="margin-top:16px"><summary><strong>Instagram & Facebook connection</strong><span class="footnote">Optional setup · required before publishing</span></summary><div class="panel meta-connection-panel" style="margin-top:14px">
+        </details></section>
+        <section class="lb-studio-pane" id="studio-pane-settings" role="tabpanel" aria-labelledby="studio-tab-settings" hidden><details class="panel content-settings" id="content-distribution-settings" style="margin-bottom:16px"><summary><strong>Channel settings</strong><span class="footnote">Optional · configure where approved posts can go</span></summary>
+        <section class="panel" id="content-distribution-panel" style="margin:14px 0 0">
+          <div class="panel-heading"><div><h3>Content distribution planner · Paanagam</h3><p>One campaign strategy across selected channels. Strategy is saved per business workspace.</p></div><span class="tag confirmed">Approval before publishing</span></div>
+          <div class="content-grid">
+            <article class="metric-card">
+              <strong>Distribution channels</strong>
+              <div class="creative-form" style="margin-top:10px">
+                <label><input type="checkbox" id="distribution-INSTAGRAM" checked> Instagram</label>
+                <label><input type="checkbox" id="distribution-FACEBOOK" checked> Facebook</label>
+                <label><input type="checkbox" id="distribution-WHATSAPP" checked> WhatsApp</label>
+                <label><input type="checkbox" id="distribution-GOOGLE_BUSINESS" checked> Google Business</label>
+                <label><input type="checkbox" id="distribution-YOUTUBE_SHORTS" checked> YouTube Shorts</label>
+              </div>
+            </article>
+            <article class="metric-card">
+              <strong>Campaign objectives</strong>
+              <p><span class="tag confirmed">Brand awareness</span></p>
+              <p><span class="tag confirmed">Engagement & followers</span></p>
+              <p><span class="tag confirmed">Local customer acquisition</span></p>
+              <label for="distribution-radius">Primary local reach radius</label>
+              <select id="distribution-radius"><option value="10">10 km</option><option value="20">20 km</option><option value="30" selected>30 km</option><option value="50">50 km</option></select>
+            </article>
+            <article class="metric-card">
+              <strong>Content language</strong>
+              <p class="tamil">தமிழ் முதலில் · English next</p>
+              <small>Tamil-first captions and voice hooks, followed by English adaptation.</small>
+            </article>
+            <article class="metric-card">
+              <strong>Publishing control</strong>
+              <p><span class="tag confirmed">Owner approval required</span></p>
+              <small>Every platform version must be reviewed. Saving a strategy or draft never publishes content.</small>
+            </article>
+          </div>
+          <h4 style="margin:16px 0 8px">Channel readiness</h4>
+          <div id="distribution-readiness" class="content-grid"></div>
+          <div class="form-actions" style="margin-top:14px"><button class="primary-button" id="distribution-save" type="button">Save Paanagam distribution strategy</button></div>
+          <p class="form-message" id="distribution-status" role="status">Loading distribution strategy…</p>
+          <p class="footnote">Important: WhatsApp and YouTube Shorts are selected in the strategy but are not yet connected for direct publishing. Google Business continues through its existing owner-approved workflow. Instagram and Facebook use the existing Meta approval queue. No unsupported channel is silently marked as published.</p>
+        </section>
+        </details><details class="panel content-settings" id="meta-connection-settings" style="margin-top:16px"><summary><strong>Instagram & Facebook connection</strong><span class="footnote">Optional setup · required before publishing</span></summary><div class="panel meta-connection-panel" style="margin-top:14px">
           <div class="panel-heading"><div><h3>Facebook &amp; Instagram connection</h3><p>Connect a Facebook Page and its linked Instagram professional account.</p></div><span class="tag pending-tag" id="meta-connection-badge">Not connected</span></div>
           <p id="meta-connection-status" class="creative-message" role="status">Meta connection status will appear here after sign-in.</p>
           <div class="meta-connection-actions">
@@ -386,8 +389,7 @@ We look forward to welcoming you!</textarea></label>
             <button class="secondary-button" id="meta-select-page" type="button" disabled>Use this Page</button>
           </div>
           <p class="footnote">Requires a Meta developer app with Facebook Login, Pages permissions and Instagram publishing permission. Only the selected business workspace can use its connection. Disconnecting removes stored tokens.</p>
-        </div></details>
-      </section>
+        </div></details></section>
       <section class="view-panel hidden" id="approvals-view"><div class="section-heading"><div><h2>Approval centre</h2><p>Approve the exact content first. Publishing is a separate manual action and is never scheduled automatically.</p></div><span class="tag pending-tag">Owner action required</span></div><div class="panel"><p id="approval-message" class="creative-message" role="status">Approval queue is loaded for the selected business.</p><div id="approval-list"><p class="empty-copy">No social posts waiting for review.</p></div><p class="footnote">Approve does not publish. Use “Publish now” only after reviewing the final caption and image. Publishing calls Meta immediately.</p></div></section>
 
 

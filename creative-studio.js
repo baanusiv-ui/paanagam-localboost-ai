@@ -6,6 +6,26 @@
   let drafts = [], current = null, ready = false, generatedImageDataUrl = "", canvaGeneratedImageUrl = "", canvaGenerationJobId = "";
   let pendingPoyoAssetSelection = null;
   const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  function initStudioTabs(){
+    const root=$("content-view");
+    if(!root || root.dataset.tabsReady==="true") return;
+    const tabs=[...root.querySelectorAll(".lb-studio-tab")];
+    const panes=[...root.querySelectorAll(".lb-studio-pane")];
+    if(!tabs.length || !panes.length) return;
+    const activate=id=>{
+      tabs.forEach(tab=>{const active=tab.getAttribute("aria-controls")===id;tab.setAttribute("aria-selected",String(active));tab.tabIndex=active?0:-1;});
+      panes.forEach(pane=>{pane.hidden=pane.id!==id;});
+    };
+    tabs.forEach((tab,index)=>{
+      tab.addEventListener("click",()=>activate(tab.getAttribute("aria-controls")));
+      tab.addEventListener("keydown",event=>{
+        if(event.key!=="ArrowRight"&&event.key!=="ArrowLeft") return;
+        event.preventDefault();const next=(index+(event.key==="ArrowRight"?1:tabs.length-1))%tabs.length;tabs[next].focus();tabs[next].click();
+      });
+    });
+    activate("studio-pane-create");root.dataset.tabsReady="true";
+  }
+  initStudioTabs();
   const businessId = () => sessionStorage.getItem(BUSINESS);
   async function api(path, options = {}) {
     const token = sessionStorage.getItem(TOKEN);
@@ -538,7 +558,7 @@
       $("creative-preview-brief").textContent = current.designerBrief || "PoYo generated artwork attached from this business workspace.";
       $("creative-asset-url").value = "";
       if (saveButton) saveButton.disabled = false;
-      const campaignTab = [...document.querySelectorAll("#content-view .lb-studio-tab")].find(tab => tab.textContent.trim() === "Campaign post");
+      const campaignTab = $("studio-tab-create");
       if (campaignTab) campaignTab.click();
       setMessage("Image attached. Review the editable campaign topic, offer, artwork and caption, then save to the approval queue. Nothing is published.");
     } catch (error) {
@@ -602,7 +622,7 @@
       <div id="ai-plan-insights" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px"></div>
       <div id="ai-plan-posts" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:12px;margin-top:14px"></div>
       <small style="display:block;margin-top:14px;color:var(--muted,#746d64)">Evidence gaps will be shown, not filled with invented reviews, products, prices or customer claims. Saving creates private drafts only; publishing remains a separate approval action.</small>`;
-    root.prepend(panel);
+    const destination=$("studio-pane-create")||root; destination.prepend(panel);
     $("ai-plan-analyse").addEventListener("click",()=>analyse(false));
     $("ai-plan-generate").addEventListener("click",()=>analyse(true));
     window.addEventListener("localboost:signed-out",()=>{const s=$("ai-plan-status");if(s)s.textContent="Signed out · business evidence is not available.";});
