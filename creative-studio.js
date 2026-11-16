@@ -179,38 +179,57 @@
     if(!current) throw new Error("Generate the campaign caption first.");
     const preview=$("creative-gemini-preview");
     const button=$("creative-image-gemini");
+    const download=$("creative-image-download");
     if(button) button.disabled=true;
-    if(preview){preview.src="";preview.classList.add("hidden");}
-    $("creative-gemini-download") && ($("creative-gemini-download").disabled=true);
-    setMessage("Caption ready. GPT Image is automatically creating matching campaign artwork…");
-    const formatMap={feed:"SQUARE",portrait:"PORTRAIT",story:"STORY"};
-    const result=await api(base()+"/creative/image",{method:"POST",body:JSON.stringify({
-      provider:"OPENAI",topic:current.topic,offer:current.offer,creativeBrief:current.imagePrompt||current.designerBrief,
-      caption:current.caption,language:current.language,format:formatMap[$("creative-format").value]||"SQUARE"
-    })});
-    const composed=await composeCampaignArtwork(result.imageDataUrl);
-    const comma=composed.indexOf(","), header=composed.slice(0,comma);
-    const mimeType=(header.match(/^data:(image\/(?:jpeg|png|webp));base64$/)||[])[1];
-    const dataBase64=composed.slice(comma+1);
-    if(!mimeType||!dataBase64) throw new Error("Generated image data is invalid.");
-    const saved=await api(base()+"/creative-assets",{method:"POST",body:JSON.stringify({
-      fileName:"gpt-image-"+Date.now()+".jpg",mimeType,dataBase64,altText:current.topic+" — "+current.caption.slice(0,160)
-    })});
-    current.assetId=saved.asset.id;current.assetName=saved.asset.fileName;
-    current.imageProvider="OPENAI_GPT_IMAGE";current.imageModel=result.model;current.imageGeneratedAt=result.generatedAt;
-    if(preview){preview.src=composed;preview.classList.remove("hidden");preview.dataset.downloadUrl=composed;}
-    $("creative-gemini-download") && ($("creative-gemini-download").disabled=false);
-    $("creative-gemini-save") && ($("creative-gemini-save").disabled=true);
-    const metrics=$("creative-provider-metrics");
-    if(metrics)metrics.textContent="OpenAI GPT Image · "+result.model+" · generated and saved to business library.";
-    current.updatedAt=new Date().toISOString();
-    await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:current.id,payload:current,recordedAt:current.updatedAt})});
-    $("creative-save").disabled=false;
-    setMessage("Matching GPT Image artwork generated and saved with the caption as a campaign draft. Review it, then use Save to Approval Centre when ready. Nothing is approved or published.");
-    if(button)button.disabled=false;
-    return current;
+    if(preview){preview.removeAttribute("src");preview.classList.add("hidden");delete preview.dataset.downloadUrl;}
+    if(download) download.disabled=true;
+    setMessage("Generating matching GPT Image artwork. This request may use credits…");
+    try {
+      const formatMap={feed:"SQUARE",portrait:"PORTRAIT",story:"STORY"};
+      const result=await api(base()+"/creative/image",{method:"POST",body:JSON.stringify({
+        provider:"OPENAI",topic:current.topic,offer:current.offer,creativeBrief:current.imagePrompt||current.designerBrief,
+        caption:current.caption,language:current.language,format:formatMap[$("creative-format").value]||"SQUARE"
+      })});
+      if(!result || typeof result.imageDataUrl!=="string" || !result.imageDataUrl.startsWith("data:image/")) {
+        throw new Error("The image service returned no displayable image data.");
+      }
+      // Display the raw returned image immediately. If local brand composition or
+      // asset persistence fails, the owner still sees the generated artwork.
+      if(preview){preview.src=result.imageDataUrl;preview.classList.remove("hidden");preview.dataset.downloadUrl=result.imageDataUrl;}
+      setMessage("Image generated. Preparing the Paanagam-branded preview and saving it to your business library…");
+      let composed=result.imageDataUrl;
+      try { composed=await composeCampaignArtwork(result.imageDataUrl); }
+      catch(composeError) {
+        if(preview){preview.src=result.imageDataUrl;preview.classList.remove("hidden");preview.dataset.downloadUrl=result.imageDataUrl;}
+        setMessage("GPT Image generated and displayed. Brand overlay could not be applied: "+composeError.message,true);
+      }
+      const comma=composed.indexOf(","), header=composed.slice(0,comma);
+      const mimeType=(header.match(/^data:(image\/(?:jpeg|png|webp));base64$/)||[])[1];
+      const dataBase64=composed.slice(comma+1);
+      if(!mimeType||!dataBase64) throw new Error("Generated image data is invalid.");
+      const saved=await api(base()+"/creative-assets",{method:"POST",body:JSON.stringify({
+        fileName:"gpt-image-"+Date.now()+(mimeType==="image/png"?".png":mimeType==="image/webp"?".webp":".jpg"),
+        mimeType,dataBase64,altText:current.topic+" — "+current.caption.slice(0,160)
+      })});
+      if(!saved?.asset?.id) throw new Error("The image was generated but the business library did not confirm that it was saved.");
+      current.assetId=saved.asset.id;current.assetName=saved.asset.fileName;
+      current.assetUrl=saved.asset.url||"";
+      current.imageProvider="OPENAI_GPT_IMAGE";current.imageModel=result.model;current.imageGeneratedAt=result.generatedAt;
+      if(preview){preview.src=composed;preview.classList.remove("hidden");preview.dataset.downloadUrl=composed;}
+      if(download) download.disabled=false;
+      const metrics=$("creative-provider-metrics");
+      if(metrics)metrics.textContent="OpenAI GPT Image · "+(result.model||"model")+" · generated and saved to business library.";
+      current.updatedAt=new Date().toISOString();
+      await api(base()+"/growth-records",{method:"POST",body:JSON.stringify({type:"CAMPAIGN_DRAFT",externalId:current.id,payload:current,recordedAt:current.updatedAt})});
+      $("creative-save").disabled=false;
+      if(button)button.textContent="Regenerate GPT Image";
+      setMessage("GPT Image artwork generated, displayed and saved to the business library. Review it, then use Save to Approval Centre when ready. Nothing is approved or published.");
+      return current;
+    } finally {
+      if(button)button.disabled=false;
+    }
   }
-  const gptImageButton=$("creative-image-gemini"); if(gptImageButton){gptImageButton.textContent="Regenerate GPT Image";gptImageButton.setAttribute("aria-label","Generate artwork with OpenAI GPT Image");}
+  const gptImageButton=$("creative-image-gemini"); if(gptImageButton){gptImageButton.textContent="Generate GPT Image (uses credits)";gptImageButton.setAttribute("aria-label","Generate artwork with OpenAI GPT Image");}
   $("creative-image-gemini")?.addEventListener("click",async()=>{
     try{await generateAndSaveGptImage();}
     catch(err){setMessage("GPT Image generation failed: "+err.message,true);const button=$("creative-image-gemini");if(button)button.disabled=false;}
@@ -234,10 +253,10 @@
       setMessage("GPT Image artwork saved to the selected business library. Save the campaign draft to send it to Approval Centre; nothing is published.");
     }catch(err){setMessage("GPT Image artwork could not be saved: "+err.message,true);button.disabled=false;}
   });
-  $("creative-gemini-download")?.addEventListener("click",()=>{
+  $("creative-image-download")?.addEventListener("click",()=>{
     const url=$("creative-gemini-preview")?.dataset.downloadUrl;
     if(!url)return;
-    const a=document.createElement("a");a.href=url;a.download="paanagam-flux-campaign.jpg";document.body.appendChild(a);a.click();a.remove();
+    const a=document.createElement("a");a.href=url;a.download="paanagam-gpt-image-campaign.jpg";document.body.appendChild(a);a.click();a.remove();
   });
   $("creative-image-save")?.addEventListener("click",async()=>{
     if(!ready||!current||!canvaGeneratedImageUrl||!canvaGenerationJobId)return;
