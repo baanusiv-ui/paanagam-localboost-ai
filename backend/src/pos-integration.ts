@@ -204,7 +204,7 @@ export async function registerPosIntegrationRoutes(app: FastifyInstance, prisma:
           lastSourceUpdatedAt: sourceUpdatedAt,
           lastSyncVersion: String(status.data?.version ?? status.version ?? "") || null,
           lastSyncCounts: counts,
-          lastCoverage: daily.coverage ?? null,
+          ...(daily.coverage ? { lastCoverage: daily.coverage } : {}),
           lastDataStatus: dataStatus,
           lastStatus: dataStatus === "STALE" ? "STALE" : "SYNCED",
           lastError: null
