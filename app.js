@@ -473,7 +473,13 @@
       $("#pos-last-tested").textContent = result.lastTestedAt ? new Date(result.lastTestedAt).toLocaleString() : "—";
       $("#pos-last-synced").textContent = result.lastSyncedAt ? new Date(result.lastSyncedAt).toLocaleString() : "—";
       $("#pos-test-status").textContent = result.lastStatus || "Not tested";
-      $("#pos-sync-status").textContent = result.lastSyncedAt ? "Synced" : "Not synced";
+      $("#pos-sync-status").textContent = result.lastSyncedAt ? (result.dataStatus || result.lastStatus || "Synced") : "Not synced";
+      $("#pos-source-updated").textContent = result.lastSourceUpdatedAt ? new Date(result.lastSourceUpdatedAt).toLocaleString() : "—";
+      $("#pos-data-status").textContent = result.dataStatus || "UNKNOWN";
+      const counts = result.lastSyncCounts;
+      $("#pos-import-summary").textContent = counts ? Object.entries(counts).filter(([key]) => key !== "total").map(([key, value]) => key + ": " + value).join(" · ") : "No imported data yet.";
+      const coverage = result.lastCoverage;
+      $("#pos-coverage").textContent = coverage ? ((coverage.first_record_date || "—") + " to " + (coverage.last_record_date || "—")) : "Not available";
       $("#pos-test-button").disabled = !result.connected;
       $("#pos-sync-button").disabled = !result.connected;
       if (result.lastError) message("pos-sync-message", result.lastError, true);
@@ -512,10 +518,10 @@
     const button = $("#pos-sync-button"); button.disabled = true; button.textContent = "Syncing…";
     try {
       const result = await api("/v1/businesses/" + encodeURIComponent(activeBusiness.id) + "/pos-integration/sync", { method: "POST", body: "{}" });
-      message("pos-sync-message", "Imported " + result.importedMenu + " menu items and " + result.importedSalesDays + " sales days (" + result.periodStart + " to " + result.periodEnd + "). POS was not modified.");
+      message("pos-sync-message", "Imported " + result.imported.total + " records: " + Object.entries(result.imported).filter(([key]) => key !== "total").map(([key, value]) => key + " " + value).join(", ") + ". Source data: " + result.dataStatus + ". POS was not modified.");
       await refreshPosStatus();
     } catch (error) { message("pos-sync-message", error.message, true); await refreshPosStatus(); }
-    finally { button.disabled = false; button.textContent = "Sync menu and sales"; }
+    finally { button.disabled = false; button.textContent = "Sync financial data"; }
   }
 
   async function loadGoogleServices() {
