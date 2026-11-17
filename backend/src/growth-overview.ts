@@ -66,7 +66,7 @@ export function buildGrowthOverview(input: {
       title: "Review the latest sales movement",
       action: "Compare the two recorded seven-day periods against POS closing totals, opening hours and promotion dates. Check for missing days before deciding on staffing, stock or pricing.",
       why: salesTrend.finding,
-      evidence: { source: "OWNER_ENTERED_DAILY_SALES", recordIds: salesTrend.evidence.recordIds, dateFrom: salesTrend.evidence.dateRange?.from ?? null, dateTo: salesTrend.evidence.dateRange?.to ?? null, calculation: salesTrend.evidence.calculation },
+      evidence: { source: salesTrend.evidence.source, recordIds: salesTrend.evidence.recordIds, dateFrom: salesTrend.evidence.dateRange?.from ?? null, dateTo: salesTrend.evidence.dateRange?.to ?? null, calculation: salesTrend.evidence.calculation },
       confidence: "MEDIUM"
     });
   }
@@ -131,6 +131,6 @@ export function buildGrowthOverview(input: {
     businessData: { savedRecords: records.length, profileEvidence: input.evidence.length, reviewSample: reviewAnalysis.sampleSize },
     actions: ranked,
     rankingPolicy: "Deterministic priority score: 70-90 high, 40-69 medium, below 40 informational. Scores use only saved evidence frequency and rule-based signal strength; they are not predicted revenue impact.",
-    guardrails: ["No demo records are used.", "No POS connection is implied; daily sales and menu inputs may be owner-entered.", "Google profile evidence is not a Google ranking or traffic metric.", "Competitor observations are owner-recorded public snapshots.", "Actions are suggestions only and require owner review; nothing is executed or published."]
+    guardrails: ["No demo records are used.", "POS-imported summaries are read-only and freshness-limited; owner-entered records are not POS-verified.", "Google profile evidence is not a Google ranking or traffic metric.", "Competitor observations are owner-recorded public snapshots.", "Actions are suggestions only and require owner review; nothing is executed or published."]
   };
 }
