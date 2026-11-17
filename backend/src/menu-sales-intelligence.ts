@@ -20,8 +20,14 @@ export function buildMenuSalesIntelligence(records: MenuSalesRecord[], from?: st
     gross: number(r.payload.gross_sales ?? r.payload.gross),
     net: number(r.payload.net_item_sales ?? r.payload.net_sales ?? r.payload.net),
     discount: number(r.payload.allocated_discount ?? r.payload.discount_allocation ?? r.payload.discount),
-    date: dateText(r.payload.business_date ?? r.payload.date, r.recordedAt)
-  })).filter(x=>x.name && x.qty !== null && validRange(x.date));
+    date: dateText(r.payload.business_date ?? r.payload.date, r.recordedAt),
+    periodStart: String((r.payload._source as Record<string, unknown> | undefined)?.periodStart ?? ""),
+    periodEnd: String((r.payload._source as Record<string, unknown> | undefined)?.periodEnd ?? "")
+  })).filter(x => {
+    if (!x.name || x.qty === null) return false;
+    if (x.periodStart || x.periodEnd) return (!from || (x.periodEnd || x.periodStart) >= from) && (!to || (x.periodStart || x.periodEnd) <= to);
+    return validRange(x.date);
+  });
   const items = new Map<string,{name:string;units:number;grossSales:number|null;netSales:number|null;discounts:number;unitContribution:number|null;records:string[]}>();
   for (const x of menu) {
     const key=x.name.toLocaleLowerCase();
