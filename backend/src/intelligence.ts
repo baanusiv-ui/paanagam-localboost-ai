@@ -1,6 +1,6 @@
 export type GrowthRecordInput = {
   id: string;
-  recordType: "MENU_ITEM" | "DAILY_SALES" | "MENU_ITEM_SALES" | "RETENTION_SNAPSHOT" | "CAMPAIGN_DRAFT" | "COMPETITOR" | "LOCAL_KEYWORD" | "REVIEW_ITEM" | "GOOGLE_CONTENT";
+  recordType: "MENU_ITEM" | "DAILY_SALES" | "MENU_ITEM_SALES" | "ORDER_SUMMARY" | "PAYMENT_SUMMARY" | "INVENTORY_SNAPSHOT" | "POS_SYNC_STATUS" | "RETENTION_SNAPSHOT" | "CAMPAIGN_DRAFT" | "COMPETITOR" | "LOCAL_KEYWORD" | "REVIEW_ITEM" | "GOOGLE_CONTENT";
   payload: Record<string, unknown>;
   recordedAt: Date | string;
   source?: string;
