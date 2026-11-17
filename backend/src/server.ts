@@ -278,7 +278,7 @@ app.get("/v1/businesses/:businessId/data-status", { preHandler: requireUser }, a
   };
 });
 
-const growthRecordType = z.enum(["MENU_ITEM", "DAILY_SALES", "RETENTION_SNAPSHOT", "CAMPAIGN_DRAFT", "COMPETITOR", "LOCAL_KEYWORD", "REVIEW_ITEM", "GOOGLE_CONTENT"]);
+const growthRecordType = z.enum(["MENU_ITEM", "DAILY_SALES", "MENU_ITEM_SALES", "ORDER_SUMMARY", "PAYMENT_SUMMARY", "INVENTORY_SNAPSHOT", "POS_SYNC_STATUS", "RETENTION_SNAPSHOT", "CAMPAIGN_DRAFT", "COMPETITOR", "LOCAL_KEYWORD", "REVIEW_ITEM", "GOOGLE_CONTENT"]);
 
 app.post("/v1/businesses/:businessId/local-seo/keywords", {
   preHandler: requireUser,
@@ -480,7 +480,7 @@ app.get("/v1/businesses/:businessId/intelligence", { preHandler: requireUser }, 
   const business = await ownedBusiness(request.userId!, params.data.businessId);
   if (!business) return reply.code(404).send({ error: "Business not found" });
   const records = await prisma.growthRecord.findMany({
-    where: { businessId: business.id, recordType: { in: ["MENU_ITEM", "DAILY_SALES", "RETENTION_SNAPSHOT"] } },
+    where: { businessId: business.id, recordType: { in: ["MENU_ITEM", "DAILY_SALES", "MENU_ITEM_SALES", "RETENTION_SNAPSHOT"] } },
     orderBy: [{ recordedAt: "asc" }, { createdAt: "asc" }],
     take: 500
   });
@@ -500,12 +500,12 @@ app.get("/v1/businesses/:businessId/menu-sales-intelligence", { preHandler: requ
   const business = await ownedBusiness(request.userId!, params.data.businessId);
   if (!business) return reply.code(404).send({ error: "Business not found" });
   const records = await prisma.growthRecord.findMany({
-    where: { businessId: business.id, recordType: { in: ["MENU_ITEM", "DAILY_SALES"] } },
+    where: { businessId: business.id, recordType: { in: ["MENU_ITEM", "DAILY_SALES", "MENU_ITEM_SALES"] } },
     orderBy: [{ recordedAt: "asc" }, { createdAt: "asc" }],
     take: 5000
   });
   const report = buildMenuSalesIntelligence(records.map(record => ({
-    id: record.id, recordType: record.recordType as "MENU_ITEM" | "DAILY_SALES",
+    id: record.id, recordType: record.recordType as "MENU_ITEM" | "DAILY_SALES" | "MENU_ITEM_SALES",
     payload: record.payload as unknown as Record<string, unknown>, recordedAt: record.recordedAt, source: record.source
   })), query.data.from, query.data.to);
   return { business: { id: business.id, displayName: business.displayName }, ...report, limits: { maxRecords: 5000, mayBeIncomplete: records.length === 5000 } };
