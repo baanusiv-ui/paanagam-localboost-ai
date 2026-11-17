@@ -1,5 +1,7 @@
 # Paanagam POS integration contract
 
+> Implementation status: the LocalBoost connector now imports the currently documented read-only v1 menu, daily sales, item sales, order summary, payment summary, inventory summary and sync-status resources. Recipe/BOM, FIFO batch, purchase, stock-event, wastage, operating-cost and cash-close exports remain blocked pending POS API extensions. See [PAANAGAM_CAPABILITY_PARITY.md](./PAANAGAM_CAPABILITY_PARITY.md).
+
 ## Purpose
 LocalBoost is a standalone growth-intelligence product. The Paanagam POS remains the system of record for transactions, menu items, recipes, inventory, payments and loyalty balances. LocalBoost consumes only minimum business summaries needed for analysis. It must never become a second POS or write operational records back into the POS.
 
