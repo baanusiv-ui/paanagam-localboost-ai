@@ -38,6 +38,11 @@ enum AuditStatus {
 enum GrowthRecordType {
   MENU_ITEM
   DAILY_SALES
+  MENU_ITEM_SALES
+  ORDER_SUMMARY
+  PAYMENT_SUMMARY
+  INVENTORY_SNAPSHOT
+  POS_SYNC_STATUS
   RETENTION_SNAPSHOT
   CAMPAIGN_DRAFT
   COMPETITOR
@@ -361,6 +366,11 @@ model PosIntegrationConnection {
   posBusinessName String?
   lastTestedAt    DateTime?
   lastSyncedAt    DateTime?
+  lastSourceUpdatedAt DateTime?
+  lastSyncVersion String?
+  lastSyncCounts  Json?
+  lastCoverage    Json?
+  lastDataStatus  String?
   lastStatus      String   @default("CONNECTED")
   lastError       String?
   createdAt       DateTime @default(now())
