@@ -1,6 +1,6 @@
 export type GrowthRecordInput = {
   id: string;
-  recordType: "MENU_ITEM" | "DAILY_SALES" | "RETENTION_SNAPSHOT" | "CAMPAIGN_DRAFT" | "COMPETITOR" | "LOCAL_KEYWORD" | "REVIEW_ITEM" | "GOOGLE_CONTENT";
+  recordType: "MENU_ITEM" | "DAILY_SALES" | "MENU_ITEM_SALES" | "RETENTION_SNAPSHOT" | "CAMPAIGN_DRAFT" | "COMPETITOR" | "LOCAL_KEYWORD" | "REVIEW_ITEM" | "GOOGLE_CONTENT";
   payload: Record<string, unknown>;
   recordedAt: Date | string;
   source?: string;
@@ -27,17 +27,17 @@ const dateOf = (value: Date | string): string => new Date(value).toISOString().s
 const money = (value: number): string => "₹" + value.toLocaleString("en-IN", { maximumFractionDigits: 2 });
 
 export function buildBusinessIntelligence(records: GrowthRecordInput[]) {
-  const usable = records.filter(record => record.source !== "DEMO" && ["MENU_ITEM", "DAILY_SALES", "RETENTION_SNAPSHOT"].includes(record.recordType));
+  const usable = records.filter(record => record.source !== "DEMO" && ["MENU_ITEM", "DAILY_SALES", "MENU_ITEM_SALES", "RETENTION_SNAPSHOT"].includes(record.recordType));
   const sales = usable.filter(record => record.recordType === "DAILY_SALES").map(record => ({
-    record, date: dateOf(record.recordedAt),
-    net: numeric(record.payload.net ?? record.payload.netSales),
-    orders: numeric(record.payload.orders)
+    record, date: String(record.payload.business_date ?? dateOf(record.recordedAt)),
+    net: numeric(record.payload.net_sales ?? record.payload.net ?? record.payload.netSales),
+    orders: numeric(record.payload.order_count ?? record.payload.orders)
   })).filter(item => item.net !== null && item.orders !== null).sort((a, b) => a.date.localeCompare(b.date));
-  const menu = usable.filter(record => record.recordType === "MENU_ITEM").map(record => ({
-    record, name: String(record.payload.name ?? record.payload.itemName ?? "Unnamed item"),
-    price: numeric(record.payload.price ?? record.payload.sellingPrice),
-    cost: numeric(record.payload.cost ?? record.payload.unitCost),
-    qty: numeric(record.payload.qty ?? record.payload.quantitySold ?? record.payload.unitsSold)
+  const menu = usable.filter(record => record.recordType === "MENU_ITEM" || record.recordType === "MENU_ITEM_SALES").map(record => ({
+    record, name: String(record.payload.item_name ?? record.payload.menu_item_name ?? record.payload.name ?? record.payload.itemName ?? "Unnamed item"),
+    price: numeric(record.payload.unit_selling_price ?? record.payload.selling_price ?? record.payload.price ?? record.payload.sellingPrice),
+    cost: numeric(record.payload.unit_cost ?? record.payload.cost ?? record.payload.unitCost),
+    qty: numeric(record.payload.quantity_sold ?? record.payload.quantity ?? record.payload.qty ?? record.payload.quantitySold ?? record.payload.unitsSold)
   }));
   const retention = usable.filter(record => record.recordType === "RETENTION_SNAPSHOT").sort((a, b) => dateOf(b.recordedAt).localeCompare(dateOf(a.recordedAt)));
   const insights: IntelligenceInsight[] = [];
@@ -57,7 +57,7 @@ export function buildBusinessIntelligence(records: GrowthRecordInput[]) {
     insights.push({
       id: "sales-baseline", priority: "INFO", title: "Recorded sales baseline",
       finding: sales.length + " recorded business dates show " + money(total) + " net sales across " + orders + " orders; average order value is " + money(orders ? total / orders : 0) + ".",
-      evidence: { source: "OWNER_ENTERED", recordIds: sales.map(item => item.record.id), dateRange: { from: sales[0]!.date, to: latest.date }, calculation: "Sum of recorded net sales; sum of orders; average order value = net sales ÷ orders." },
+      evidence: { source: sales.some(item => item.record.source === "PAANAGAM_POS_READ_ONLY") ? "PAANAGAM_POS_READ_ONLY" : "OWNER_ENTERED", recordIds: sales.map(item => item.record.id), dateRange: { from: sales[0]!.date, to: latest.date }, calculation: "Sum of recorded net sales; sum of orders; average order value = net sales ÷ orders." },
       recommendation: "Use this as an owner-entered baseline only. Reconcile the totals with the POS before making staffing, pricing or purchasing decisions.",
       confidence: "HIGH", requiresOwnerApproval: true, status: "SUGGESTED"
     });
@@ -86,7 +86,7 @@ export function buildBusinessIntelligence(records: GrowthRecordInput[]) {
     insights.push({
       id: "menu-volume-leader", priority: "INFO", title: "Highest recorded menu volume",
       finding: leader.name + " has the highest entered quantity at " + leader.qty + " units.",
-      evidence: { source: "OWNER_ENTERED", recordIds: ranked.map(item => item.record.id), calculation: "Sorted menu records by entered quantity; this is not a POS-verified sales ranking." },
+      evidence: { source: ranked.some(item => item.record.source === "PAANAGAM_POS_READ_ONLY") ? "PAANAGAM_POS_READ_ONLY" : "OWNER_ENTERED", recordIds: ranked.map(item => item.record.id), calculation: "Sorted menu records by entered quantity; this is not a POS-verified sales ranking." },
       recommendation: "Validate quantities against the POS and review availability during the periods this item is sold.",
       confidence: "MEDIUM", requiresOwnerApproval: true, status: "SUGGESTED"
     });
@@ -106,7 +106,7 @@ export function buildBusinessIntelligence(records: GrowthRecordInput[]) {
     insights.push({
       id: "menu-lowest-unit-margin", priority: "MEDIUM", title: "Lowest supplied unit contribution rate",
       finding: lowest.name + " has a supplied unit contribution of " + money(lowest.price! - lowest.cost!) + " (" + (lowest.price! > 0 ? ((lowest.price! - lowest.cost!) / lowest.price! * 100).toFixed(1) : "not meaningful") + "% of selling price).",
-      evidence: { source: "OWNER_ENTERED", recordIds: costed.map(item => item.record.id), calculation: "(selling price − supplied unit cost) ÷ selling price. Excludes any costs not included in the supplied unit cost." },
+      evidence: { source: costed.some(item => item.record.source === "PAANAGAM_POS_READ_ONLY") ? "PAANAGAM_POS_READ_ONLY" : "OWNER_ENTERED", recordIds: costed.map(item => item.record.id), calculation: "(selling price − supplied unit cost) ÷ selling price. Excludes any costs not included in the supplied unit cost." },
       recommendation: "Validate recipe yield, packaging, wastage, tax basis and cost effective date before considering a price or recipe change.",
       confidence: "LOW", requiresOwnerApproval: true, status: "SUGGESTED"
     });
@@ -130,9 +130,9 @@ export function buildBusinessIntelligence(records: GrowthRecordInput[]) {
   return {
     engine: "PAANAGAM_INTELLIGENCE_RULES_V1",
     generatedAt: new Date().toISOString(),
-    dataStatus: usable.length ? "OWNER_DATA_AVAILABLE" : "NO_VERIFIED_BUSINESS_DATA",
+    dataStatus: usable.some(record => record.source === "PAANAGAM_POS_READ_ONLY") ? "POS_DATA_AVAILABLE" : usable.length ? "OWNER_DATA_AVAILABLE" : "NO_VERIFIED_BUSINESS_DATA",
     recordCount: usable.length,
-    sourcePolicy: "DEMO records are excluded. Current inputs are owner-entered; no POS connection is implied.",
+    sourcePolicy: "DEMO records are excluded. POS-imported summaries are read-only source data; owner-entered records are not POS-verified.",
     insights
   };
 }
