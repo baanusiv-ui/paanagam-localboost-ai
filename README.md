@@ -29,6 +29,7 @@ The current product includes an authenticated owner workspace, business workspac
 ## Roadmap and integration
 - Growth Intelligence delivery roadmap: docs/GROWTH_INTELLIGENCE_ROADMAP.md
 - Paanagam POS read-only integration contract: docs/POS_INTEGRATION_CONTRACT.md
+- Paanagam capability parity audit and blocked export requirements: docs/PAANAGAM_CAPABILITY_PARITY.md
 - Product blueprint: docs/PRODUCT_BLUEPRINT.md
 - Backend setup and API documentation: backend/README.md
 
