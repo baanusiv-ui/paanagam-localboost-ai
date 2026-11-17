@@ -425,14 +425,17 @@ We look forward to welcoming you!</textarea></label>
             <button class="primary-button" id="pos-connect-button" type="submit">Verify and connect</button>
           </form>
           <p id="pos-connect-message" class="form-message" role="status"></p>
-          <div class="form-actions"><button class="secondary-button" type="button" id="pos-test-button" disabled>Test connection</button><button class="primary-button" type="button" id="pos-sync-button" disabled>Sync menu and sales</button></div>
+          <div class="form-actions"><button class="secondary-button" type="button" id="pos-test-button" disabled>Test connection</button><button class="primary-button" type="button" id="pos-sync-button" disabled>Sync financial data</button></div>
           <p id="pos-sync-message" class="form-message" role="status"></p>
         </div>
         <div class="panel">
           <div class="panel-heading"><div><h3>Connection status</h3><p id="pos-business-name">No POS business connected.</p></div></div>
           <div class="check-row"><div><strong>Last connection test</strong><small id="pos-last-tested">—</small></div><span class="tag" id="pos-test-status">Not tested</span></div>
-          <div class="check-row"><div><strong>Last successful sync</strong><small id="pos-last-synced">—</small></div><span class="tag" id="pos-sync-status">Not synced</span></div>
-          <p class="footnote">Read-only scope. LocalBoost imports menu items and daily sales summaries only. It does not create bills, change prices, edit stock, or write back to the POS.</p>
+          <div class="check-row"><div><strong>Last LocalBoost import</strong><small id="pos-last-synced">—</small></div><span class="tag" id="pos-sync-status">Not synced</span></div>
+          <div class="check-row"><div><strong>POS source last updated</strong><small id="pos-source-updated">—</small></div><span class="tag" id="pos-data-status">UNKNOWN</span></div>
+          <div class="check-row"><div><strong>Imported data categories</strong><small id="pos-import-summary">No imported data yet.</small></div></div>
+          <div class="check-row"><div><strong>Sales coverage</strong><small id="pos-coverage">Not available</small></div></div>
+          <p class="footnote">Read-only scope. LocalBoost imports menu, daily sales, item sales, order summaries, payment summaries, inventory snapshots and sync health. Recipe/BOM, purchase FIFO lots, production, stock movements, wastage, operating expenses and cash-close exports still require POS API extensions. No POS records are modified.</p>
         </div>
       </section>
 <section class="view-panel hidden" id="launch-view">
