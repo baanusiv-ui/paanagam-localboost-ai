@@ -42,3 +42,18 @@ test("latest retention snapshot is used rather than summing snapshots", () => {
   assert.ok(insight);
   assert.match(insight.finding, /4 rewards redeemed from 10 issued/);
 });
+
+test("Paanagam POS daily sales fields are recognized and retain POS provenance", () => {
+  const result = buildBusinessIntelligence([
+    record("pos-day", "DAILY_SALES", { business_date: "2026-11-17", net_sales: 2500, order_count: 50 }, "2026-11-17T00:00:00.000Z", "PAANAGAM_POS_READ_ONLY"),
+    record("pos-item", "MENU_ITEM_SALES", { item_name: "Filter Coffee", quantity_sold: 12, unit_selling_price: 25 }, "2026-11-17T00:00:00.000Z", "PAANAGAM_POS_READ_ONLY")
+  ]);
+  assert.equal(result.dataStatus, "POS_DATA_AVAILABLE");
+  const baseline = result.insights.find(item => item.id === "sales-baseline");
+  assert.ok(baseline);
+  assert.match(baseline.finding, /₹2,500/);
+  assert.equal(baseline.evidence.source, "PAANAGAM_POS_READ_ONLY");
+  const menu = result.insights.find(item => item.id === "menu-volume-leader");
+  assert.ok(menu);
+  assert.match(menu.finding, /Filter Coffee.*12 units/);
+});
