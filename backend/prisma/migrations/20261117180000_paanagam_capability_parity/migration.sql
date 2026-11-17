@@ -10,6 +10,3 @@ ALTER TABLE "PosIntegrationConnection"
   ADD COLUMN "lastSyncCounts" JSONB,
   ADD COLUMN "lastCoverage" JSONB,
   ADD COLUMN "lastDataStatus" TEXT;
-
-CREATE INDEX "GrowthRecord_businessId_recordType_recordedAt_idx"
-  ON "GrowthRecord"("businessId", "recordType", "recordedAt");
